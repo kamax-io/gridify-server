@@ -44,7 +44,7 @@ public class MemoryIdentityStoreSupplier implements IdentityStoreSupplier {
 
     @Override
     public IdentityStore build(IdentityConfig.Store cfg) {
-        String id = GsonUtil.getStringOrThrow(GsonUtil.makeObj(cfg.getConfig()), "connection");
+        String id = GsonUtil.findString(GsonUtil.makeObj(cfg.getConfig()), "connection").orElse("");
         MemoryStore store = MemoryStore.get(id);
         long uLid = store.addUser("a");
         store.addThreePid(uLid, new GenericThreePid("g.id.local.username", "a"));

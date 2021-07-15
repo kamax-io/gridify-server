@@ -43,7 +43,7 @@ public class IdentityConfig {
 
         private boolean enabled;
         private String type;
-        private Object config;
+        private Object config = new Object();
 
         public boolean isEnabled() {
             return enabled;

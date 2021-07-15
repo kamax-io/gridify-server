@@ -29,11 +29,15 @@ import io.kamax.grid.gridepo.core.identity.IdentityStore;
 import io.kamax.grid.gridepo.core.identity.IdentityStoreSupplier;
 import io.kamax.grid.gridepo.core.identity.IdentityStoreSuppliers;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
+import io.kamax.grid.gridepo.util.KxLog;
+import org.slf4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MultiStoreAuthService implements AuthService {
+
+    private static final Logger log = KxLog.make(MultiStoreAuthService.class);
 
     private Map<String, IdentityStore> storeByLabel = new ConcurrentHashMap<>();
 
@@ -55,10 +59,28 @@ public class MultiStoreAuthService implements AuthService {
     }
 
     public MultiStoreAuthService(GridepoConfig cfg) {
+        // We configure some default identity stores if none was given in the config
+        if (cfg.getIdentity().getStores().isEmpty()) {
+            if ("memory".equals(cfg.getStorage().getDatabase().getType())) {
+                IdentityConfig.Store idCfg = new IdentityConfig.Store();
+                idCfg.setType("memory");
+                cfg.getIdentity().getStores().put("memory-default", idCfg);
+            }
+        }
+
         cfg.getIdentity().getStores().forEach((label, storeCfg) -> {
             IdentityStore store = forLabel(label, storeCfg);
             stores.add(store);
         });
+
+        if (stores.isEmpty()) {
+            log.warn("No auth type supported, users will not be able to login!");
+        } else {
+            log.debug("Supported auth types:");
+            for (IdentityStore store : stores) {
+                log.debug("  - " + store.getClass() + ": " + store.forAuth().getSupportedTypes());
+            }
+        }
     }
 
     @Override
