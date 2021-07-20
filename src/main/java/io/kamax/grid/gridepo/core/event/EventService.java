@@ -23,10 +23,10 @@ package io.kamax.grid.gridepo.core.event;
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.codec.GridHash;
 import io.kamax.grid.gridepo.codec.GridJson;
-import io.kamax.grid.gridepo.core.ServerID;
 import io.kamax.grid.gridepo.core.channel.event.*;
 import io.kamax.grid.gridepo.core.crypto.Cryptopher;
 import io.kamax.grid.gridepo.core.crypto.Signature;
+import io.kamax.grid.gridepo.network.grid.core.ServerID;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
 import java.util.HashMap;

@@ -20,10 +20,6 @@
 
 package io.kamax.test.grid.gridepo.core.store;
 
-import io.kamax.grid.gridepo.core.ChannelID;
-import io.kamax.grid.gridepo.core.EventID;
-import io.kamax.grid.gridepo.core.ServerID;
-import io.kamax.grid.gridepo.core.UserID;
 import io.kamax.grid.gridepo.core.auth.Credentials;
 import io.kamax.grid.gridepo.core.auth.SecureCredentials;
 import io.kamax.grid.gridepo.core.channel.ChannelDao;
@@ -34,6 +30,10 @@ import io.kamax.grid.gridepo.core.identity.GenericThreePid;
 import io.kamax.grid.gridepo.core.identity.ThreePid;
 import io.kamax.grid.gridepo.core.store.DataStore;
 import io.kamax.grid.gridepo.core.store.UserDao;
+import io.kamax.grid.gridepo.network.grid.core.ChannelID;
+import io.kamax.grid.gridepo.network.grid.core.EventID;
+import io.kamax.grid.gridepo.network.grid.core.ServerID;
+import io.kamax.grid.gridepo.network.grid.core.UserID;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Before;

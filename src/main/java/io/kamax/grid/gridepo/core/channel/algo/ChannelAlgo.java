@@ -21,11 +21,11 @@
 package io.kamax.grid.gridepo.core.channel.algo;
 
 import com.google.gson.JsonObject;
-import io.kamax.grid.gridepo.core.EventID;
 import io.kamax.grid.gridepo.core.channel.event.BareEvent;
 import io.kamax.grid.gridepo.core.channel.event.BarePowerEvent;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.core.channel.state.ChannelState;
+import io.kamax.grid.gridepo.network.grid.core.EventID;
 
 import java.util.List;
 

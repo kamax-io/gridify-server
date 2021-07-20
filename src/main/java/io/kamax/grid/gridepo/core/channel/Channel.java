@@ -21,7 +21,7 @@
 package io.kamax.grid.gridepo.core.channel;
 
 import com.google.gson.JsonObject;
-import io.kamax.grid.gridepo.core.*;
+import io.kamax.grid.gridepo.core.EntityGUID;
 import io.kamax.grid.gridepo.core.channel.algo.ChannelAlgo;
 import io.kamax.grid.gridepo.core.channel.event.*;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
@@ -39,6 +39,10 @@ import io.kamax.grid.gridepo.core.store.DataStore;
 import io.kamax.grid.gridepo.exception.ForbiddenException;
 import io.kamax.grid.gridepo.exception.NotImplementedException;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
+import io.kamax.grid.gridepo.network.grid.core.ChannelID;
+import io.kamax.grid.gridepo.network.grid.core.EventID;
+import io.kamax.grid.gridepo.network.grid.core.ServerID;
+import io.kamax.grid.gridepo.network.grid.core.UserID;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import io.kamax.grid.gridepo.util.KxLog;
 import org.apache.commons.lang3.StringUtils;

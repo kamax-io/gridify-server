@@ -23,7 +23,7 @@ package io.kamax.grid.gridepo.core.federation;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import io.kamax.grid.gridepo.core.ServerID;
+import io.kamax.grid.gridepo.network.grid.core.ServerID;
 
 import java.util.Collection;
 import java.util.Comparator;

@@ -18,41 +18,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.core;
+package io.kamax.grid.gridepo.network.grid.core;
 
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.Optional;
+public class EventID extends GridEntityID {
 
-public class ServerID extends EntityID {
+    public static final String Sigill = "$";
 
-    public static final String Sigill = ":";
-
-    public static ServerID parse(String id) {
+    public static EventID parse(String id) {
         if (!StringUtils.startsWith(id, Sigill)) {
             throw new IllegalArgumentException("Does not start with " + Sigill);
         }
 
-        return new ServerID(id.substring(1));
+        return new EventID(id.substring(1));
     }
 
-    public static ServerID from(String namespace) {
-        return new ServerID(encode(namespace));
+    public static EventID from(String localpart, String namespace) {
+        return new EventID(encode(localpart + Delimiter + namespace));
     }
 
-    public static ServerID fromDns(String domain) {
-        return new ServerID("dns:" + encode(domain));
-    }
-
-    public Optional<String> tryDecodeDns() {
-        if (!base().startsWith("dns:")) {
-            return Optional.empty();
-        }
-
-        return tryDecode(base().substring(4));
-    }
-
-    public ServerID(String id) {
+    public EventID(String id) {
         super(Sigill, id);
     }
 

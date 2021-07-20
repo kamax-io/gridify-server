@@ -21,9 +21,6 @@
 package io.kamax.grid.gridepo.core.store.postgres;
 
 import io.kamax.grid.gridepo.config.StorageConfig;
-import io.kamax.grid.gridepo.core.ChannelID;
-import io.kamax.grid.gridepo.core.EventID;
-import io.kamax.grid.gridepo.core.ServerID;
 import io.kamax.grid.gridepo.core.auth.Credentials;
 import io.kamax.grid.gridepo.core.auth.SecureCredentials;
 import io.kamax.grid.gridepo.core.channel.ChannelDao;
@@ -35,6 +32,9 @@ import io.kamax.grid.gridepo.core.store.DataStore;
 import io.kamax.grid.gridepo.core.store.SqlConnectionPool;
 import io.kamax.grid.gridepo.core.store.UserDao;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
+import io.kamax.grid.gridepo.network.grid.core.ChannelID;
+import io.kamax.grid.gridepo.network.grid.core.EventID;
+import io.kamax.grid.gridepo.network.grid.core.ServerID;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;

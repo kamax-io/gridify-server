@@ -20,8 +20,8 @@
 
 package io.kamax.grid.gridepo.core.channel;
 
-import io.kamax.grid.gridepo.core.EventID;
 import io.kamax.grid.gridepo.core.store.DataStore;
+import io.kamax.grid.gridepo.network.grid.core.EventID;
 
 public class ChannelTimeline {
 

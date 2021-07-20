@@ -20,9 +20,6 @@
 
 package io.kamax.grid.gridepo.core.channel;
 
-import io.kamax.grid.gridepo.core.ChannelAlias;
-import io.kamax.grid.gridepo.core.ChannelID;
-import io.kamax.grid.gridepo.core.ServerID;
 import io.kamax.grid.gridepo.core.channel.event.BareAliasEvent;
 import io.kamax.grid.gridepo.core.channel.event.BareGenericEvent;
 import io.kamax.grid.gridepo.core.channel.event.ChannelEventType;
@@ -31,6 +28,9 @@ import io.kamax.grid.gridepo.core.signal.ChannelMessageProcessed;
 import io.kamax.grid.gridepo.core.signal.SignalBus;
 import io.kamax.grid.gridepo.core.signal.SignalTopic;
 import io.kamax.grid.gridepo.core.store.DataStore;
+import io.kamax.grid.gridepo.network.grid.core.ChannelAlias;
+import io.kamax.grid.gridepo.network.grid.core.ChannelID;
+import io.kamax.grid.gridepo.network.grid.core.ServerID;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import io.kamax.grid.gridepo.util.KxLog;
 import net.engio.mbassy.listener.Handler;

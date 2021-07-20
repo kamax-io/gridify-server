@@ -24,24 +24,19 @@ import java.util.Objects;
 
 public class EntityAlias {
 
-    public static final String Delimiter = "@";
+    private final String sigill;
+    private final String local;
+    private final String delimiter;
+    private final String network;
+    private final String raw;
+    private final String full;
 
-    private String sigill;
-    private String local;
-    private String network;
-    private String raw;
-    private String full;
-
-    public EntityAlias(String sigill, String local, String network) {
+    public EntityAlias(String sigill, String delimiter, String local, String network) {
         this.sigill = Objects.requireNonNull(sigill);
         this.local = Objects.requireNonNull(local).toLowerCase();
+        this.delimiter = Objects.requireNonNull(delimiter);
         this.network = Objects.requireNonNull(network).toLowerCase();
-
-        init();
-    }
-
-    private void init() {
-        raw = local() + Delimiter + network();
+        raw = local() + delimiter() + network();
         full = sigill() + raw();
     }
 
@@ -51,6 +46,10 @@ public class EntityAlias {
 
     public String local() {
         return local;
+    }
+
+    public String delimiter() {
+        return delimiter;
     }
 
     public String network() {

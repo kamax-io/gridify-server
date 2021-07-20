@@ -1,6 +1,6 @@
 /*
  * Gridepo - Grid Data Server
- * Copyright (C) 2019 Kamax Sarl
+ * Copyright (C) 2021 Kamax Sarl
  *
  * https://www.kamax.io/
  *
@@ -18,41 +18,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.core.channel;
+package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 
-import io.kamax.grid.gridepo.network.grid.core.ChannelID;
+import org.apache.commons.lang3.StringUtils;
 
-public class ChannelDao {
+import java.util.Objects;
+import java.util.Optional;
 
-    private long sid;
-    private ChannelID id;
+public class Loader implements RoomAlgoLoader {
 
-    public ChannelDao() {
-    }
+    private RoomAlgoV7 obj;
 
-    public ChannelDao(ChannelID id) {
-        setId(id);
-    }
+    @Override
+    public Optional<RoomAlgo> apply(String version) {
+        if (!StringUtils.equals(RoomAlgoV7.Version, version)) {
+            return Optional.empty();
+        }
 
-    public ChannelDao(long sid, ChannelID id) {
-        setSid(sid);
-        setId(id);
-    }
+        synchronized (this) {
+            if (Objects.isNull(obj)) {
+                obj = new RoomAlgoV7();
+            }
+        }
 
-    public long getSid() {
-        return sid;
-    }
-
-    public void setSid(long sid) {
-        this.sid = sid;
-    }
-
-    public ChannelID getId() {
-        return id;
-    }
-
-    public void setId(ChannelID id) {
-        this.id = id;
+        return Optional.of(obj);
     }
 
 }

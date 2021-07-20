@@ -1,6 +1,6 @@
 /*
  * Gridepo - Grid Data Server
- * Copyright (C) 2019 Kamax Sarl
+ * Copyright (C) 2021 Kamax Sarl
  *
  * https://www.kamax.io/
  *
@@ -18,10 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.core.channel;
+package io.kamax.grid.gridepo.network.matrix.core.room;
 
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
+import io.kamax.grid.gridepo.core.channel.Channel;
+import io.kamax.grid.gridepo.core.channel.ChannelDao;
+import io.kamax.grid.gridepo.core.channel.ChannelLookup;
+import io.kamax.grid.gridepo.core.channel.ChannelMembership;
 import io.kamax.grid.gridepo.core.channel.algo.ChannelAlgo;
 import io.kamax.grid.gridepo.core.channel.algo.ChannelAlgos;
 import io.kamax.grid.gridepo.core.channel.algo.v0.ChannelAlgoV0_0;
@@ -56,9 +60,9 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-public class ChannelManager {
+public class RoomManager {
 
-    private static final Logger log = KxLog.make(ChannelManager.class);
+    private static final Logger log = KxLog.make(RoomManager.class);
 
     private Gridepo g;
     private SignalBus bus;
@@ -68,7 +72,7 @@ public class ChannelManager {
 
     private Map<ChannelID, Channel> channels = new ConcurrentHashMap<>();
 
-    public ChannelManager(Gridepo g, SignalBus bus, EventService evSvc, DataStore store, DataServerManager dsmgr) {
+    public RoomManager(Gridepo g, SignalBus bus, EventService evSvc, DataStore store, DataServerManager dsmgr) {
         this.g = g;
         this.bus = bus;
         this.evSvc = evSvc;

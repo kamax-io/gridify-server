@@ -18,11 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.core;
+package io.kamax.grid.gridepo.network.grid.core;
 
 import org.apache.commons.lang3.StringUtils;
 
-public class ChannelAlias extends EntityAlias {
+public class ChannelAlias extends GridEntityAlias {
 
     public static final String Sigill = "#";
 

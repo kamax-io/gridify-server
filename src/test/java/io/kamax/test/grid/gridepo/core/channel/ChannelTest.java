@@ -20,9 +20,6 @@
 
 package io.kamax.test.grid.gridepo.core.channel;
 
-import io.kamax.grid.gridepo.core.ChannelID;
-import io.kamax.grid.gridepo.core.ServerID;
-import io.kamax.grid.gridepo.core.UserID;
 import io.kamax.grid.gridepo.core.channel.Channel;
 import io.kamax.grid.gridepo.core.channel.ChannelDao;
 import io.kamax.grid.gridepo.core.channel.ChannelMembership;
@@ -41,6 +38,9 @@ import io.kamax.grid.gridepo.core.signal.SignalBus;
 import io.kamax.grid.gridepo.core.store.DataStore;
 import io.kamax.grid.gridepo.core.store.MemoryStore;
 import io.kamax.grid.gridepo.core.store.crypto.MemoryKeyStore;
+import io.kamax.grid.gridepo.network.grid.core.ChannelID;
+import io.kamax.grid.gridepo.network.grid.core.ServerID;
+import io.kamax.grid.gridepo.network.grid.core.UserID;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;

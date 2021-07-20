@@ -1,6 +1,6 @@
 /*
  * Gridepo - Grid Data Server
- * Copyright (C) 2019 Kamax Sarl
+ * Copyright (C) 2021 Kamax Sarl
  *
  * https://www.kamax.io/
  *
@@ -18,42 +18,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.core.channel;
+package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 
-import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
+import com.google.gson.JsonObject;
+import io.kamax.grid.gridepo.core.channel.event.BareEvent;
+import io.kamax.grid.gridepo.core.channel.event.BarePowerEvent;
+import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
+import io.kamax.grid.gridepo.core.channel.state.ChannelState;
 import io.kamax.grid.gridepo.network.grid.core.EventID;
 
-import java.util.ArrayList;
 import java.util.List;
 
-public class TimelineChunk {
+public interface RoomAlgo {
 
-    private EventID start;
-    private List<ChannelEvent> events = new ArrayList<>();
-    private EventID end;
+    String getVersion();
 
-    public EventID getStart() {
-        return start;
-    }
+    long getBaseDepth();
 
-    public void setStart(EventID start) {
-        this.start = start;
-    }
+    long getCreateDepth();
 
-    public List<ChannelEvent> getEvents() {
-        return events;
-    }
+    BarePowerEvent.Content getDefaultPowers(String creator);
 
-    public void setEvents(List<ChannelEvent> events) {
-        this.events = events;
-    }
+    EventID generateEventId(String domain);
 
-    public EventID getEnd() {
-        return end;
-    }
+    String validate(JsonObject ev);
 
-    public void setEnd(EventID end) {
-        this.end = end;
-    }
+    ChannelEventAuthorization authorize(ChannelState state, EventID evId, JsonObject ev);
+
+    List<BareEvent> getCreationEvents(String creator);
 
 }

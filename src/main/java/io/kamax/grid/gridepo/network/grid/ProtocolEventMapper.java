@@ -21,9 +21,9 @@
 package io.kamax.grid.gridepo.network.grid;
 
 import com.google.gson.JsonObject;
-import io.kamax.grid.gridepo.core.*;
 import io.kamax.grid.gridepo.core.channel.event.*;
 import io.kamax.grid.gridepo.exception.NotImplementedException;
+import io.kamax.grid.gridepo.network.grid.core.*;
 import io.kamax.grid.gridepo.network.matrix.http.json.*;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import io.kamax.grid.gridepo.util.KxLog;

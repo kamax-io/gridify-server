@@ -20,33 +20,16 @@
 
 package io.kamax.grid.gridepo.core;
 
-import java.io.UnsupportedEncodingException;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.Objects;
-import java.util.Optional;
 
 public class EntityID {
 
-    public static final String Delimiter = "@";
-
-    protected static String encode(String value) {
-        try {
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(value.getBytes(StandardCharsets.UTF_8.name()));
-        } catch (UnsupportedEncodingException e) {
-            // Nothing we can do about it
-            throw new RuntimeException(e);
-        }
-    }
-
-    private String sigill;
-    private String base;
-    private String complete;
+    private final String sigill;
+    private final String base;
 
     public EntityID(String sigill, String id) {
         this.sigill = Objects.requireNonNull(sigill);
         this.base = Objects.requireNonNull(id);
-        this.complete = sigill + id;
     }
 
     public String sigill() {
@@ -58,19 +41,7 @@ public class EntityID {
     }
 
     public String full() {
-        return complete;
-    }
-
-    protected Optional<String> tryDecode(String base) {
-        try {
-            return Optional.of(new String(Base64.getUrlDecoder().decode(base), StandardCharsets.UTF_8));
-        } catch (IllegalArgumentException e) {
-            return Optional.empty();
-        }
-    }
-
-    public Optional<String> tryDecode() {
-        return tryDecode(base());
+        return sigill + base;
     }
 
     @Override

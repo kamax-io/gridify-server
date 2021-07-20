@@ -20,9 +20,9 @@
 
 package io.kamax.grid.gridepo.core.channel;
 
-import io.kamax.grid.gridepo.core.ChannelAlias;
-import io.kamax.grid.gridepo.core.ChannelID;
-import io.kamax.grid.gridepo.core.ServerID;
+import io.kamax.grid.gridepo.network.grid.core.ChannelAlias;
+import io.kamax.grid.gridepo.network.grid.core.ChannelID;
+import io.kamax.grid.gridepo.network.grid.core.ServerID;
 
 import java.util.Collections;
 import java.util.Set;

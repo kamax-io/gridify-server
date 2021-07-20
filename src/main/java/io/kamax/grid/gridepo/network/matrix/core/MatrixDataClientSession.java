@@ -20,8 +20,8 @@
 
 package io.kamax.grid.gridepo.network.matrix.core;
 
-import io.kamax.grid.gridepo.core.UserID;
 import io.kamax.grid.gridepo.core.channel.Channel;
+import io.kamax.grid.gridepo.network.grid.core.UserID;
 
 public interface MatrixDataClientSession {
 

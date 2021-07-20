@@ -22,13 +22,18 @@ package io.kamax.test.grid.gridepo.core.federation;
 
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.config.GridepoConfig;
-import io.kamax.grid.gridepo.core.*;
+import io.kamax.grid.gridepo.core.EntityGUID;
+import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.core.channel.Channel;
 import io.kamax.grid.gridepo.core.channel.ChannelMembership;
 import io.kamax.grid.gridepo.core.channel.event.BareMessageEvent;
 import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
 import io.kamax.grid.gridepo.core.identity.User;
 import io.kamax.grid.gridepo.http.MonolithHttpGridepo;
+import io.kamax.grid.gridepo.network.grid.core.ChannelAlias;
+import io.kamax.grid.gridepo.network.grid.core.ChannelID;
+import io.kamax.grid.gridepo.network.grid.core.EventID;
+import io.kamax.grid.gridepo.network.grid.core.UserID;
 import org.junit.Test;
 
 import java.util.ArrayList;

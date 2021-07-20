@@ -20,7 +20,7 @@
 
 package io.kamax.grid.gridepo.core.channel.event;
 
-import io.kamax.grid.gridepo.core.ChannelAlias;
+import io.kamax.grid.gridepo.network.grid.core.ChannelAlias;
 
 import java.util.HashSet;
 import java.util.Set;

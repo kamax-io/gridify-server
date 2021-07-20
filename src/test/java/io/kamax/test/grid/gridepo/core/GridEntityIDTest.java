@@ -20,7 +20,7 @@
 
 package io.kamax.test.grid.gridepo.core;
 
-import io.kamax.grid.gridepo.core.EntityID;
+import io.kamax.grid.gridepo.network.grid.core.GridEntityID;
 import org.apache.commons.codec.binary.Base64;
 import org.junit.Test;
 
@@ -31,7 +31,7 @@ import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-public class EntityIDTest {
+public class GridEntityIDTest {
 
     private final String sigill = "|";
     private final String local = "a";
@@ -40,7 +40,7 @@ public class EntityIDTest {
 
     @Test
     public void create() {
-        EntityID id = new EntityID(sigill, local);
+        GridEntityID id = new GridEntityID(sigill, local);
         assertEquals(sigill, id.sigill());
         assertEquals(local, id.base());
         assertEquals(full, id.full());
@@ -49,8 +49,8 @@ public class EntityIDTest {
 
     @Test
     public void equals() {
-        EntityID id1 = new EntityID(sigill, local);
-        EntityID id2 = new EntityID(sigill, local);
+        GridEntityID id1 = new GridEntityID(sigill, local);
+        GridEntityID id2 = new GridEntityID(sigill, local);
         assertEquals(id1, id2);
         assertEquals(id1.hashCode(), id2.hashCode());
     }
@@ -58,7 +58,7 @@ public class EntityIDTest {
     @Test
     public void decodeValid() {
         String encoded = Base64.encodeBase64URLSafeString(localUtf8.getBytes(StandardCharsets.UTF_8));
-        EntityID id = new EntityID(sigill, encoded);
+        GridEntityID id = new GridEntityID(sigill, encoded);
         Optional<String> decoded = id.tryDecode();
         assertTrue(decoded.isPresent());
         assertEquals(localUtf8, decoded.get());
@@ -66,7 +66,7 @@ public class EntityIDTest {
 
     @Test
     public void decodeInvalid() {
-        EntityID id = new EntityID(sigill, local);
+        GridEntityID id = new GridEntityID(sigill, local);
         assertFalse(id.tryDecode().isPresent());
     }
 

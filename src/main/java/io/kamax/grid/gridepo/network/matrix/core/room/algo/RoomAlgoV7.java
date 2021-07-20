@@ -1,6 +1,6 @@
 /*
  * Gridepo - Grid Data Server
- * Copyright (C) 2019 Kamax Sarl
+ * Copyright (C) 2021 Kamax Sarl
  *
  * https://www.kamax.io/
  *
@@ -18,12 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.core.channel.algo.v0;
+package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.core.channel.ChannelJoinRule;
 import io.kamax.grid.gridepo.core.channel.ChannelMembership;
-import io.kamax.grid.gridepo.core.channel.algo.ChannelAlgo;
 import io.kamax.grid.gridepo.core.channel.event.*;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.core.channel.state.ChannelState;
@@ -36,9 +35,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class ChannelAlgoV0_0 implements ChannelAlgo {
+public class RoomAlgoV7 implements RoomAlgo {
 
-    public static final String Version = "0.0";
+    public static final String Version = "7";
     static final long minDepth = 0;
 
     private BareGenericEvent toProto(JsonObject ev) {

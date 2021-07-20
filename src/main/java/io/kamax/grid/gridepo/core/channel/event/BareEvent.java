@@ -22,8 +22,8 @@ package io.kamax.grid.gridepo.core.channel.event;
 
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
-import io.kamax.grid.gridepo.core.UserID;
 import io.kamax.grid.gridepo.core.event.EventKey;
+import io.kamax.grid.gridepo.network.grid.core.UserID;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
 import java.util.ArrayList;

@@ -21,8 +21,8 @@
 package io.kamax.grid.gridepo.core.channel.event;
 
 import com.google.gson.JsonObject;
-import io.kamax.grid.gridepo.core.EventID;
 import io.kamax.grid.gridepo.core.store.postgres.ChannelEventMeta;
+import io.kamax.grid.gridepo.network.grid.core.EventID;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
 import java.util.List;

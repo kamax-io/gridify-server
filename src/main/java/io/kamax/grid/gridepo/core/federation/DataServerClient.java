@@ -21,15 +21,15 @@
 package io.kamax.grid.gridepo.core.federation;
 
 import com.google.gson.JsonObject;
-import io.kamax.grid.gridepo.core.ChannelAlias;
-import io.kamax.grid.gridepo.core.ChannelID;
-import io.kamax.grid.gridepo.core.EventID;
-import io.kamax.grid.gridepo.core.UserID;
 import io.kamax.grid.gridepo.core.channel.ChannelLookup;
 import io.kamax.grid.gridepo.core.channel.event.BareMemberEvent;
 import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
 import io.kamax.grid.gridepo.core.channel.structure.InviteApprovalRequest;
 import io.kamax.grid.gridepo.core.identity.ThreePid;
+import io.kamax.grid.gridepo.network.grid.core.ChannelAlias;
+import io.kamax.grid.gridepo.network.grid.core.ChannelID;
+import io.kamax.grid.gridepo.network.grid.core.EventID;
+import io.kamax.grid.gridepo.network.grid.core.UserID;
 
 import java.util.List;
 import java.util.Optional;

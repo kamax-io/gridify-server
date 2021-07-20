@@ -23,12 +23,12 @@ package io.kamax.grid.gridepo.network.grid.http.handler.matrix.home.client;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.ChannelAlias;
 import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.core.channel.ChannelLookup;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 import io.kamax.grid.gridepo.http.handler.Exchange;
 import io.kamax.grid.gridepo.network.grid.ProtocolEventMapper;
+import io.kamax.grid.gridepo.network.grid.core.ChannelAlias;
 import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
 
 public class RoomAliasLookupHandler extends ClientApiHandler {

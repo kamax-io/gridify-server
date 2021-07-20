@@ -20,8 +20,8 @@
 
 package io.kamax.test.grid.gridepo.matrix;
 
-import io.kamax.grid.gridepo.core.ChannelID;
 import io.kamax.grid.gridepo.network.grid.ProtocolEventMapper;
+import io.kamax.grid.gridepo.network.grid.core.ChannelID;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;

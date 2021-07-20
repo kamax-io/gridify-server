@@ -1,6 +1,6 @@
 /*
  * Gridepo - Grid Data Server
- * Copyright (C) 2019 Kamax Sarl
+ * Copyright (C) 2021 Kamax Sarl
  *
  * https://www.kamax.io/
  *
@@ -18,28 +18,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.core;
+package io.kamax.grid.gridepo.network.grid.core;
 
-import org.apache.commons.lang3.StringUtils;
+import io.kamax.grid.gridepo.core.EntityAlias;
 
-public class EventID extends EntityID {
+public class GridEntityAlias extends EntityAlias {
 
-    public static final String Sigill = "$";
+    public static final String Delimiter = "@";
 
-    public static EventID parse(String id) {
-        if (!StringUtils.startsWith(id, Sigill)) {
-            throw new IllegalArgumentException("Does not start with " + Sigill);
-        }
-
-        return new EventID(id.substring(1));
+    public GridEntityAlias(String sigill, String delimiter, String local, String network) {
+        super(sigill, delimiter, local, network);
     }
 
-    public static EventID from(String localpart, String namespace) {
-        return new EventID(encode(localpart + Delimiter + namespace));
-    }
-
-    public EventID(String id) {
-        super(Sigill, id);
+    public GridEntityAlias(String sigill, String local, String network) {
+        this(sigill, Delimiter, local, network);
     }
 
 }

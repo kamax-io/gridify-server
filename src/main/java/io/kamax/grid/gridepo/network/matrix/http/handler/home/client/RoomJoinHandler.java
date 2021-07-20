@@ -22,12 +22,12 @@ package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
 
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.ChannelAlias;
-import io.kamax.grid.gridepo.core.ChannelID;
 import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.core.channel.Channel;
 import io.kamax.grid.gridepo.exception.NotImplementedException;
 import io.kamax.grid.gridepo.http.handler.Exchange;
+import io.kamax.grid.gridepo.network.grid.core.ChannelAlias;
+import io.kamax.grid.gridepo.network.grid.core.ChannelID;
 import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import org.apache.commons.lang3.StringUtils;

@@ -21,10 +21,10 @@
 package io.kamax.grid.gridepo.core.federation;
 
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.ServerID;
 import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
 import io.kamax.grid.gridepo.core.signal.ChannelMessageProcessed;
 import io.kamax.grid.gridepo.core.signal.SignalTopic;
+import io.kamax.grid.gridepo.network.grid.core.ServerID;
 import io.kamax.grid.gridepo.util.KxLog;
 import net.engio.mbassy.listener.Handler;
 import org.slf4j.Logger;

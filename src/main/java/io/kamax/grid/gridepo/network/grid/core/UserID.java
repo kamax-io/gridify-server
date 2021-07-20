@@ -18,41 +18,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.core.channel;
+package io.kamax.grid.gridepo.network.grid.core;
 
-import io.kamax.grid.gridepo.network.grid.core.ChannelID;
+import org.apache.commons.lang3.StringUtils;
 
-public class ChannelDao {
+public final class UserID extends GridEntityID {
 
-    private long sid;
-    private ChannelID id;
+    public static final String Sigill = "@";
 
-    public ChannelDao() {
+    public static UserID parse(String id) {
+        if (!StringUtils.startsWith(id, Sigill)) {
+            throw new IllegalArgumentException("Does not start with " + Sigill);
+        }
+
+        return new UserID(id.substring(1));
     }
 
-    public ChannelDao(ChannelID id) {
-        setId(id);
+    public static UserID from(String username, String namespace) {
+        return new UserID(encode(username + Delimiter + namespace));
     }
 
-    public ChannelDao(long sid, ChannelID id) {
-        setSid(sid);
-        setId(id);
-    }
-
-    public long getSid() {
-        return sid;
-    }
-
-    public void setSid(long sid) {
-        this.sid = sid;
-    }
-
-    public ChannelID getId() {
-        return id;
-    }
-
-    public void setId(ChannelID id) {
-        this.id = id;
+    public UserID(String id) {
+        super(Sigill, id);
     }
 
 }

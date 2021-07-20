@@ -1,6 +1,6 @@
 /*
  * Gridepo - Grid Data Server
- * Copyright (C) 2019 Kamax Sarl
+ * Copyright (C) 2021 Kamax Sarl
  *
  * https://www.kamax.io/
  *
@@ -18,28 +18,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.core;
+package io.kamax.grid.gridepo.network.matrix.core.room;
 
-import org.apache.commons.lang3.StringUtils;
+public class Room {
 
-public final class UserID extends EntityID {
-
-    public static final String Sigill = "@";
-
-    public static UserID parse(String id) {
-        if (!StringUtils.startsWith(id, Sigill)) {
-            throw new IllegalArgumentException("Does not start with " + Sigill);
-        }
-
-        return new UserID(id.substring(1));
-    }
-
-    public static UserID from(String username, String namespace) {
-        return new UserID(encode(username + Delimiter + namespace));
-    }
-
-    public UserID(String id) {
-        super(Sigill, id);
-    }
 
 }

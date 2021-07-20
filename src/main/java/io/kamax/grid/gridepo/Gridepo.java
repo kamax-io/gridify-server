@@ -21,8 +21,6 @@
 package io.kamax.grid.gridepo;
 
 import io.kamax.grid.gridepo.config.GridepoConfig;
-import io.kamax.grid.gridepo.core.ServerID;
-import io.kamax.grid.gridepo.core.UserID;
 import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.core.auth.AuthService;
 import io.kamax.grid.gridepo.core.auth.UIAuthSession;
@@ -37,6 +35,8 @@ import io.kamax.grid.gridepo.core.identity.User;
 import io.kamax.grid.gridepo.core.signal.SignalBus;
 import io.kamax.grid.gridepo.core.store.DataStore;
 import io.kamax.grid.gridepo.network.grid.core.GridServer;
+import io.kamax.grid.gridepo.network.grid.core.ServerID;
+import io.kamax.grid.gridepo.network.grid.core.UserID;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixServer;
 import org.apache.commons.lang3.StringUtils;
 

@@ -20,11 +20,11 @@
 
 package io.kamax.grid.gridepo.core.channel;
 
-import io.kamax.grid.gridepo.core.EventID;
-import io.kamax.grid.gridepo.core.ServerID;
 import io.kamax.grid.gridepo.core.channel.event.BareMemberEvent;
 import io.kamax.grid.gridepo.core.channel.event.ChannelEventType;
 import io.kamax.grid.gridepo.core.channel.state.ChannelState;
+import io.kamax.grid.gridepo.network.grid.core.EventID;
+import io.kamax.grid.gridepo.network.grid.core.ServerID;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
 import java.util.Set;

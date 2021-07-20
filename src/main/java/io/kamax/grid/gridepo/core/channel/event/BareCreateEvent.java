@@ -20,7 +20,7 @@
 
 package io.kamax.grid.gridepo.core.channel.event;
 
-import io.kamax.grid.gridepo.core.UserID;
+import io.kamax.grid.gridepo.network.grid.core.UserID;
 
 public class BareCreateEvent extends BareEvent<BareCreateEvent.Content> {
 

@@ -20,7 +20,7 @@
 
 package io.kamax.grid.gridepo.core.channel.state;
 
-import io.kamax.grid.gridepo.core.EventID;
+import io.kamax.grid.gridepo.network.grid.core.EventID;
 
 public class ChannelEventAuthorization {
 

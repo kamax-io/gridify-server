@@ -20,12 +20,12 @@
 
 package io.kamax.grid.gridepo.core.identity;
 
-import io.kamax.grid.gridepo.core.UserID;
 import io.kamax.grid.gridepo.core.auth.Credentials;
 import io.kamax.grid.gridepo.core.crypto.Cryptopher;
 import io.kamax.grid.gridepo.core.crypto.KeyIdentifier;
 import io.kamax.grid.gridepo.core.crypto.KeyType;
 import io.kamax.grid.gridepo.core.store.DataStore;
+import io.kamax.grid.gridepo.network.grid.core.UserID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
