@@ -20,10 +20,8 @@
 
 package io.kamax.grid.gridepo;
 
-import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.config.GridepoConfig;
 import io.kamax.grid.gridepo.core.ServerID;
-import io.kamax.grid.gridepo.core.ServerSession;
 import io.kamax.grid.gridepo.core.UserID;
 import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.core.auth.AuthService;
@@ -35,8 +33,10 @@ import io.kamax.grid.gridepo.core.event.EventStreamer;
 import io.kamax.grid.gridepo.core.federation.DataServerManager;
 import io.kamax.grid.gridepo.core.federation.FederationPusher;
 import io.kamax.grid.gridepo.core.identity.IdentityManager;
+import io.kamax.grid.gridepo.core.identity.User;
 import io.kamax.grid.gridepo.core.signal.SignalBus;
 import io.kamax.grid.gridepo.core.store.DataStore;
+import io.kamax.grid.gridepo.network.grid.core.GridServer;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixServer;
 import org.apache.commons.lang3.StringUtils;
 
@@ -80,15 +80,11 @@ public interface Gridepo {
 
     AuthService getAuth();
 
-    UIAuthSession register();
+    User register(String username, String password);
 
-    UserSession register(String username, String password);
+    UserSession login(String network, User user);
 
-    UIAuthSession login();
-
-    UserSession login(String username, String password);
-
-    UserSession login(JsonObject credentials);
+    UIAuthSession login(String network);
 
     UserSession login(UIAuthSession auth);
 
@@ -98,8 +94,8 @@ public interface Gridepo {
 
     boolean isLocal(UserID uId);
 
-    ServerSession forServer(String srvId);
+    GridServer overGrid();
 
-    MatrixServer forMatrix(String host);
+    MatrixServer overMatrix(String host);
 
 }

@@ -33,6 +33,8 @@ public interface UIAuthSession {
 
     String getId();
 
+    String getNetwork();
+
     Instant createdAt();
 
     Set<String> getCompletedStages();

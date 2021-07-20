@@ -57,8 +57,11 @@ import io.kamax.grid.gridepo.core.store.postgres.PostgreSQLDataStore;
 import io.kamax.grid.gridepo.exception.InternalServerError;
 import io.kamax.grid.gridepo.exception.InvalidTokenException;
 import io.kamax.grid.gridepo.exception.UnauthenticatedException;
+import io.kamax.grid.gridepo.network.grid.core.GridDataServer;
+import io.kamax.grid.gridepo.network.grid.core.GridDataServerClient;
+import io.kamax.grid.gridepo.network.grid.core.GridServer;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixServer;
-import io.kamax.grid.gridepo.util.GsonUtil;
+import io.kamax.grid.gridepo.network.matrix.core.base.BaseMatrixServer;
 import io.kamax.grid.gridepo.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -66,11 +69,10 @@ import org.slf4j.Logger;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 public class MonolithGridepo implements Gridepo {
 
@@ -99,7 +101,7 @@ public class MonolithGridepo implements Gridepo {
     public MonolithGridepo(GridepoConfig cfg) {
         this.cfg = cfg;
         if (cfg.getAuth().getFlows().isEmpty()) {
-            cfg.getAuth().addFlow().addStage("g.auth.id.password");
+            cfg.getAuth().addFlow().addStage("m.login.password");
         }
 
         if (StringUtils.isBlank(cfg.getDomain())) {
@@ -242,35 +244,37 @@ public class MonolithGridepo implements Gridepo {
         return authSvc;
     }
 
-    @Override
-    public UIAuthSession register() {
-        return getAuth().getSession(getConfig().getAuth());
-    }
-
-    private UserSession createSession(User usr) {
+    private UserSession createSession(String network, User usr) {
         String token = JWT.create()
                 .withIssuer(cfg.getDomain())
                 .withIssuedAt(new Date())
                 .withExpiresAt(Date.from(Instant.ofEpochMilli(Long.MAX_VALUE)))
-                .withClaim(GridType.of("id.internal"), usr.getId())
+                .withClaim(GridType.id().internal().getId(), usr.getId())
                 .sign(jwtAlgo);
 
         store.insertUserAccessToken(usr.getLid(), token);
         tokens.put(token, true);
-        return new UserSession(this, usr, token);
+        return new UserSession(this, network, usr, token);
     }
 
     @Override
-    public UserSession register(String username, String password) {
+    public User register(String username, String password) {
         User user = getIdentity().createUserWithKey();
         user.addThreePid(new GenericThreePid(GridType.id().local().username(), username));
-        store.addCredentials(user.getLid(), new Credentials(GridType.of("auth.id.password"), password));
-        return createSession(user);
+        user.addThreePid(new GenericThreePid("m.id.user", username));
+        user.addThreePid(new GenericThreePid("g.id.net.matrix", "@" + username + ":" + cfg.getDomain()));
+        user.addCredentials(new Credentials("g.auth.id.password", password));
+        return user;
     }
 
     @Override
-    public UIAuthSession login() {
-        return getAuth().getSession(getConfig().getAuth());
+    public UserSession login(String network, User user) {
+        return createSession(network, user);
+    }
+
+    @Override
+    public UIAuthSession login(String network) {
+        return getAuth().getSession(network, getConfig().getAuth());
     }
 
     @Override
@@ -279,16 +283,13 @@ public class MonolithGridepo implements Gridepo {
             throw new UnauthenticatedException(auth);
         }
 
-        Set<String> idStages = auth.getCompletedStages().stream()
-                .filter(id -> id.startsWith(GridType.of("auth.id.")))
-                .collect(Collectors.toSet());
-
+        Set<String> idStages = new HashSet<>(auth.getCompletedStages());
         if (idStages.isEmpty()) {
             throw new InternalServerError("No ID-based authentication was completed, cannot identify the user");
         }
 
         // FIXME assumption that it will be done via password
-        UIAuthStage stage = auth.getStage(GridType.of("auth.id.password"));
+        UIAuthStage stage = auth.getStage("m.login.password");
 
         ThreePid uid = stage.getUid();
         User usr = getIdentity().findUser(uid).orElseGet(() -> {
@@ -297,37 +298,7 @@ public class MonolithGridepo implements Gridepo {
             return newUsr;
         });
 
-        return createSession(usr);
-    }
-
-    @Override
-    public UserSession login(String username, String password) {
-        UIAuthSession session = login();
-
-        JsonObject id = new JsonObject();
-        id.addProperty("type", GridType.id().local().username().getId());
-        id.addProperty("value", username);
-        JsonObject doc = new JsonObject();
-        doc.addProperty("type", GridType.of("auth.id.password"));
-        doc.addProperty("password", password);
-        doc.add("identifier", id);
-
-        session.complete(doc);
-        return login(session);
-    }
-
-    @Override
-    public UserSession login(JsonObject credentials) {
-        Optional<String> sessionId = GsonUtil.findString(credentials, "session");
-        UIAuthSession session;
-        if (sessionId.isPresent()) {
-            session = getAuth().getSession(sessionId.get());
-        } else {
-            session = login();
-        }
-
-        session.complete(credentials);
-        return login(session);
+        return createSession(auth.getNetwork(), usr);
     }
 
     @Override
@@ -338,15 +309,17 @@ public class MonolithGridepo implements Gridepo {
 
     @Override
     public UserSession withToken(String token) {
+        /*
         if (!tokens.computeIfAbsent(token, t -> store.hasUserAccessToken(token))) {
             throw new InvalidTokenException("Unknown token");
         }
+        */
 
         try {
             DecodedJWT data = jwtVerifier.verify(JWT.decode(token));
             String uid = data.getClaim(GridType.of("id.internal")).asString();
             User user = getIdentity().getUser(uid); // FIXME check in cluster for missing events
-            return new UserSession(this, user, token);
+            return new UserSession(this, "matrix", user, token);
         } catch (JWTVerificationException e) {
             throw new InvalidTokenException("Invalid token");
         }
@@ -358,13 +331,49 @@ public class MonolithGridepo implements Gridepo {
     }
 
     @Override
-    public ServerSession forServer(String srvId) {
-        return new ServerSession(this, ServerID.parse(srvId));
+    public GridServer overGrid() {
+        return () -> new GridDataServer() {
+            @Override
+            public ServerSession asServer(String srvId) {
+                return new ServerSession(MonolithGridepo.this, ServerID.parse(srvId));
+            }
+
+            @Override
+            public GridDataServerClient asClient() {
+                return new GridDataServerClient() {
+                    @Override
+                    public UIAuthSession login() {
+                        return MonolithGridepo.this.login("grid");
+                    }
+
+                    @Override
+                    public UserSession login(JsonObject doc) {
+                        return null;
+                    }
+
+                    @Override
+                    public UserSession login(String username, String password) {
+                        UIAuthSession session = login();
+
+                        JsonObject id = new JsonObject();
+                        id.addProperty("type", GridType.id().internal().getId());
+                        id.addProperty("value", username);
+                        JsonObject doc = new JsonObject();
+                        doc.addProperty("type", GridType.of("auth.id.password"));
+                        doc.addProperty("password", password);
+                        doc.add("identifier", id);
+
+                        session.complete(doc);
+                        return MonolithGridepo.this.login(session);
+                    }
+                };
+            }
+        };
     }
 
     @Override
-    public MatrixServer forMatrix(String host) {
-        return null;
+    public MatrixServer overMatrix(String host) {
+        return new BaseMatrixServer(this, host);
     }
 
     @Override

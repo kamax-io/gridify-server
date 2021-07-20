@@ -28,8 +28,13 @@ public class AuthPasswordDocument {
 
     public static AuthPasswordDocument from(JsonObject docRaw) {
         AuthPasswordDocument doc = GsonUtil.fromJson(docRaw, AuthPasswordDocument.class);
-        if (!StringUtils.equals("g.auth.id.password", doc.getType())) {
+        if (!StringUtils.equals("m.login.password", doc.getType())) {
             throw new IllegalArgumentException("Document is not of password type");
+        }
+
+        // We try to find a user ID
+        if ("m.id.user".equals(doc.getIdentifier().getType())) {
+            doc.getIdentifier().setValue(GsonUtil.findString(GsonUtil.getObj(docRaw, "identifier"), "user").orElse(""));
         }
         return doc;
     }

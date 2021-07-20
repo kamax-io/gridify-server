@@ -28,6 +28,7 @@ import io.kamax.grid.gridepo.core.SyncOptions;
 import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.core.channel.Channel;
 import io.kamax.grid.gridepo.core.channel.ChannelMembership;
+import io.kamax.grid.gridepo.core.identity.User;
 import org.apache.commons.lang3.StringUtils;
 
 import static junit.framework.TestCase.assertTrue;
@@ -42,14 +43,14 @@ public class MonolithGridepoTest {
         Gridepo g = new MonolithGridepo(cfg);
         g.start();
 
-        g.register("gridepo", "gridepo");
-        UserSession u = g.login("gridepo", "gridepo");
-        String uId = u.getUser().getGridId().full();
+        User u = g.register("gridepo", "gridepo");
+        UserSession uSess = g.login("grid", u);
+        String uId = uSess.getUser().getGridId().full();
 
         Channel ch = g.getChannelManager().createChannel(uId);
         assertEquals(ChannelMembership.Join, ch.getView().getState().getMembership(uId));
 
-        SyncData data = u.sync(new SyncOptions().setToken("0").setTimeout(0));
+        SyncData data = uSess.sync(new SyncOptions().setToken("0").setTimeout(0));
         assertFalse(data.getEvents().isEmpty());
         assertTrue(StringUtils.isNotBlank(data.getPosition()));
         assertNotEquals("0", data.getPosition());

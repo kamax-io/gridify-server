@@ -21,13 +21,28 @@
 package io.kamax.grid.gridepo.network.matrix.http.json;
 
 import com.google.gson.JsonObject;
+import io.kamax.grid.gridepo.core.auth.UIAuthSession;
+import io.kamax.grid.gridepo.core.auth.UIAuthStage;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class UIAuthJson {
+
+    public static UIAuthJson from(UIAuthSession session) {
+        UIAuthJson json = new UIAuthJson();
+
+        json.setSession(session.getId());
+        session.getFlows().forEach(flowG -> {
+            Set<String> stagesG = flowG.getStages().stream().map(UIAuthStage::getId).collect(Collectors.toSet());
+            UIAuthJson.Flow flowM = json.addFlow();
+            for (String stageG : stagesG) {
+                flowM.addStage(stageG);
+            }
+        });
+
+        return json;
+    }
 
     public static class Flow {
 

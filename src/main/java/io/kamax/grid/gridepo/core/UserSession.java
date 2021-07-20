@@ -52,16 +52,20 @@ public class UserSession {
     private static final Logger log = KxLog.make(UserSession.class);
 
     private Gridepo g;
+    private String network;
     private User user;
+    private UserID uId;
     private String accessToken;
 
-    public UserSession(Gridepo g, User user) {
+    public UserSession(Gridepo g, String network, User user) {
         this.g = g;
+        this.network = network;
         this.user = user;
+        this.uId = user.getNetworkId(network);
     }
 
-    public UserSession(Gridepo g, User user, String accessToken) {
-        this(g, user);
+    public UserSession(Gridepo g, String network, User user, String accessToken) {
+        this(g, network, user);
         this.accessToken = accessToken;
     }
 
@@ -95,7 +99,7 @@ public class UserSession {
     }
 
     public Channel createChannel() {
-        return g.getChannelManager().createChannel(user.getGridId().full());
+        return g.getChannelManager().createChannel(user.getNetworkId(network).full());
     }
 
     // FIXME evaluate if we should compute the exact state at the stream position in an atomic way
@@ -153,7 +157,7 @@ public class UserSession {
                                 // FIXME move this into channel/state algo to check if a user can see an event in the stream
 
                                 // If we are the author
-                                if (StringUtils.equalsAny(user.getGridId().full(), ev.getBare().getSender(), ev.getBare().getScope())) {
+                                if (StringUtils.equalsAny(user.getNetworkId(network).full(), ev.getBare().getSender(), ev.getBare().getScope())) {
                                     return true;
                                 }
 
@@ -191,20 +195,20 @@ public class UserSession {
     }
 
     public String send(String cId, JsonObject data) {
-        data.addProperty(EventKey.Sender, user.getGridId().full());
+        data.addProperty(EventKey.Sender, user.getNetworkId(network).full());
         return g.getChannelManager().get(cId).makeAndOffer(data).getEventId().full();
     }
 
     public String inviteToChannel(String cId, EntityGUID uAl) {
         Channel c = g.getChannelManager().get(cId);
-        String evId = c.invite(user.getGridId().full(), uAl).getId().full();
+        String evId = c.invite(user.getNetworkId(network).full(), uAl).getId().full();
         return evId;
     }
 
     public String joinChannel(String cId) {
         BareMemberEvent ev = new BareMemberEvent();
-        ev.setSender(user.getGridId().full());
-        ev.setScope(user.getGridId().full());
+        ev.setSender(user.getNetworkId(network).full());
+        ev.setScope(user.getNetworkId(network).full());
         ev.getContent().setAction(ChannelMembership.Join);
 
         ChannelEventAuthorization r = g.getChannelManager().get(cId).makeAndOffer(ev.getJson());
@@ -216,13 +220,13 @@ public class UserSession {
     }
 
     public Channel joinChannel(ChannelAlias cAlias) {
-        return g.getChannelManager().join(cAlias, getUser().getGridId());
+        return g.getChannelManager().join(cAlias, getUser().getNetworkId(network));
     }
 
     public String leaveChannel(String cId) {
         BareMemberEvent ev = new BareMemberEvent();
-        ev.setSender(user.getGridId().full());
-        ev.setScope(user.getGridId().full());
+        ev.setSender(user.getNetworkId(network).full());
+        ev.setScope(user.getNetworkId(network).full());
         ev.getContent().setAction(ChannelMembership.Leave);
 
         ChannelEventAuthorization r = g.getChannelManager().get(cId).makeAndOffer(ev.getJson());
@@ -243,7 +247,7 @@ public class UserSession {
 
         BareAliasEvent ev = new BareAliasEvent();
         ev.setScope(g.getOrigin().full());
-        ev.setSender(user.getGridId().full());
+        ev.setSender(user.getNetworkId(network).full());
         ev.getContent().setAliases(aliases);
 
         g.getChannelManager().get(id).makeAndOffer(ev.getJson());
@@ -262,7 +266,7 @@ public class UserSession {
 
         BareAliasEvent ev = new BareAliasEvent();
         ev.setScope(g.getOrigin().full());
-        ev.setSender(user.getGridId().full());
+        ev.setSender(user.getNetworkId(network).full());
         ev.getContent().setAliases(aliases);
 
         g.getChannelManager().get(cId).makeAndOffer(ev.getJson());

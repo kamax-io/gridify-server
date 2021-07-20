@@ -24,6 +24,15 @@ public class GridType extends Type {
 
     public static class ID extends Type {
 
+        public static class Internal extends Type {
+
+            public static final String Id = "internal";
+
+            public Internal(String parent) {
+                super(parent, Internal.Id);
+            }
+        }
+
         public static class Local extends Type {
 
             public static class Username extends Type {
@@ -56,6 +65,10 @@ public class GridType extends Type {
 
         public String local(String child) {
             return local().make(child);
+        }
+
+        public Internal internal() {
+            return new Internal(getId());
         }
 
         private ID(String parent) {

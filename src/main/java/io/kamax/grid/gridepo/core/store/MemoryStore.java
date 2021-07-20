@@ -417,6 +417,10 @@ public class MemoryStore implements DataStore, IdentityStore {
 
     @Override
     public Optional<UserDao> findUserByTreePid(ThreePid tpid) {
+        if (GridType.id().local("store.memory.id").equals(tpid.getMedium())) {
+            return findUser(tpid.getAddress());
+        }
+
         for (Map.Entry<Long, Set<ThreePid>> entity : userThreepids.entrySet()) {
             if (entity.getValue().contains(tpid)) {
                 return findUser(entity.getKey());
@@ -541,23 +545,13 @@ public class MemoryStore implements DataStore, IdentityStore {
 
             @Override
             public Set<String> getSupportedTypes() {
-                return Collections.singleton(GridType.of("auth.id.password"));
+                return new HashSet<>(Arrays.asList(GridType.of("auth.id.password"), "m.login.password"));
             }
 
             @Override
             public Optional<AuthResult> authenticate(String type, JsonObject docJson) {
                 AuthPasswordDocument doc = AuthPasswordDocument.from(docJson);
-                if (!StringUtils.equals(GridType.of("auth.id.password"), doc.getType())) {
-                    throw new IllegalArgumentException();
-                }
-
-                Credentials creds = new Credentials(GridType.of("auth.id.password"), doc.getPassword());
-
-
-                if (!GridType.id().local().username().matches(doc.getIdentifier().getType())) {
-                    log.info("Identifier type {} is not supported", doc.getIdentifier().getType());
-                    return Optional.empty();
-                }
+                Credentials creds = new Credentials(doc.getType(), doc.getPassword());
 
                 ThreePid username = new GenericThreePid(doc.getIdentifier().getType(), doc.getIdentifier().getValue());
                 Optional<UserDao> daoOpt = findUserByTreePid(username);
@@ -567,7 +561,7 @@ public class MemoryStore implements DataStore, IdentityStore {
                 }
 
                 UserDao dao = daoOpt.get();
-                SecureCredentials pass = userCreds.computeIfAbsent(dao.getLid(), i -> new ConcurrentHashMap<>()).get(GridType.of("auth.id.password"));
+                SecureCredentials pass = userCreds.computeIfAbsent(dao.getLid(), i -> new ConcurrentHashMap<>()).get(creds.getType());
                 if (pass.matches(creds)) {
                     log.info("Authentication of {}: via password: success", dao.getId());
                     return Optional.of(AuthResult.success(new GenericThreePid(GridType.id().local("store.memory.id"), dao.getId())));

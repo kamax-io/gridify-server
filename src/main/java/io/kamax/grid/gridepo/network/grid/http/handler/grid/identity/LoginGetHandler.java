@@ -34,7 +34,7 @@ public class LoginGetHandler extends GridApiHandler {
 
     @Override
     protected void handle(Exchange exchange) {
-        exchange.respondJson(UIAuthJson.from(g.login()));
+        exchange.respondJson(UIAuthJson.from(g.login("grid")));
     }
 
 }

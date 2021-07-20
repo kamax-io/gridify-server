@@ -42,6 +42,10 @@ public class ChannelID extends EntityID {
         return new ChannelID(encode(localpart + Delimiter + namespace));
     }
 
+    public static ChannelID fromEncoded(String localpart, String namespace) {
+        return new ChannelID(localpart + Delimiter + namespace);
+    }
+
     public ChannelID(String id) {
         super(Sigill, id);
     }

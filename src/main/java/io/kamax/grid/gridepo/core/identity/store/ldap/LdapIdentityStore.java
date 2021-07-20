@@ -141,13 +141,13 @@ public class LdapIdentityStore implements IdentityStore, AuthIdentityStore, Prof
 
     @Override
     public Set<String> getSupportedTypes() {
-        return Collections.singleton("g.auth.id.password");
+        return Collections.singleton("m.login.password");
     }
 
     @Override
     public Optional<AuthResult> authenticate(String type, JsonObject document) {
         AuthPasswordDocument credentials = AuthPasswordDocument.from(document);
-        if (!StringUtils.equals("g.auth.id.password", credentials.getType())) {
+        if (!StringUtils.equals("m.login.password", credentials.getType())) {
             throw new NotImplementedException();
         }
 

@@ -24,4 +24,8 @@ public interface MatrixServer {
 
     MatrixIdentityServer forIdentity();
 
+    MatrixDataClient asClient();
+
+    MatrixDataServer asServer();
+
 }

@@ -25,7 +25,7 @@ import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 
 public interface AuthService {
 
-    UIAuthSession getSession(UIAuthConfig cfg);
+    UIAuthSession getSession(String network, UIAuthConfig cfg);
 
     UIAuthSession getSession(String sessionId) throws ObjectNotFoundException;
 

@@ -24,10 +24,13 @@ import io.kamax.grid.gridepo.config.GridepoConfig;
 import io.kamax.grid.gridepo.config.IdentityConfig;
 import io.kamax.grid.gridepo.config.UIAuthConfig;
 import io.kamax.grid.gridepo.core.auth.AuthService;
+import io.kamax.grid.gridepo.core.auth.Credentials;
 import io.kamax.grid.gridepo.core.auth.UIAuthSession;
+import io.kamax.grid.gridepo.core.identity.GenericThreePid;
 import io.kamax.grid.gridepo.core.identity.IdentityStore;
 import io.kamax.grid.gridepo.core.identity.IdentityStoreSupplier;
 import io.kamax.grid.gridepo.core.identity.IdentityStoreSuppliers;
+import io.kamax.grid.gridepo.core.store.MemoryStore;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 import io.kamax.grid.gridepo.util.KxLog;
 import org.slf4j.Logger;
@@ -65,12 +68,24 @@ public class MultiStoreAuthService implements AuthService {
                 IdentityConfig.Store idCfg = new IdentityConfig.Store();
                 idCfg.setType("memory");
                 cfg.getIdentity().getStores().put("memory-default", idCfg);
+
+
             }
         }
 
         cfg.getIdentity().getStores().forEach((label, storeCfg) -> {
             IdentityStore store = forLabel(label, storeCfg);
             stores.add(store);
+
+            if (cfg.getIdentity().getStores().size() == 1 && store instanceof MemoryStore) {
+                MemoryStore storeMem = (MemoryStore) store;
+                long uLid = storeMem.addUser("a");
+                storeMem.addThreePid(uLid, new GenericThreePid("g.id.local.username", "a"));
+                storeMem.addThreePid(uLid, new GenericThreePid("m.id.user", "a"));
+                storeMem.addThreePid(uLid, new GenericThreePid("g.id.net.matrix", "@a:" + cfg.getDomain()));
+                storeMem.addCredentials(uLid, new Credentials("g.auth.id.password", "a"));
+                storeMem.addCredentials(uLid, new Credentials("m.login.password", "a"));
+            }
         });
 
         if (stores.isEmpty()) {
@@ -84,8 +99,8 @@ public class MultiStoreAuthService implements AuthService {
     }
 
     @Override
-    public UIAuthSession getSession(UIAuthConfig cfg) {
-        UIAuthSession session = new MultiStoreUIAuthSession(UUID.randomUUID().toString(), stores, cfg);
+    public UIAuthSession getSession(String network, UIAuthConfig cfg) {
+        UIAuthSession session = new MultiStoreUIAuthSession(UUID.randomUUID().toString(), network, stores, cfg);
         if (sessions.containsKey(session.getId())) {
             throw new IllegalStateException("Session ID " + session.getId() + " cannot be used: already exists");
         }

@@ -60,7 +60,7 @@ public class SyncHandler extends ClientApiHandler {
         }
 
         SyncData data = session.sync(options);
-        String mxId = ProtocolEventMapper.forUserIdFromGridToMatrix(session.getUser().getGridId().full());
+        String mxId = ProtocolEventMapper.forUserIdFromGridToMatrix(session.getUser().getNetworkId("grid").full());
         exchange.respondJson(SyncResponse.build(g, mxId, data));
     }
 

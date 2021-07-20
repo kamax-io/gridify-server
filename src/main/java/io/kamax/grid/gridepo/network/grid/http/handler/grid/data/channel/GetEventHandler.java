@@ -43,7 +43,7 @@ public class GetEventHandler extends GridApiHandler {
 
     @Override
     protected void handle(Exchange exchange) {
-        ServerSession s = g.forServer(exchange.authenticate());
+        ServerSession s = g.overGrid().forData().asServer(exchange.authenticate());
 
         ChannelID cId = ChannelID.parse(exchange.getPathVariable("channelId"));
         EventID eId = EventID.parse(exchange.getPathVariable("eventId"));

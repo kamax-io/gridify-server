@@ -27,6 +27,7 @@ import io.kamax.grid.gridepo.core.channel.Channel;
 import io.kamax.grid.gridepo.core.channel.ChannelMembership;
 import io.kamax.grid.gridepo.core.channel.event.BareMessageEvent;
 import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
+import io.kamax.grid.gridepo.core.identity.User;
 import io.kamax.grid.gridepo.http.MonolithHttpGridepo;
 import org.junit.Test;
 
@@ -171,10 +172,10 @@ public class BasicFederation extends Federation {
         Gridepo g3 = mg3.start();
         g3.getFedPusher().setAsync(false);
 
-        g3.register("shadow", pass);
+        User u3 = g3.register("shadow", pass);
 
-        UserSession s3 = g3.login("shadow", pass);
-        UserID u3 = s3.getUser().getGridId();
+        UserSession s3 = g3.login("grid", u3);
+        UserID u3Id = s3.getUser().getGridId();
 
         String cId = makeSharedChannel();
         Channel g3c1 = s3.joinChannel(new ChannelAlias("test", g1.getDomain()));

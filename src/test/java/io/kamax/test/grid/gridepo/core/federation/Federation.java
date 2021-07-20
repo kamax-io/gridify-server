@@ -30,6 +30,7 @@ import io.kamax.grid.gridepo.core.channel.event.BareAliasEvent;
 import io.kamax.grid.gridepo.core.channel.event.BareJoiningEvent;
 import io.kamax.grid.gridepo.core.federation.DataServerHttpClient;
 import io.kamax.grid.gridepo.core.identity.GenericThreePid;
+import io.kamax.grid.gridepo.core.identity.User;
 import io.kamax.grid.gridepo.http.MonolithHttpGridepo;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -91,8 +92,8 @@ public class Federation {
         a1 = "@" + n1 + "@" + dn1;
         g1 = mg1.start();
         g1.getFedPusher().setAsync(false);
-        g1.register(n1, pass);
-        s1 = g1.login(n1, pass);
+        User u1b = g1.register(n1, pass);
+        s1 = g1.login("grid", u1b);
         s1.getUser().addThreePid(new GenericThreePid("g.id.net.grid.alias", a1));
         u1 = s1.getUser().getGridId();
 
@@ -100,8 +101,8 @@ public class Federation {
         a2 = "@" + n2 + "@" + dn2;
         g2 = mg2.start();
         g2.getFedPusher().setAsync(false);
-        g2.register(n2, pass);
-        s2 = g2.login(n2, pass);
+        User u2b = g2.register(n2, pass);
+        s2 = g2.login("grid", u2b);
         s2.getUser().addThreePid(new GenericThreePid("g.id.net.grid.alias", a2));
         u2 = s2.getUser().getGridId();
     }

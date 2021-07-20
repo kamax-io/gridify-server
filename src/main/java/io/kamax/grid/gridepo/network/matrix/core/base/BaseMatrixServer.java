@@ -20,21 +20,95 @@
 
 package io.kamax.grid.gridepo.network.matrix.core.base;
 
+import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
+import io.kamax.grid.gridepo.core.GridType;
+import io.kamax.grid.gridepo.core.UserSession;
+import io.kamax.grid.gridepo.core.auth.UIAuthSession;
+import io.kamax.grid.gridepo.core.identity.GenericThreePid;
+import io.kamax.grid.gridepo.core.identity.User;
+import io.kamax.grid.gridepo.network.matrix.core.MatrixDataClient;
+import io.kamax.grid.gridepo.network.matrix.core.MatrixDataServer;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixIdentityServer;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixServer;
+import io.kamax.grid.gridepo.util.GsonUtil;
 
-public class BaseMatrixServer implements MatrixServer {
+import java.util.Optional;
 
+public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixDataServer {
+
+    private Gridepo g;
     private MatrixIdentityServer is;
 
-    public BaseMatrixServer(Gridepo g) {
+    private String domain;
+
+    public BaseMatrixServer(Gridepo g, String domain) {
+        this.g = g;
+        this.domain = domain;
+
         is = new BaseMatrixIdentityServer(g);
     }
 
     @Override
     public MatrixIdentityServer forIdentity() {
         return is;
+    }
+
+    @Override
+    public MatrixDataClient asClient() {
+        return this;
+    }
+
+    @Override
+    public MatrixDataServer asServer() {
+        return this;
+    }
+
+    @Override
+    public UserSession withToken(String token) {
+        return g.withToken(token);
+    }
+
+    @Override
+    public User register(String username, String password) {
+        User u = g.register(username, password);
+        u.addThreePid(new GenericThreePid(GridType.id().make("net.matrix"), "@" + username + ":" + domain));
+        return u;
+    }
+
+    @Override
+    public UserSession login(User u) {
+        return g.login("matrix", u);
+    }
+
+    @Override
+    public UserSession login(String username, String password) {
+        UIAuthSession session = g.login("matrix");
+
+        JsonObject id = new JsonObject();
+        id.addProperty("type", "m.id.user");
+        id.addProperty("user", username);
+        JsonObject doc = new JsonObject();
+        doc.addProperty("type", "m.login.password");
+        doc.addProperty("password", password);
+        doc.add("identifier", id);
+
+        session.complete(doc);
+        return g.login(session);
+    }
+
+    @Override
+    public UserSession login(JsonObject credentials) {
+        Optional<String> sessionId = GsonUtil.findString(credentials, "session");
+        UIAuthSession session;
+        if (sessionId.isPresent()) {
+            session = g.getAuth().getSession(sessionId.get());
+        } else {
+            session = g.login("matrix");
+        }
+
+        session.complete(credentials);
+        return g.login(session);
     }
 
 }

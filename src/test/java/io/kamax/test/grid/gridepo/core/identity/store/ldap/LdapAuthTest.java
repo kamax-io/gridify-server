@@ -101,7 +101,7 @@ public class LdapAuthTest {
         id.addProperty("type", GridType.id().local().username().getId());
         id.addProperty("value", userId);
         JsonObject doc = new JsonObject();
-        doc.addProperty("type", "g.auth.id.password");
+        doc.addProperty("type", "m.login.password");
         doc.add("identifier", id);
         doc.addProperty("password", userPw);
 

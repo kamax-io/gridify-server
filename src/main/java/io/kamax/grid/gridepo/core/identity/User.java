@@ -21,6 +21,7 @@
 package io.kamax.grid.gridepo.core.identity;
 
 import io.kamax.grid.gridepo.core.UserID;
+import io.kamax.grid.gridepo.core.auth.Credentials;
 import io.kamax.grid.gridepo.core.crypto.Cryptopher;
 import io.kamax.grid.gridepo.core.crypto.KeyIdentifier;
 import io.kamax.grid.gridepo.core.crypto.KeyType;
@@ -79,6 +80,10 @@ public class User {
         store.linkUserToStore(lid, tpid);
     }
 
+    public void addCredentials(Credentials creds) {
+        store.addCredentials(lid, creds);
+    }
+
     public void addThreePid(ThreePid tpid) {
         store.addThreePid(lid, tpid);
         log.info("LID {}: 3PID: add: {}", lid, tpid);
@@ -88,8 +93,13 @@ public class User {
         store.removeThreePid(lid, tpid);
     }
 
+    @Deprecated
     public UserID getGridId() {
-        return store.listThreePid(lid, "g.id.net.grid").stream()
+        return getNetworkId("grid");
+    }
+
+    public UserID getNetworkId(String network) {
+        return store.listThreePid(lid, "g.id.net." + network).stream()
                 .findFirst()
                 .map(id -> UserID.parse(id.getAddress()))
                 .orElseThrow(IllegalStateException::new);

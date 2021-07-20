@@ -33,14 +33,16 @@ import java.util.stream.Collectors;
 public class MultiStoreUIAuthSession implements UIAuthSession {
 
     private String id;
+    private String network;
     private Instant createTs;
     private List<UIAuthFlow> flows = new ArrayList<>();
     private Map<String, JsonObject> parameters = new HashMap<>();
     private Map<String, UIAuthStage> stages = new HashMap<>();
     private Map<String, List<IdentityStore>> stageHandlers = new HashMap<>();
 
-    public MultiStoreUIAuthSession(String id, Set<IdentityStore> stores, UIAuthConfig cfg) {
+    public MultiStoreUIAuthSession(String id, String network, Set<IdentityStore> stores, UIAuthConfig cfg) {
         this.id = id;
+        this.network = network;
         this.createTs = Instant.now();
 
         stores.forEach(store -> {
@@ -69,6 +71,11 @@ public class MultiStoreUIAuthSession implements UIAuthSession {
     }
 
     @Override
+    public String getNetwork() {
+        return network;
+    }
+
+    @Override
     public Instant createdAt() {
         return createTs;
     }
@@ -93,6 +100,10 @@ public class MultiStoreUIAuthSession implements UIAuthSession {
 
     @Override
     public boolean complete(String stageId, JsonObject data) {
+        if (!stages.containsKey(stageId)) {
+            throw new IllegalArgumentException("No such stage available: " + stageId);
+        }
+
         List<IdentityStore> handlers = stageHandlers.get(stageId);
         UIAuthStage stage = stages.get(stageId);
         if (Objects.isNull(handlers)) {

@@ -44,7 +44,7 @@ public class LoginHandler extends ClientApiHandler {
         try {
             JsonObject credentials = exchange.parseJsonObject();
             JsonObject gCreds = ProtocolMapper.m2gCredentials(credentials);
-            UserSession session = g.login(gCreds);
+            UserSession session = g.overGrid().forData().asClient().login(gCreds);
 
             JsonObject reply = new JsonObject();
             reply.addProperty("user_id", "@" + session.getUser().getId() + ":" + g.getDomain());

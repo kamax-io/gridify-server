@@ -38,7 +38,7 @@ public class GridepoConfig {
         cfg.getStorage().getKey().setType("memory");
         cfg.getStorage().setData(uuid);
         cfg.getIdentity().getStores().put("memory", MemoryStore.getMinimalConfig(uuid));
-        cfg.getAuth().addFlow().addStage("g.auth.id.password");
+        cfg.getAuth().addFlow().addStage("m.login.password");
 
         return cfg;
     }
