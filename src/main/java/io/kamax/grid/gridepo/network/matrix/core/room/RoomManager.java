@@ -22,165 +22,134 @@ package io.kamax.grid.gridepo.network.matrix.core.room;
 
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.channel.Channel;
 import io.kamax.grid.gridepo.core.channel.ChannelDao;
-import io.kamax.grid.gridepo.core.channel.ChannelLookup;
-import io.kamax.grid.gridepo.core.channel.ChannelMembership;
-import io.kamax.grid.gridepo.core.channel.algo.ChannelAlgo;
-import io.kamax.grid.gridepo.core.channel.algo.ChannelAlgos;
-import io.kamax.grid.gridepo.core.channel.algo.v0.ChannelAlgoV0_0;
-import io.kamax.grid.gridepo.core.channel.event.BareCreateEvent;
-import io.kamax.grid.gridepo.core.channel.event.BareEvent;
-import io.kamax.grid.gridepo.core.channel.event.BareMemberEvent;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
-import io.kamax.grid.gridepo.core.channel.structure.ApprovalExchange;
-import io.kamax.grid.gridepo.core.event.EventService;
-import io.kamax.grid.gridepo.core.federation.DataServer;
-import io.kamax.grid.gridepo.core.federation.DataServerManager;
-import io.kamax.grid.gridepo.core.signal.SignalBus;
-import io.kamax.grid.gridepo.core.store.DataStore;
 import io.kamax.grid.gridepo.exception.EntityUnreachableException;
 import io.kamax.grid.gridepo.exception.ForbiddenException;
+import io.kamax.grid.gridepo.exception.NotImplementedException;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
-import io.kamax.grid.gridepo.network.grid.core.ChannelAlias;
-import io.kamax.grid.gridepo.network.grid.core.ChannelID;
-import io.kamax.grid.gridepo.network.grid.core.UserID;
+import io.kamax.grid.gridepo.network.matrix.core.UserID;
+import io.kamax.grid.gridepo.network.matrix.core.event.BareCreateEvent;
+import io.kamax.grid.gridepo.network.matrix.core.event.BareEvent;
+import io.kamax.grid.gridepo.network.matrix.core.event.BareMemberEvent;
+import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServer;
+import io.kamax.grid.gridepo.network.matrix.core.federation.RoomJoinTemplate;
+import io.kamax.grid.gridepo.network.matrix.core.room.algo.RoomAlgo;
+import io.kamax.grid.gridepo.network.matrix.core.room.algo.RoomAlgos;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import io.kamax.grid.gridepo.util.KxLog;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 public class RoomManager {
 
     private static final Logger log = KxLog.make(RoomManager.class);
 
-    private Gridepo g;
-    private SignalBus bus;
-    private EventService evSvc;
-    private DataStore store;
-    private DataServerManager dsmgr;
+    private final String blankRoomVersion = "1";
 
-    private Map<ChannelID, Channel> channels = new ConcurrentHashMap<>();
+    private final Gridepo g;
+    private final Map<String, Room> rooms = new ConcurrentHashMap<>();
 
-    public RoomManager(Gridepo g, SignalBus bus, EventService evSvc, DataStore store, DataServerManager dsmgr) {
+    public RoomManager(Gridepo g) {
         this.g = g;
-        this.bus = bus;
-        this.evSvc = evSvc;
-        this.store = store;
-        this.dsmgr = dsmgr;
     }
 
-    private Channel fromDao(ChannelDao dao) {
-        // FIXME get version from somewhere
-        return new Channel(dao, g.getOrigin(), ChannelAlgos.get(null), evSvc, store, dsmgr, bus);
+    private Room fromDao(ChannelDao dao) {
+        return new Room(g, dao.getId(), RoomAlgos.get(dao.getVersion()));
     }
 
-    private ChannelID generateId() {
-        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-        buffer.putLong(Instant.now().toEpochMilli() - 1546297200000L); // TS since 2019-01-01T00:00:00Z to keep IDs short
-        byte[] tsBytes = buffer.array();
-        String localpart = new String(tsBytes, StandardCharsets.UTF_8) + RandomStringUtils.randomAlphanumeric(4);
+    public Room createRoom(String domain, String creator, JsonObject options) {
+        String algoVersion = GsonUtil.getStringOrNull(options, "room_version");
+        if (StringUtils.isBlank(algoVersion)) {
+            algoVersion = g.getConfig().getRoom().getCreation().getVersion();
+        }
+        RoomAlgo algo = RoomAlgos.get(algoVersion);
 
-        return ChannelID.from(localpart, g.getDomain());
-    }
+        ChannelDao dao = new ChannelDao("matrix", algo.generateRoomId(domain), algo.getVersion());
+        dao = g.getStore().saveChannel(dao);
 
-    public Channel createChannel(String creator) {
-        return createChannel(creator, g.getConfig().getChannel().getCreation().getVersion());
-    }
+        Room r = new Room(g, dao.getId(), algo);
+        rooms.put(r.getId(), r);
 
-    public Channel createChannel(String creator, String version) {
-        ChannelAlgo algo = ChannelAlgos.get(version);
-
-        ChannelDao dao = new ChannelDao(generateId());
-        dao = store.saveChannel(dao); // FIXME rollback creation in case of failure, or use transaction
-
-        Channel ch = new Channel(dao, g.getOrigin(), algo, evSvc, store, dsmgr, bus);
-        channels.put(ch.getId(), ch);
-
-        List<BareEvent> createEvents = algo.getCreationEvents(creator);
+        List<BareEvent<?>> createEvents = algo.getCreationEvents(creator, options);
         createEvents.stream()
-                .map(ch::makeEvent)
-                .map(ev -> evSvc.finalize(ev))
-                .map(ch::offer)
+                .map(r::offer)
                 .filter(auth -> !auth.isAuthorized())
                 .findAny().ifPresent(auth -> {
             throw new RuntimeException("Room creation failed because of initial event(s) being rejected: " + auth.getReason());
         });
-
-        return ch;
+        return r;
     }
 
-    public Channel create(String from, JsonObject seedJson, List<JsonObject> stateJson) {
-        BareMemberEvent ev = GsonUtil.fromJson(seedJson, BareMemberEvent.class);
-        ChannelDao dao = new ChannelDao(ChannelID.parse(ev.getChannelId()));
-        dao = store.saveChannel(dao);
+    public Room create(List<JsonObject> stateJson) {
+        throw new NotImplementedException();
+    }
 
+    public Room create(String from, JsonObject seedJson, List<JsonObject> stateJson) {
+        // We expect the list of state event to be in the correct order to pass validation
+        // This means the create event must be the first
         BareCreateEvent createEv = GsonUtil.fromJson(stateJson.get(0), BareCreateEvent.class);
-        String version = StringUtils.defaultIfEmpty(createEv.getContent().getVersion(), ChannelAlgoV0_0.Version);
-        Channel ch = new Channel(dao, g.getOrigin(), ChannelAlgos.get(version), evSvc, store, dsmgr, bus);
 
-        ChannelEventAuthorization auth = ch.inject(from, seedJson, stateJson);
+        // SPEC-UNCLEAR If the version key is defined but is an empty string, assuming default spec version
+        String roomVersion = StringUtils.defaultIfBlank(createEv.getContent().getVersion(), blankRoomVersion);
+
+        ChannelDao dao = new ChannelDao("matrix", createEv.getRoomId(), roomVersion);
+        dao = g.getStore().saveChannel(dao);
+        Room r = new Room(g, dao.getId(), RoomAlgos.get(dao.getVersion()));
+
+        ChannelEventAuthorization auth = r.inject(from, seedJson, stateJson);
         if (!auth.isAuthorized()) {
             throw new ForbiddenException("Seed is not allowed as per state: " + auth.getReason());
         }
 
-        channels.put(ch.getId(), ch);
-        return ch;
+        rooms.put(r.getId(), r);
+        return r;
     }
 
-    public List<ChannelID> list() {
-        List<ChannelDao> daos = store.listChannels();
-        return daos.stream().map(ChannelDao::getId).collect(Collectors.toList());
+    public List<ChannelDao> list() {
+        return g.getStore().listChannels();
     }
 
-    public synchronized Optional<Channel> find(ChannelID cId) {
-        if (!channels.containsKey(cId)) {
-            store.findChannel(cId).ifPresent(channelDao -> channels.put(cId, fromDao(channelDao)));
+    public synchronized Optional<Room> find(String rId) {
+        if (!rooms.containsKey(rId)) {
+            g.getStore().findChannel(rId).ifPresent(dao -> rooms.put(rId, fromDao(dao)));
         }
 
-        return Optional.ofNullable(channels.get(cId));
+        return Optional.ofNullable(rooms.get(rId));
     }
 
-    public Channel get(ChannelID cId) {
-        return find(cId).orElseThrow(() -> new ObjectNotFoundException("Channel", cId));
+    public Room get(String rId) {
+        return find(rId).orElseThrow(() -> new ObjectNotFoundException("Room", rId));
     }
 
-    public Channel get(String id) {
-        return get(ChannelID.parse(id));
-    }
+    public Room join(String rAliasRaw, String uIdRaw) {
+        RoomAlias rAlias = RoomAlias.parse(rAliasRaw);
+        UserID uId = UserID.parse(uIdRaw);
+        RoomLookup data = g.overMatrix().roomDir().lookup(uId.network(), rAlias, true)
+                .orElseThrow(() -> new ObjectNotFoundException("Room alias", rAlias.full()));
 
-    public Channel join(ChannelAlias cAlias, UserID uId) {
-        ChannelLookup data = g.getChannelDirectory().lookup(cAlias, true)
-                .orElseThrow(() -> new ObjectNotFoundException("Channel alias", cAlias.full()));
-
-        BareMemberEvent bEv = new BareMemberEvent();
-        bEv.setChannelId(data.getId().full());
-        bEv.setSender(uId.full());
-        bEv.setScope(uId.full());
-        bEv.getContent().setAction(ChannelMembership.Join);
-
-        Optional<Channel> cOpt = find(data.getId());
+        Optional<Room> cOpt = find(data.getId());
         if (cOpt.isPresent()) {
-            Channel c = cOpt.get();
-            if (c.getView().getAllServers().stream().anyMatch(g::isLocal)) {
+            Room r = cOpt.get();
+            if (r.getView().getAllServers().stream().anyMatch(s -> StringUtils.equals(s, uId.network()))) {
                 // We are joined, so we can make our own event
-
-                ChannelEventAuthorization auth = c.makeAndOffer(bEv.getJson());
+                BareMemberEvent bEv = new BareMemberEvent();
+                bEv.setRoomId(data.getId());
+                bEv.setSender(uIdRaw);
+                bEv.setStateKey(uIdRaw);
+                bEv.getContent().setAction(RoomMembership.Join);
+                ChannelEventAuthorization auth = r.offer(bEv);
                 if (!auth.isAuthorized()) {
                     throw new ForbiddenException(auth.getReason());
                 }
 
-                return c;
+                return r;
             }
         }
 
@@ -190,24 +159,18 @@ public class RoomManager {
             throw new EntityUnreachableException();
         }
 
-        for (DataServer srv : dsmgr.get(data.getServers(), true)) {
-            String origin = srv.getId().full();
+        for (HomeServer srv : g.overMatrix().hsMgr().get(data.getServers(), true)) {
+            String origin = srv.getOrigin();
             try {
-                ApprovalExchange ex = srv.approveJoin(g.getOrigin().full(), bEv);
-                JsonObject seed = g.getEventService().finalize(ex.getObject());
-                if (cOpt.isPresent()) {
-                    Channel c = cOpt.get();
-
-                    // The room already exists, so we need to add the join to it
-                    c.offer(origin, ex.getContext().getState());
-                    c.offer(origin, seed);
-
-                    return c;
-                } else {
-                    return create(origin, seed, ex.getContext().getState());
-                }
+                RoomJoinTemplate joinTemplate = srv.getJoinTemplate(data.getId(), uIdRaw);
+                RoomAlgo algo = RoomAlgos.get(joinTemplate.getRoomVersion());
+                JsonObject joinEvent = algo.buildJoinEvent(uId.network(), joinTemplate.getEvent());
+                JsonObject response = srv.sendJoin(joinEvent);
+                Room r = cOpt.orElseGet(() -> create(new ArrayList<>()));
+                r.offer(joinEvent);
+                return r;
             } catch (ForbiddenException e) {
-                log.warn("{} refused to sign our join request to {} because: {}", srv.getId(), data.getId(), e.getReason());
+                log.warn("{} refused to sign our join request to {} because: {}", origin, data.getId(), e.getReason());
             }
         }
 

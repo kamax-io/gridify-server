@@ -18,28 +18,41 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
+package io.kamax.grid.gridepo.network.matrix.core.room;
 
-import com.google.gson.JsonObject;
-import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.core.room.Room;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
-import io.kamax.grid.gridepo.util.GsonUtil;
+import org.apache.commons.lang3.StringUtils;
 
-public class CreateRoomHandler extends ClientApiHandler {
+public enum RoomMembership {
 
-    private Gridepo g;
+    Knock("knock"),
+    Invite("invite"),
+    Join("join"),
+    Leave("leave"),
+    Kick("kick"),
+    Ban("ban");
 
-    public CreateRoomHandler(Gridepo g) {
-        this.g = g;
+    private String id;
+
+    RoomMembership(String id) {
+        this.id = id;
     }
 
-    @Override
-    protected void handle(Exchange exchange) {
-        JsonObject body = exchange.parseJsonObject();
-        Room r = getSession(g, exchange).createRoom(body);
-        exchange.respondJson(GsonUtil.makeObj("room_id", r.getId()));
+    public String getId() {
+        return id;
+    }
+
+    public boolean isAny(RoomMembership... mem) {
+        for (RoomMembership o : mem) {
+            if (this.equals(o)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public boolean match(String id) {
+        return StringUtils.equals(this.id, id);
     }
 
 }

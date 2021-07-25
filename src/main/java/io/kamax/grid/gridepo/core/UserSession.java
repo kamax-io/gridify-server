@@ -200,7 +200,7 @@ public class UserSession {
 
     public String send(String cId, JsonObject data) {
         data.addProperty(EventKey.Sender, user.getNetworkId(network).full());
-        return g.getChannelManager().get(cId).makeAndOffer(data).getEventId().full();
+        return g.getChannelManager().get(cId).makeAndOffer(data).getEventId();
     }
 
     public String inviteToChannel(String cId, EntityGUID uAl) {
@@ -220,7 +220,7 @@ public class UserSession {
             throw new ForbiddenException(r.getReason());
         }
 
-        return r.getEventId().full();
+        return r.getEventId();
     }
 
     public Channel joinChannel(ChannelAlias cAlias) {
@@ -238,7 +238,7 @@ public class UserSession {
             throw new ForbiddenException(r.getReason());
         }
 
-        return r.getEventId().full();
+        return r.getEventId();
     }
 
     public void addChannelAlias(String alias, ChannelID id) {

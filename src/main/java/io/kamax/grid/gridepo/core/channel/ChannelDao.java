@@ -20,23 +20,24 @@
 
 package io.kamax.grid.gridepo.core.channel;
 
-import io.kamax.grid.gridepo.network.grid.core.ChannelID;
+import io.kamax.grid.gridepo.core.EntityID;
 
 public class ChannelDao {
 
     private long sid;
-    private ChannelID id;
+    private String network;
+    private String id;
+    private String version;
 
-    public ChannelDao() {
+    public ChannelDao(String net, String id, String version) {
+        this.network = net;
+        this.id = id;
+        this.version = version;
     }
 
-    public ChannelDao(ChannelID id) {
-        setId(id);
-    }
-
-    public ChannelDao(long sid, ChannelID id) {
+    public ChannelDao(long sid, String network, String id, String version) {
+        this(network, id, version);
         setSid(sid);
-        setId(id);
     }
 
     public long getSid() {
@@ -47,12 +48,32 @@ public class ChannelDao {
         this.sid = sid;
     }
 
-    public ChannelID getId() {
+    public String getNetwork() {
+        return network;
+    }
+
+    public void setNetwork(String network) {
+        this.network = network;
+    }
+
+    public String getId() {
         return id;
     }
 
-    public void setId(ChannelID id) {
+    public void setId(String id) {
         this.id = id;
+    }
+
+    public void setId(EntityID id) {
+        setId(id.full());
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
     }
 
 }

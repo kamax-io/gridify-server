@@ -216,7 +216,7 @@ public class PostgreSQLDataStore implements DataStore {
             return Optional.empty();
         }
 
-        ChannelDao dao = new ChannelDao(rSet.getLong("lid"), ChannelID.fromRaw(rSet.getString("id")));
+        ChannelDao dao = new ChannelDao(rSet.getLong("lid"), rSet.getString("network"), rSet.getString("id"), rSet.getString("version"));
         return Optional.of(dao);
     }
 

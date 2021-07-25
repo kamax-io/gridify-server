@@ -22,6 +22,7 @@ package io.kamax.test.grid.gridepo.core.auth;
 
 import io.kamax.grid.gridepo.core.auth.Credentials;
 import io.kamax.grid.gridepo.core.auth.SecureCredentials;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Test;
 
@@ -39,6 +40,7 @@ public class SecureCredentialsTest {
         assertTrue(secCreds.matches(creds));
         assertTrue(secCreds.matches(pass));
         assertTrue(secCreds.matches(pass.toCharArray()));
+        assertTrue(StringUtils.isNotBlank(secCreds.getSalt()));
     }
 
 }

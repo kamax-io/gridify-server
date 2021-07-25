@@ -30,22 +30,29 @@ import java.util.Objects;
 public final class SecureCredentials {
 
     public static SecureCredentials from(Credentials creds) {
-        String salt = RandomStringUtils.randomAlphanumeric(16); // Salt requires 16 bytes
+        // Salt requires 16 bytes
+        String salt = RandomStringUtils.randomAlphanumeric(16);
+        // 12 is arbitrary
         String endData = OpenBSDBCrypt.generate(creds.getData(), salt.getBytes(StandardCharsets.UTF_8), 12);
-
-        return new SecureCredentials(creds.getType(), endData);
+        return new SecureCredentials(creds.getType(), salt, endData);
     }
 
     private final String type;
+    private final String salt;
     private final String data;
 
-    public SecureCredentials(String type, String data) {
+    public SecureCredentials(String type, String salt, String data) {
         this.type = Objects.requireNonNull(type);
+        this.salt = Objects.requireNonNull(salt);
         this.data = Objects.requireNonNull(data);
     }
 
     public String getType() {
         return type;
+    }
+
+    public String getSalt() {
+        return salt;
     }
 
     public String getData() {
@@ -74,12 +81,13 @@ public final class SecureCredentials {
         if (o == null || getClass() != o.getClass()) return false;
         SecureCredentials that = (SecureCredentials) o;
         return type.equals(that.type) &&
+                salt.equals(that.salt) &&
                 data.equals(that.data);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, data);
+        return Objects.hash(type, salt, data);
     }
 
 }

@@ -23,12 +23,11 @@ package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.core.channel.ChannelJoinRule;
 import io.kamax.grid.gridepo.core.channel.ChannelMembership;
-import io.kamax.grid.gridepo.core.channel.event.*;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.core.channel.state.ChannelState;
-import io.kamax.grid.gridepo.network.grid.core.EventID;
+import io.kamax.grid.gridepo.exception.NotImplementedException;
+import io.kamax.grid.gridepo.network.matrix.core.event.*;
 import io.kamax.grid.gridepo.util.GsonUtil;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
@@ -46,7 +45,7 @@ public class RoomAlgoV7 implements RoomAlgo {
 
     public BarePowerEvent getDefaultPowersEvent(String creator) {
         BarePowerEvent ev = new DefaultPowerEvent();
-        ev.getContent().getUsers().put(creator, Long.MAX_VALUE);
+        ev.getContent().getUsers().put(creator, 100L);
         return ev;
     }
 
@@ -74,10 +73,10 @@ public class RoomAlgoV7 implements RoomAlgo {
         return senderPl >= actionPl;
     }
 
-    private boolean canEvent(BarePowerEvent.Content pls, long senderPl, BareEvent ev) {
+    private boolean canEvent(BarePowerEvent.Content pls, long senderPl, BareEvent<?> ev) {
         Long defPl;
 
-        if (StringUtils.isNotEmpty(ev.getScope())) {
+        if (StringUtils.isNotEmpty(ev.getStateKey())) {
             defPl = pls.getDef().getState();
         } else {
             defPl = pls.getDef().getEvent();
@@ -169,20 +168,11 @@ public class RoomAlgoV7 implements RoomAlgo {
     }
 
     @Override
-    public EventID generateEventId(String domain) {
-        return EventID.from(UUID.randomUUID().toString().replace("-", "") + RandomStringUtils.randomAlphanumeric(4), domain);
-    }
-
-    @Override
     public String validate(JsonObject evRaw) {
         BareGenericEvent ev = toProto(evRaw);
 
         if (StringUtils.isEmpty(ev.getId())) {
             return "Invalid event, no ID";
-        }
-
-        if (StringUtils.isEmpty(ev.getVersion())) {
-            return "Event " + ev.getId() + ": Invalid: Version is missing/empty";
         }
 
         if (StringUtils.isEmpty(ev.getType())) {
@@ -213,12 +203,8 @@ public class RoomAlgoV7 implements RoomAlgo {
     }
 
     @Override
-    public ChannelEventAuthorization authorize(ChannelState state, EventID evId, JsonObject evRaw) {
+    public ChannelEventAuthorization authorize(ChannelState state, String evId, JsonObject evRaw) {
         BareGenericEvent ev = toProto(evRaw);
-
-        if (Objects.isNull(evId)) {
-            evId = EventID.parse(ev.getId());
-        }
 
         ChannelEventAuthorization.Builder auth = new ChannelEventAuthorization.Builder(evId);
         String validation = validate(evRaw);
@@ -228,8 +214,8 @@ public class RoomAlgoV7 implements RoomAlgo {
 
         String evType = ev.getType();
 
-        Optional<BareCreateEvent> cOpt = state.find(ChannelEventType.Create.getId(), BareCreateEvent.class);
-        if (ChannelEventType.Create.match(evType)) {
+        Optional<BareCreateEvent> cOpt = state.find(RoomEventType.Create.getId(), BareCreateEvent.class);
+        if (RoomEventType.Create.match(evType)) {
             if (cOpt.isPresent()) {
                 return auth.deny("Room is already created");
             }
@@ -256,10 +242,10 @@ public class RoomAlgoV7 implements RoomAlgo {
         ChannelMembership senderMs = state.findMembership(sender).orElse(ChannelMembership.Leave);
         long senderPl = pls.getUsers().getOrDefault(sender, pls.getDef().getUser());
 
-        if (ChannelEventType.Member.match(evType)) {
+        if (RoomEventType.Member.match(evType)) {
             BareMemberEvent mEv = GsonUtil.fromJson(evRaw, BareMemberEvent.class);
             String membership = mEv.getContent().getAction();
-            String target = mEv.getScope();
+            String target = mEv.getStateKey();
             ChannelMembership targetMs = state.findMembership(target).orElse(ChannelMembership.Leave);
             long targetPl = pls.getUsers().getOrDefault(target, pls.getDef().getUser());
 
@@ -369,7 +355,7 @@ public class RoomAlgoV7 implements RoomAlgo {
             return auth.deny("Sender does not have minimum PL for event type " + ev.getType());
         }
 
-        if (ChannelEventType.Power.match(evType)) {
+        if (RoomEventType.Power.match(evType)) {
             BarePowerEvent.Content newPls = DefaultPowerEvent.applyDefaults(GsonUtil.fromJson(evRaw, DefaultPowerEvent.class).getContent());
             if (pls.getDef().getEvent() > senderPl || newPls.getDef().getEvent() > senderPl) {
                 return auth.deny("Sender is missing minimum Power Level to change Power Level settings");
@@ -390,16 +376,21 @@ public class RoomAlgoV7 implements RoomAlgo {
     }
 
     @Override
-    public List<BareEvent> getCreationEvents(String creator) {
-        List<BareEvent> events = new ArrayList<>();
+    public JsonObject buildJoinEvent(String origin, JsonObject template) {
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public List<BareEvent<?>> getCreationEvents(String creator, JsonObject options) {
+        List<BareEvent<?>> events = new ArrayList<>();
         BareCreateEvent createEv = new BareCreateEvent();
         createEv.getContent().setCreator(creator);
         createEv.setSender(creator);
 
         BareMemberEvent cJoinEv = new BareMemberEvent();
         cJoinEv.setSender(creator);
-        cJoinEv.setScope(creator);
-        cJoinEv.getContent().setAction(ChannelMembership.Join);
+        cJoinEv.setStateKey(creator);
+        cJoinEv.getContent().setAction(ChannelMembership.Join.getId());
 
         BarePowerEvent cPlEv = getDefaultPowersEvent(creator);
         cPlEv.setSender(creator);
@@ -407,6 +398,8 @@ public class RoomAlgoV7 implements RoomAlgo {
         events.add(createEv);
         events.add(cJoinEv);
         events.add(cPlEv);
+
+        // FIXME apply options
 
         return events;
     }

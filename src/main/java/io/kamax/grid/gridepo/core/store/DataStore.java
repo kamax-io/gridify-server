@@ -41,7 +41,11 @@ public interface DataStore {
 
     Optional<ChannelDao> findChannel(long cLid);
 
-    Optional<ChannelDao> findChannel(ChannelID cId);
+    Optional<ChannelDao> findChannel(String cId);
+
+    default Optional<ChannelDao> findChannel(ChannelID cId) {
+        return findChannel(cId.full());
+    }
 
     default ChannelDao getChannel(long cLid) {
         return findChannel(cLid).orElseThrow(() -> new ObjectNotFoundException("Channel", Long.toString(cLid)));
@@ -118,7 +122,7 @@ public interface DataStore {
 
     Optional<ChannelID> lookupChannelAlias(String chAlias);
 
-    Set<String> findChannelAlias(ServerID origin, ChannelID cId);
+    Set<String> findChannelAlias(ServerID origin, String cId);
 
     void setAliases(ServerID origin, ChannelID cId, Set<String> chAliases);
 

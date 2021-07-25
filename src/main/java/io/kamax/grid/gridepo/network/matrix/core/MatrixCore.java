@@ -20,20 +20,20 @@
 
 package io.kamax.grid.gridepo.network.matrix.core;
 
-import com.google.gson.JsonObject;
-import io.kamax.grid.gridepo.core.identity.User;
-import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerManager;
+import io.kamax.grid.gridepo.network.matrix.core.room.RoomDirectory;
+import io.kamax.grid.gridepo.network.matrix.core.room.RoomManager;
 
-public interface MatrixDataClient {
+public interface MatrixCore {
 
-    UserSession withToken(String token);
+    RoomManager roomMgr();
 
-    User register(String username, String password);
+    RoomDirectory roomDir();
 
-    UserSession login(User u);
+    HomeServerManager hsMgr();
 
-    UserSession login(String username, String password);
+    boolean isLocal(String host);
 
-    UserSession login(JsonObject credentials);
+    MatrixServer vHost(String host);
 
 }

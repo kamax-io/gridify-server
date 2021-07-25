@@ -28,7 +28,6 @@ public class EntityAlias {
     private final String local;
     private final String delimiter;
     private final String network;
-    private final String raw;
     private final String full;
 
     public EntityAlias(String sigill, String delimiter, String local, String network) {
@@ -36,8 +35,7 @@ public class EntityAlias {
         this.local = Objects.requireNonNull(local).toLowerCase();
         this.delimiter = Objects.requireNonNull(delimiter);
         this.network = Objects.requireNonNull(network).toLowerCase();
-        raw = local() + delimiter() + network();
-        full = sigill() + raw();
+        full = sigill() + local() + delimiter() + network();
     }
 
     public String sigill() {
@@ -54,10 +52,6 @@ public class EntityAlias {
 
     public String network() {
         return network;
-    }
-
-    public String raw() {
-        return raw;
     }
 
     public String full() {

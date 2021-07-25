@@ -20,15 +20,13 @@
 
 package io.kamax.grid.gridepo.core.channel.state;
 
-import io.kamax.grid.gridepo.network.grid.core.EventID;
-
 public class ChannelEventAuthorization {
 
     public static class Builder {
 
         private ChannelEventAuthorization o;
 
-        public Builder(EventID eventId) {
+        public Builder(String eventId) {
             o = new ChannelEventAuthorization();
             o.eventId = eventId;
         }
@@ -61,7 +59,7 @@ public class ChannelEventAuthorization {
 
     }
 
-    private EventID eventId;
+    private String eventId;
     private boolean valid;
     private boolean authorized;
     private String reason;
@@ -70,7 +68,7 @@ public class ChannelEventAuthorization {
         // only for builder
     }
 
-    public EventID getEventId() {
+    public String getEventId() {
         return eventId;
     }
 

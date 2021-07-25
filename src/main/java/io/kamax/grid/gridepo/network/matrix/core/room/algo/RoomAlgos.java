@@ -20,7 +20,6 @@
 
 package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 
-import io.kamax.grid.gridepo.core.channel.algo.v0.ChannelAlgoV0_0;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.NoSuchElementException;
@@ -30,23 +29,23 @@ import java.util.ServiceLoader;
 public class RoomAlgos {
 
     public static String defaultVersion() {
-        return ChannelAlgoV0_0.Version;
+        return RoomAlgoV7.Version;
     }
 
-    public static RoomAlgo get(String channelVersion) throws NoSuchElementException {
-        if (StringUtils.isEmpty(channelVersion)) {
-            channelVersion = defaultVersion();
+    public static RoomAlgo get(String version) throws NoSuchElementException {
+        if (StringUtils.isBlank(version)) {
+            version = defaultVersion();
         }
 
         ServiceLoader<RoomAlgoLoader> svcLoader = ServiceLoader.load(RoomAlgoLoader.class);
         while (svcLoader.iterator().hasNext()) {
-            Optional<RoomAlgo> algo = svcLoader.iterator().next().apply(channelVersion);
+            Optional<RoomAlgo> algo = svcLoader.iterator().next().apply(version);
             if (algo.isPresent()) {
                 return algo.get();
             }
         }
 
-        throw new NoSuchElementException();
+        throw new NoSuchElementException("Room version " + version);
     }
 
 }

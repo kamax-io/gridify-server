@@ -41,16 +41,14 @@ import static org.junit.Assert.assertFalse;
 public class LdapAuthTest {
 
     private static InMemoryDirectoryServer ds;
-    private static ArrayList<String> dnList = new ArrayList<>();
+    private static final ArrayList<String> dnList = new ArrayList<>();
 
-    private static String domain = "example.org";
-    private static String host = "localhost";
-    private static String mxisdCn = "cn=mxisd";
-    private static String mxisdPw = "mxisd";
-    private static String idType = "uid";
-    private static String idAttribute = "saMAccountName";
-    private static String userId = "john";
-    private static String userPw = "doe";
+    private static final String host = "localhost";
+    private static final String mxisdCn = "cn=mxisd";
+    private static final String mxisdPw = "mxisd";
+    private static final String idAttribute = "saMAccountName";
+    private static final String userId = "john";
+    private static final String userPw = "doe";
 
     @BeforeClass
     public static void beforeClass() throws LDAPException {

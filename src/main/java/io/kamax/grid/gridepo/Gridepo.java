@@ -37,7 +37,7 @@ import io.kamax.grid.gridepo.core.store.DataStore;
 import io.kamax.grid.gridepo.network.grid.core.GridServer;
 import io.kamax.grid.gridepo.network.grid.core.ServerID;
 import io.kamax.grid.gridepo.network.grid.core.UserID;
-import io.kamax.grid.gridepo.network.matrix.core.MatrixServer;
+import io.kamax.grid.gridepo.network.matrix.core.MatrixCore;
 import org.apache.commons.lang3.StringUtils;
 
 public interface Gridepo {
@@ -96,6 +96,6 @@ public interface Gridepo {
 
     GridServer overGrid();
 
-    MatrixServer overMatrix(String host);
+    MatrixCore overMatrix();
 
 }

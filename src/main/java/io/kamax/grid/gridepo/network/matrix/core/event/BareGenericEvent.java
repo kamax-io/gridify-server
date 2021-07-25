@@ -18,28 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
+package io.kamax.grid.gridepo.network.matrix.core.event;
 
 import com.google.gson.JsonObject;
-import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.core.room.Room;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
-import io.kamax.grid.gridepo.util.GsonUtil;
 
-public class CreateRoomHandler extends ClientApiHandler {
+public class BareGenericEvent extends BareEvent<JsonObject> {
 
-    private Gridepo g;
-
-    public CreateRoomHandler(Gridepo g) {
-        this.g = g;
-    }
-
-    @Override
-    protected void handle(Exchange exchange) {
-        JsonObject body = exchange.parseJsonObject();
-        Room r = getSession(g, exchange).createRoom(body);
-        exchange.respondJson(GsonUtil.makeObj("room_id", r.getId()));
+    public BareGenericEvent() {
+        setContent(new JsonObject());
     }
 
 }

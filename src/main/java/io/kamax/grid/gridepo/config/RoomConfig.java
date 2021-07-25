@@ -18,28 +18,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
+package io.kamax.grid.gridepo.config;
 
-import com.google.gson.JsonObject;
-import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.core.room.Room;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
-import io.kamax.grid.gridepo.util.GsonUtil;
+public class RoomConfig {
 
-public class CreateRoomHandler extends ClientApiHandler {
+    public static class Creation {
 
-    private Gridepo g;
+        private String version;
 
-    public CreateRoomHandler(Gridepo g) {
-        this.g = g;
+
+        public String getVersion() {
+            return version;
+        }
+
+        public void setVersion(String version) {
+            this.version = version;
+        }
     }
 
-    @Override
-    protected void handle(Exchange exchange) {
-        JsonObject body = exchange.parseJsonObject();
-        Room r = getSession(g, exchange).createRoom(body);
-        exchange.respondJson(GsonUtil.makeObj("room_id", r.getId()));
+    private Creation creation = new Creation();
+
+    public Creation getCreation() {
+        return creation;
+    }
+
+    public void setCreation(Creation creation) {
+        this.creation = creation;
     }
 
 }

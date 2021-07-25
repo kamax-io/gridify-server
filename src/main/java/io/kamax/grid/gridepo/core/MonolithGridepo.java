@@ -56,10 +56,15 @@ import io.kamax.grid.gridepo.core.store.crypto.MemoryKeyStore;
 import io.kamax.grid.gridepo.core.store.postgres.PostgreSQLDataStore;
 import io.kamax.grid.gridepo.exception.InternalServerError;
 import io.kamax.grid.gridepo.exception.InvalidTokenException;
+import io.kamax.grid.gridepo.exception.NotImplementedException;
 import io.kamax.grid.gridepo.exception.UnauthenticatedException;
 import io.kamax.grid.gridepo.network.grid.core.*;
+import io.kamax.grid.gridepo.network.matrix.core.MatrixCore;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixServer;
 import io.kamax.grid.gridepo.network.matrix.core.base.BaseMatrixServer;
+import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerManager;
+import io.kamax.grid.gridepo.network.matrix.core.room.RoomDirectory;
+import io.kamax.grid.gridepo.network.matrix.core.room.RoomManager;
 import io.kamax.grid.gridepo.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -80,18 +85,19 @@ public class MonolithGridepo implements Gridepo {
     private final Algorithm jwtAlgo;
     private final JWTVerifier jwtVerifier;
 
-    private GridepoConfig cfg;
-    private SignalBus bus;
-    private DataStore store;
-    private KeyStore kStore;
-    private AuthService authSvc;
-    private IdentityManager idMgr;
-    private EventService evSvc;
-    private ChannelManager chMgr;
-    private ChannelDirectory chDir;
-    private EventStreamer streamer;
-    private DataServerManager dsMgr;
-    private FederationPusher fedPush;
+    private final GridepoConfig cfg;
+    private final SignalBus bus;
+    private final DataStore store;
+    private final KeyStore kStore;
+    private final AuthService authSvc;
+    private final IdentityManager idMgr;
+    private final EventService evSvc;
+    private final ChannelManager chMgr;
+    private final RoomManager rMgr;
+    private final ChannelDirectory chDir;
+    private final EventStreamer streamer;
+    private final DataServerManager dsMgr;
+    private final FederationPusher fedPush;
 
     private boolean isStopping;
     private Map<String, Boolean> tokens = new ConcurrentHashMap<>();
@@ -153,6 +159,7 @@ public class MonolithGridepo implements Gridepo {
         authSvc = new MultiStoreAuthService(cfg);
         idMgr = new IdentityManager(cfg.getIdentity(), store, crypto);
         chMgr = new ChannelManager(this, bus, evSvc, store, dsMgr);
+        rMgr = new RoomManager(this);
         streamer = new EventStreamer(store);
 
         chDir = new ChannelDirectory(origin, store, bus, dsMgr);
@@ -370,8 +377,35 @@ public class MonolithGridepo implements Gridepo {
     }
 
     @Override
-    public MatrixServer overMatrix(String host) {
-        return new BaseMatrixServer(this, host);
+    public MatrixCore overMatrix() {
+        return new MatrixCore() {
+
+            @Override
+            public RoomManager roomMgr() {
+                return rMgr;
+            }
+
+            @Override
+            public RoomDirectory roomDir() {
+                throw new NotImplementedException();
+            }
+
+            @Override
+            public HomeServerManager hsMgr() {
+                throw new NotImplementedException();
+            }
+
+            @Override
+            public boolean isLocal(String host) {
+                throw new NotImplementedException();
+            }
+
+            @Override
+            public MatrixServer vHost(String host) {
+                return new BaseMatrixServer(MonolithGridepo.this, host);
+            }
+
+        };
     }
 
     @Override

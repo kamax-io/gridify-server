@@ -21,17 +21,28 @@
 package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 
 import com.google.gson.JsonObject;
-import io.kamax.grid.gridepo.core.channel.event.BareEvent;
-import io.kamax.grid.gridepo.core.channel.event.BarePowerEvent;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.core.channel.state.ChannelState;
-import io.kamax.grid.gridepo.network.grid.core.EventID;
+import io.kamax.grid.gridepo.network.matrix.core.event.BareEvent;
+import io.kamax.grid.gridepo.network.matrix.core.event.BarePowerEvent;
+import io.kamax.grid.gridepo.network.matrix.core.room.RoomID;
+import org.apache.commons.lang3.RandomStringUtils;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 
 public interface RoomAlgo {
 
     String getVersion();
+
+    default String generateRoomId(String domain) {
+        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+        buffer.putLong(Instant.now().toEpochMilli());
+        String localpart = new String(buffer.array(), StandardCharsets.UTF_8) + RandomStringUtils.randomAlphanumeric(4);
+        return RoomID.from(localpart, domain).full();
+    }
 
     long getBaseDepth();
 
@@ -39,12 +50,12 @@ public interface RoomAlgo {
 
     BarePowerEvent.Content getDefaultPowers(String creator);
 
-    EventID generateEventId(String domain);
-
     String validate(JsonObject ev);
 
-    ChannelEventAuthorization authorize(ChannelState state, EventID evId, JsonObject ev);
+    ChannelEventAuthorization authorize(ChannelState state, String evId, JsonObject ev);
 
-    List<BareEvent> getCreationEvents(String creator);
+    List<BareEvent<?>> getCreationEvents(String creator, JsonObject options);
+
+    JsonObject buildJoinEvent(String origin, JsonObject template);
 
 }

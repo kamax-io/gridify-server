@@ -55,7 +55,7 @@ public class DoPushHandler extends GridApiHandler {
 
             JsonObject evAuthJson = new JsonObject();
             evAuthJson.addProperty("reason", evAuth.getReason());
-            result.add(evAuth.getEventId().full(), evAuthJson);
+            result.add(evAuth.getEventId(), evAuthJson);
         });
         exchange.respond(GsonUtil.makeObj("denied", result));
     }

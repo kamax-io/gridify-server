@@ -20,7 +20,7 @@
 
 package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 
-import io.kamax.grid.gridepo.core.channel.event.BarePowerEvent;
+import io.kamax.grid.gridepo.network.matrix.core.event.BarePowerEvent;
 
 import java.util.Objects;
 

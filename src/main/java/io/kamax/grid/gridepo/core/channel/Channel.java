@@ -71,7 +71,7 @@ public class Channel {
     private ChannelView view;
 
     public Channel(long sid, ChannelID id, ServerID origin, ChannelAlgo algo, EventService evSvc, DataStore store, DataServerManager srvMgr, SignalBus bus) {
-        this(new ChannelDao(sid, id), origin, algo, evSvc, store, srvMgr, bus);
+        this(new ChannelDao(sid, "grid", id.full(), "0"), origin, algo, evSvc, store, srvMgr, bus);
     }
 
     public Channel(ChannelDao dao, ServerID origin, ChannelAlgo algo, EventService evSvc, DataStore store, DataServerManager srvMgr, SignalBus bus) {
@@ -104,7 +104,7 @@ public class Channel {
     }
 
     public ChannelID getId() {
-        return dao.getId();
+        return ChannelID.parse(dao.getId());
     }
 
     public ServerID getDomain() {
@@ -196,7 +196,7 @@ public class Channel {
     private synchronized ChannelEventAuthorization process(EventID evId, boolean recursive, boolean force) {
         ChannelEvent ev = store.getEvent(getId(), evId);
         if (!ev.getMeta().isPresent() || (ev.getMeta().isProcessed() && !force)) {
-            return new ChannelEventAuthorization.Builder(evId)
+            return new ChannelEventAuthorization.Builder(evId.full())
                     .authorize(ev.getMeta().isPresent() && ev.getMeta().isValid() && ev.getMeta().isAllowed(), "From previous computation");
         }
 
@@ -209,7 +209,7 @@ public class Channel {
 
     public synchronized ChannelEventAuthorization process(ChannelEvent ev, boolean recursive, boolean isSeed) {
         log.info("Processing event {} in channel {}", ev.getId(), ev.getChannelId());
-        ChannelEventAuthorization.Builder b = new ChannelEventAuthorization.Builder(ev.getId());
+        ChannelEventAuthorization.Builder b = new ChannelEventAuthorization.Builder(ev.getId().full());
         BareGenericEvent bEv = ev.getBare();
         ev.getMeta().setPresent(true);
 
@@ -522,7 +522,7 @@ public class Channel {
             throw new ForbiddenException(result.getReason());
         }
 
-        return store.getEvent(getId(), result.getEventId());
+        return store.getEvent(getId(), EventID.parse(result.getEventId()));
     }
 
 }

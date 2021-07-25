@@ -1,6 +1,6 @@
 /*
  * Gridepo - Grid Data Server
- * Copyright (C) 2019 Kamax Sarl
+ * Copyright (C) 2021 Kamax Sarl
  *
  * https://www.kamax.io/
  *

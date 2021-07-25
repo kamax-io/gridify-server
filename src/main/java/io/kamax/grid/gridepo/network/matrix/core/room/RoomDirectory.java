@@ -1,6 +1,6 @@
 /*
  * Gridepo - Grid Data Server
- * Copyright (C) 2019 Kamax Sarl
+ * Copyright (C) 2021 Kamax Sarl
  *
  * https://www.kamax.io/
  *
@@ -18,38 +18,38 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.core.channel;
+package io.kamax.grid.gridepo.network.matrix.core.room;
 
+import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.core.channel.event.BareAliasEvent;
 import io.kamax.grid.gridepo.core.channel.event.BareGenericEvent;
 import io.kamax.grid.gridepo.core.channel.event.ChannelEventType;
-import io.kamax.grid.gridepo.core.federation.DataServerManager;
 import io.kamax.grid.gridepo.core.signal.ChannelMessageProcessed;
 import io.kamax.grid.gridepo.core.signal.SignalBus;
 import io.kamax.grid.gridepo.core.signal.SignalTopic;
 import io.kamax.grid.gridepo.core.store.DataStore;
-import io.kamax.grid.gridepo.network.grid.core.ChannelAlias;
 import io.kamax.grid.gridepo.network.grid.core.ChannelID;
-import io.kamax.grid.gridepo.network.grid.core.ServerID;
+import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerManager;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import io.kamax.grid.gridepo.util.KxLog;
 import net.engio.mbassy.listener.Handler;
 import org.slf4j.Logger;
 
+import java.lang.invoke.MethodHandles;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 
-public class ChannelDirectory {
+public class RoomDirectory {
 
-    private static final Logger log = KxLog.make(ChannelDirectory.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
-    private final ServerID origin;
+    private final Gridepo g;
     private final DataStore store;
-    private final DataServerManager srvMgr;
+    private final HomeServerManager srvMgr;
 
-    public ChannelDirectory(ServerID origin, DataStore store, SignalBus bus, DataServerManager srvMgr) {
-        this.origin = origin;
+    public RoomDirectory(Gridepo g, DataStore store, SignalBus bus, HomeServerManager srvMgr) {
+        this.g = g;
         this.store = store;
         this.srvMgr = srvMgr;
 
@@ -68,7 +68,7 @@ public class ChannelDirectory {
             return;
         }
 
-        if (!origin.equals(ServerID.parse(bEv.getOrigin()))) {
+        if (!g.overMatrix().isLocal((bEv.getOrigin()))) {
             return;
         }
 
@@ -76,11 +76,10 @@ public class ChannelDirectory {
         setAliases(ChannelID.parse(ev.getChannelId()), ev.getContent().getAliases());
     }
 
-    public Optional<ChannelLookup> lookup(ChannelAlias alias, boolean recursive) {
-        ServerID aSrvID = ServerID.fromDns(alias.network());
-        if (origin.equals(aSrvID)) {
+    public Optional<RoomLookup> lookup(String origin, RoomAlias alias, boolean recursive) {
+        if (g.overMatrix().isLocal((alias.network()))) {
             log.info("Looking for our own alias {}", alias);
-            return store.lookupChannelAlias(alias.full()).map(id -> new ChannelLookup(alias, id, Collections.singleton(origin)));
+            return store.lookupChannelAlias(alias.full()).map(id -> new RoomLookup(alias.full(), id.full(), Collections.singleton(alias.network())));
         }
 
         if (!recursive) {
@@ -88,16 +87,16 @@ public class ChannelDirectory {
             return Optional.empty();
         }
 
-        log.info("Looking recursively on {} for {}", aSrvID, alias);
-        return srvMgr.get(aSrvID).lookup(origin.full(), alias);
+        log.info("Looking recursively on {} for {}", alias.network(), alias);
+        return srvMgr.get(alias.network()).lookup(origin, alias.full());
     }
 
-    public Set<String> getAliases(ChannelID id) {
-        return store.findChannelAlias(origin, id.full());
+    public Set<String> getAliases(String rId) {
+        return store.findChannelAlias(null, rId);
     }
 
     public void setAliases(ChannelID id, Set<String> aliases) {
-        store.setAliases(origin, id, aliases);
+        store.setAliases(null, id, aliases);
     }
 
 }

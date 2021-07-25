@@ -168,6 +168,7 @@ public class GridepoConfig {
     private StorageConfig storage = new StorageConfig();
     private IdentityConfig identity = new IdentityConfig();
     private UIAuthConfig auth = new UIAuthConfig();
+    private RoomConfig room = new RoomConfig();
 
     public List<Listener> getListeners() {
         return listeners;
@@ -223,6 +224,14 @@ public class GridepoConfig {
 
     public void setAuth(UIAuthConfig auth) {
         this.auth = auth;
+    }
+
+    public RoomConfig getRoom() {
+        return room;
+    }
+
+    public void setRoom(RoomConfig room) {
+        this.room = room;
     }
 
 }

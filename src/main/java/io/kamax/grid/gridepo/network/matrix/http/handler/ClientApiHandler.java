@@ -20,8 +20,11 @@
 
 package io.kamax.grid.gridepo.network.matrix.http.handler;
 
+import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.exception.*;
 import io.kamax.grid.gridepo.http.handler.Exchange;
+import io.kamax.grid.gridepo.network.matrix.core.MatrixDataClient;
+import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
 import io.kamax.grid.gridepo.util.KxLog;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -110,6 +113,14 @@ public abstract class ClientApiHandler implements HttpHandler {
                 }
             }
         }
+    }
+
+    protected MatrixDataClient getClient(Gridepo g, Exchange ex) {
+        return g.overMatrix().vHost(ex.requireHost()).asClient();
+    }
+
+    protected UserSession getSession(Gridepo g, Exchange ex) {
+        return getClient(g, ex).withToken(ex.getAccessToken());
     }
 
     protected abstract void handle(Exchange ex);

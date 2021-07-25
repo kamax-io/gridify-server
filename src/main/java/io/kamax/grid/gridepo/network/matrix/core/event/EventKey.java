@@ -18,22 +18,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.core;
+package io.kamax.grid.gridepo.network.matrix.core.event;
 
-import com.google.gson.JsonObject;
-import io.kamax.grid.gridepo.core.identity.User;
-import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+public class EventKey {
 
-public interface MatrixDataClient {
-
-    UserSession withToken(String token);
-
-    User register(String username, String password);
-
-    UserSession login(User u);
-
-    UserSession login(String username, String password);
-
-    UserSession login(JsonObject credentials);
+    public static final String Id = "event_id";
+    public static final String ChannelId = "room_id";
+    public static final String Type = "type";
+    public static final String Scope = "state_key";
+    public static final String Origin = "origin";
+    public static final String Sender = "sender";
+    public static final String PrevEvents = "prev_events";
+    public static final String Depth = "depth";
+    public static final String Timestamp = "origin_server_ts";
+    public static final String Content = "content";
+    public static final String Hashes = "hashes";
+    public static final String Signatures = "signatures";
 
 }

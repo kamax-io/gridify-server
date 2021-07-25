@@ -73,7 +73,7 @@ public class ChannelTest {
         EventService evSvc = new EventService(sId, crypto);
         ChannelAlgo algo = new ChannelAlgoV0_0();
         DataServerManager srvMgr = new DataServerManager();
-        ChannelDao cDao = store.saveChannel(new ChannelDao(cId));
+        ChannelDao cDao = store.saveChannel(new ChannelDao("grid", cId.full(), "0"));
         Channel c = new Channel(cDao, sId, algo, evSvc, store, srvMgr, bus);
         assertNull(c.getView().getHead());
         assertNotNull(c.getView().getState());
@@ -86,9 +86,9 @@ public class ChannelTest {
         ChannelState state = c.getView().getState();
         assertNotNull(state);
         Long sid = state.getSid();
-        assertEquals(auth.getEventId().full(), state.getCreationId());
+        assertEquals(auth.getEventId(), state.getCreationId());
         assertEquals(1, c.getExtremities().size());
-        assertEquals(auth.getEventId(), c.getExtremityIds().get(0));
+        assertEquals(auth.getEventId(), c.getExtremityIds().get(0).full());
 
         BarePowerEvent.Content afterCreatePls = state.getPowers().orElseGet(c::getDefaultPls);
         assertEquals(Long.MAX_VALUE, (long) afterCreatePls.getUsers().get(janeId.full()));
