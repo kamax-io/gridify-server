@@ -20,6 +20,7 @@
 
 package io.kamax.grid.gridepo.network.matrix.core;
 
+import io.kamax.grid.gridepo.core.event.EventStreamer;
 import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerManager;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomDirectory;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomManager;
@@ -35,5 +36,7 @@ public interface MatrixCore {
     boolean isLocal(String host);
 
     MatrixServer vHost(String host);
+
+    EventStreamer getStreamer();
 
 }

@@ -20,6 +20,8 @@
 
 package io.kamax.grid.gridepo.network.matrix.core.base;
 
+import io.kamax.grid.gridepo.Gridepo;
+import io.kamax.grid.gridepo.core.event.EventStreamer;
 import io.kamax.grid.gridepo.exception.NotImplementedException;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixCore;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixServer;
@@ -30,9 +32,17 @@ import io.kamax.grid.gridepo.network.matrix.core.room.RoomManager;
 // FIXME do we need this?
 public class BaseMatrixCore implements MatrixCore {
 
+    private final Gridepo g;
+    private final RoomManager rMgr;
+
+    public BaseMatrixCore(Gridepo g) {
+        this.g = g;
+        rMgr = new RoomManager(g);
+    }
+
     @Override
     public RoomManager roomMgr() {
-        throw new NotImplementedException();
+        return rMgr;
     }
 
     @Override
@@ -52,7 +62,12 @@ public class BaseMatrixCore implements MatrixCore {
 
     @Override
     public MatrixServer vHost(String host) {
-        throw new NotImplementedException();
+        return new BaseMatrixServer(g, host);
+    }
+
+    @Override
+    public EventStreamer getStreamer() {
+        return new EventStreamer(g.getStore());
     }
 
 }

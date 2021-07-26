@@ -56,14 +56,10 @@ import io.kamax.grid.gridepo.core.store.crypto.MemoryKeyStore;
 import io.kamax.grid.gridepo.core.store.postgres.PostgreSQLDataStore;
 import io.kamax.grid.gridepo.exception.InternalServerError;
 import io.kamax.grid.gridepo.exception.InvalidTokenException;
-import io.kamax.grid.gridepo.exception.NotImplementedException;
 import io.kamax.grid.gridepo.exception.UnauthenticatedException;
 import io.kamax.grid.gridepo.network.grid.core.*;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixCore;
-import io.kamax.grid.gridepo.network.matrix.core.MatrixServer;
-import io.kamax.grid.gridepo.network.matrix.core.base.BaseMatrixServer;
-import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerManager;
-import io.kamax.grid.gridepo.network.matrix.core.room.RoomDirectory;
+import io.kamax.grid.gridepo.network.matrix.core.base.BaseMatrixCore;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomManager;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import io.kamax.grid.gridepo.util.KxLog;
@@ -96,6 +92,8 @@ public class MonolithGridepo implements Gridepo {
     private final EventStreamer streamer;
     private final DataServerManager dsMgr;
     private final FederationPusher fedPush;
+
+    private final MatrixCore mxCore;
 
     private boolean isStopping;
     private Map<String, Boolean> tokens = new ConcurrentHashMap<>();
@@ -162,6 +160,8 @@ public class MonolithGridepo implements Gridepo {
 
         chDir = new ChannelDirectory(origin, store, bus, dsMgr);
         fedPush = new FederationPusher(this, dsMgr);
+
+        mxCore = new BaseMatrixCore(this);
 
         log.info("We are {}", getDomain());
         log.info("Serving domain(s):");
@@ -389,34 +389,7 @@ public class MonolithGridepo implements Gridepo {
 
     @Override
     public MatrixCore overMatrix() {
-        return new MatrixCore() {
-
-            @Override
-            public RoomManager roomMgr() {
-                return rMgr;
-            }
-
-            @Override
-            public RoomDirectory roomDir() {
-                throw new NotImplementedException();
-            }
-
-            @Override
-            public HomeServerManager hsMgr() {
-                throw new NotImplementedException();
-            }
-
-            @Override
-            public boolean isLocal(String host) {
-                throw new NotImplementedException();
-            }
-
-            @Override
-            public MatrixServer vHost(String host) {
-                return new BaseMatrixServer(MonolithGridepo.this, host);
-            }
-
-        };
+        return mxCore;
     }
 
     @Override

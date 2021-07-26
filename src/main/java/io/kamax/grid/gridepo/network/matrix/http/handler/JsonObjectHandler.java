@@ -40,7 +40,7 @@ public class JsonObjectHandler extends ClientApiHandler {
     @Override
     protected void handle(Exchange exchange) {
         if (withAuth) {
-            g.withToken(exchange.getAccessToken());
+            getSession(g, exchange);
         }
 
         exchange.respondJson(body);
