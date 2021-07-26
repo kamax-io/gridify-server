@@ -121,6 +121,13 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
+    public List<ChannelDao> listChannels(String network) {
+        return listChannels().stream()
+                .filter(dao -> StringUtils.equals(network, dao.getNetwork()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public Optional<ChannelDao> findChannel(long cSid) {
         return Optional.ofNullable(channels.get(cSid));
     }

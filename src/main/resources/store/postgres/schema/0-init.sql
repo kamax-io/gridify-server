@@ -25,8 +25,9 @@ CREATE TABLE entity_routes
 CREATE TABLE channels
 (
     lid bigserial NOT NULL,
-    id text NOT NULL,
     network text NOT NULL,
+    id text NOT NULL,
+    version text,
     CONSTRAINT c_ids UNIQUE (id, network)
 );
 CREATE INDEX IF NOT EXISTS c_id_idx
@@ -115,6 +116,7 @@ CREATE TABLE identity_user_credentials
 (
     user_lid bigint NOT NULL,
     type text NOT NULL,
+    salt text,
     data text NOT NULL,
     CONSTRAINT id_u_creds UNIQUE(user_lid, type)
 );

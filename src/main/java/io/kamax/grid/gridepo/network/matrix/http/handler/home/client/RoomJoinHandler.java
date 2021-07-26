@@ -20,60 +20,28 @@
 
 package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
 
-import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.UserSession;
-import io.kamax.grid.gridepo.core.channel.Channel;
-import io.kamax.grid.gridepo.exception.NotImplementedException;
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.grid.core.ChannelAlias;
-import io.kamax.grid.gridepo.network.grid.core.ChannelID;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
-import io.kamax.grid.gridepo.util.GsonUtil;
+import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+import io.kamax.grid.gridepo.network.matrix.core.room.Room;
+import io.kamax.grid.gridepo.network.matrix.http.handler.AuthenticatedClientApiHandler;
 import org.apache.commons.lang3.StringUtils;
 
-public class RoomJoinHandler extends ClientApiHandler {
-
-    private final Gridepo g;
+public class RoomJoinHandler extends AuthenticatedClientApiHandler {
 
     public RoomJoinHandler(Gridepo g) {
-        this.g = g;
+        super(g);
     }
 
     @Override
-    protected void handle(Exchange exchange) {
-        UserSession s = g.withToken(exchange.getAccessToken());
-
-        String mIdOrAlias = exchange.getPathVariable("roomId");
-        if (StringUtils.isEmpty(mIdOrAlias)) {
+    protected void handle(UserSession session, Exchange ex) {
+        String rIdOrAlias = ex.getPathVariable("roomId");
+        if (StringUtils.isEmpty(rIdOrAlias)) {
             throw new IllegalArgumentException("Missing Room ID in path");
         }
 
-        if (mIdOrAlias.startsWith(ChannelID.Sigill)) {
-            handleRoomAlias(exchange, s, mIdOrAlias);
-        } else if (mIdOrAlias.startsWith("!")) {
-            handleRoomId(exchange, s, mIdOrAlias);
-        } else {
-            throw new IllegalArgumentException("Invalid Room ID/Alias in path: " + mIdOrAlias);
-        }
-
-    }
-
-    private void handleRoomAlias(Exchange exchange, UserSession s, String mAlias) {
-        ChannelAlias cAlias = ChannelAlias.parse(mAlias);
-        Channel c = s.joinChannel(cAlias);
-        exchange.respond(GsonUtil.makeObj("room_id", c.getId().full()));
-    }
-
-    private void handleRoomId(Exchange exchange, UserSession s, String mId) {
-        JsonObject body = exchange.parseJsonObject();
-        if (body.has("third_party_signed")) {
-            throw new NotImplementedException("3PIDs invites to join rooms");
-        }
-
-        s.joinChannel(mId);
-
-        exchange.respond(GsonUtil.makeObj("room_id", mId));
+        Room r = session.joinRoom(rIdOrAlias);
+        ex.respondJsonObject("room_id", r.getId());
     }
 
 }

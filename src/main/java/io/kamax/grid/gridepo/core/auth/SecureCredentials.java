@@ -43,8 +43,8 @@ public final class SecureCredentials {
 
     public SecureCredentials(String type, String salt, String data) {
         this.type = Objects.requireNonNull(type);
-        this.salt = Objects.requireNonNull(salt);
         this.data = Objects.requireNonNull(data);
+        this.salt = salt;
     }
 
     public String getType() {

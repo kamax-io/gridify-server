@@ -185,6 +185,10 @@ public class Exchange {
         respondJson(GsonUtil.toJson(body));
     }
 
+    public void respondJsonObject(String key, Object value) {
+        respond(GsonUtil.makeObj(key, value));
+    }
+
     public JsonObject buildErrorBody(String errCode, String error) {
         JsonObject obj = new JsonObject();
         obj.addProperty("errcode", setError(errCode));

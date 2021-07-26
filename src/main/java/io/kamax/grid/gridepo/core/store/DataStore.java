@@ -39,6 +39,8 @@ public interface DataStore {
 
     List<ChannelDao> listChannels();
 
+    List<ChannelDao> listChannels(String network);
+
     Optional<ChannelDao> findChannel(long cLid);
 
     Optional<ChannelDao> findChannel(String cId);

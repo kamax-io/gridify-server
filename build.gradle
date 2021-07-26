@@ -124,7 +124,7 @@ dependencies {
     implementation 'com.mchange:c3p0:0.9.5.2'
 
     // PostgreSQL
-    implementation 'org.postgresql:postgresql:42.2.5'
+    implementation 'org.postgresql:postgresql:42.2.23'
 
     // Crypto
     implementation 'net.i2p.crypto:eddsa:0.3.0'

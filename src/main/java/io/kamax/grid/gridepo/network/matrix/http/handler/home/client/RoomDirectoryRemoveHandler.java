@@ -21,24 +21,20 @@
 package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
 
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
+import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+import io.kamax.grid.gridepo.network.matrix.http.handler.AuthenticatedClientApiHandler;
 import org.apache.commons.lang3.StringUtils;
 
-public class RoomDirectoryRemoveHandler extends ClientApiHandler {
-
-    private final Gridepo g;
+public class RoomDirectoryRemoveHandler extends AuthenticatedClientApiHandler {
 
     public RoomDirectoryRemoveHandler(Gridepo g) {
-        this.g = g;
+        super(g);
     }
 
     @Override
-    protected void handle(Exchange exchange) {
-        UserSession s = g.withToken(exchange.getAccessToken());
-
-        String rAlias = exchange.getPathVariable("roomAlias");
+    protected void handle(UserSession session, Exchange ex) {
+        String rAlias = ex.getPathVariable("roomAlias");
         if (StringUtils.isEmpty(rAlias)) {
             throw new IllegalArgumentException("Missing Room Alias in path");
         }
@@ -47,9 +43,9 @@ public class RoomDirectoryRemoveHandler extends ClientApiHandler {
             throw new IllegalArgumentException("Room alias cannot be blank");
         }
 
-        s.removeChannelAlias(rAlias);
+        session.removeRoomAlias(rAlias);
 
-        exchange.respondJson("{}");
+        ex.respondJson("{}");
     }
 
 }

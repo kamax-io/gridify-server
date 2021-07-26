@@ -22,26 +22,21 @@ package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
 
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.grid.core.ChannelID;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
+import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+import io.kamax.grid.gridepo.network.matrix.http.handler.AuthenticatedClientApiHandler;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import org.apache.commons.lang3.StringUtils;
 
-public class RoomDirectoryAddHandler extends ClientApiHandler {
-
-    private final Gridepo g;
+public class RoomDirectoryAddHandler extends AuthenticatedClientApiHandler {
 
     public RoomDirectoryAddHandler(Gridepo g) {
-        this.g = g;
+        super(g);
     }
 
     @Override
-    protected void handle(Exchange exchange) {
-        UserSession s = g.withToken(exchange.getAccessToken());
-
-        String rAlias = exchange.getPathVariable("roomAlias");
+    protected void handle(UserSession session, Exchange ex) {
+        String rAlias = ex.getPathVariable("roomAlias");
         if (StringUtils.isEmpty(rAlias)) {
             throw new IllegalArgumentException("Missing Room Alias in path");
         }
@@ -50,18 +45,15 @@ public class RoomDirectoryAddHandler extends ClientApiHandler {
             throw new IllegalArgumentException("Room alias cannot be blank");
         }
 
-        JsonObject body = exchange.parseJsonObject();
+        JsonObject body = ex.parseJsonObject();
         String rId = GsonUtil.getStringOrThrow(body, "room_id");
         if (StringUtils.isBlank(rId)) {
             throw new IllegalArgumentException("Room alias cannot be blank");
         }
 
-        String cAlias = rAlias.replaceFirst(":", "@");
-        ChannelID cId = ChannelID.parse(rId);
+        session.addRoomAlias(rAlias, rId);
 
-        s.addChannelAlias(cAlias, cId);
-
-        exchange.respondJson("{}");
+        ex.respondJson("{}");
     }
 
 }

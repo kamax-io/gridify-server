@@ -23,38 +23,32 @@ package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.UserSession;
-import io.kamax.grid.gridepo.core.channel.ChannelLookup;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.grid.core.ChannelAlias;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
+import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+import io.kamax.grid.gridepo.network.matrix.core.room.RoomAliasLookup;
+import io.kamax.grid.gridepo.network.matrix.http.handler.AuthenticatedClientApiHandler;
+import io.kamax.grid.gridepo.util.GsonUtil;
 
-public class RoomAliasLookupHandler extends ClientApiHandler {
-
-    private final Gridepo g;
+public class RoomAliasLookupHandler extends AuthenticatedClientApiHandler {
 
     public RoomAliasLookupHandler(Gridepo g) {
-        this.g = g;
+        super(g);
     }
 
     @Override
-    protected void handle(Exchange exchange) {
-        UserSession s = g.withToken(exchange.getAccessToken());
+    protected void handle(UserSession session, Exchange ex) {
+        String rAlias = ex.getPathVariable("roomAlias");
 
-        String rAlias = exchange.getPathVariable("roomAlias");
-        ChannelAlias cAlias = ChannelAlias.fromRaw(rAlias);
+        RoomAliasLookup lookup = session.lookupRoomAlias(rAlias)
+                .orElseThrow(() -> new ObjectNotFoundException("Room alias", rAlias));
 
-        ChannelLookup lookup = s.lookup(cAlias).orElseThrow(() -> new ObjectNotFoundException("Room alias", rAlias));
-
-        JsonArray servers = new JsonArray();
-        lookup.getServers().forEach(id -> id.tryDecodeDns().ifPresent(servers::add));
-
+        JsonArray servers = GsonUtil.asArrayObj(lookup.getResidentServers());
         JsonObject response = new JsonObject();
-        response.addProperty("room_id", lookup.getId().full());
+        response.addProperty("room_id", lookup.getId());
         response.add("servers", servers);
 
-        exchange.respond(response);
+        ex.respond(response);
     }
 
 }

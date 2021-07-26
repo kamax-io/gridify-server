@@ -24,26 +24,23 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
+import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+import io.kamax.grid.gridepo.network.matrix.http.handler.AuthenticatedClientApiHandler;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import org.apache.commons.lang3.StringUtils;
 
-public class UserDirectorySearchHandler extends ClientApiHandler {
-
-    private final Gridepo g;
+public class UserDirectorySearchHandler extends AuthenticatedClientApiHandler {
 
     public UserDirectorySearchHandler(Gridepo g) {
-        this.g = g;
+        super(g);
     }
 
     @Override
-    protected void handle(Exchange exchange) {
-        g.withToken(exchange.getAccessToken());
-
+    protected void handle(UserSession session, Exchange ex) {
         JsonArray results = new JsonArray();
-        String term = GsonUtil.getStringOrThrow(exchange.parseJsonObject(), "search_term");
+        String term = GsonUtil.getStringOrThrow(ex.parseJsonObject(), "search_term");
         if (StringUtils.length(term) > 1 && StringUtils.startsWith(term, "@") && !StringUtils.contains(term, ":")) {
-            String uId = term + ":" + g.getDomain();
+            String uId = term + ":" + "g";
             JsonObject result = new JsonObject();
             result.addProperty("user_id", uId);
             result.addProperty("display_name", term.substring(1) + " (Auto-complete server)");
@@ -54,7 +51,7 @@ public class UserDirectorySearchHandler extends ClientApiHandler {
         body.addProperty("limited", true); // So data is not cached
         body.add("results", results);
 
-        exchange.respond(body);
+        ex.respond(body);
     }
 
 }

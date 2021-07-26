@@ -18,27 +18,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
+package io.kamax.grid.gridepo.network.matrix.core.room;
 
-import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
-import io.kamax.grid.gridepo.util.GsonUtil;
+import java.util.ArrayList;
+import java.util.List;
 
-public class FiltersPostHandler extends ClientApiHandler {
+public class RoomAliasLookup {
 
-    private final Gridepo g;
+    private final String alias;
+    private final String id;
+    private final List<String> residentServers;
 
-    public FiltersPostHandler(Gridepo g) {
-        this.g = g;
+    public RoomAliasLookup(String alias, String id, List<String> residentServers) {
+        this.alias = alias;
+        this.id = id;
+        this.residentServers = new ArrayList<>(residentServers);
     }
 
-    @Override
-    protected void handle(Exchange exchange) {
-        getSession(g, exchange);
+    public String getAlias() {
+        return alias;
+    }
 
-        // FIXME actually do an implementation
-        exchange.respond(GsonUtil.makeObj("filter_id", Long.toString(System.currentTimeMillis())));
+    public String getId() {
+        return id;
+    }
+
+    public List<String> getResidentServers() {
+        return residentServers;
     }
 
 }

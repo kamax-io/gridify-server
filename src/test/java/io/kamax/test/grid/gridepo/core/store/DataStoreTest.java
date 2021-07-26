@@ -49,7 +49,7 @@ public abstract class DataStoreTest {
 
     protected abstract DataStore getNewStore();
 
-    private long makeChannel() {
+    private ChannelDao makeChannel() {
         String id = ChannelID.from(UUID.randomUUID().toString(), "example.org").full();
         ChannelDao daoBefore = new ChannelDao("", id, "");
         assertEquals(id, daoBefore.getId());
@@ -58,7 +58,7 @@ public abstract class DataStoreTest {
         assertNotEquals(daoBefore, daoAfter);
         assertNotEquals(daoBefore.getSid(), daoAfter.getSid());
         assertEquals(daoBefore.getId(), daoAfter.getId());
-        return daoAfter.getSid();
+        return daoAfter;
     }
 
     @Before
@@ -133,20 +133,39 @@ public abstract class DataStoreTest {
 
     @Test
     public void channelRead() {
-        long cLid = makeChannel();
+        ChannelDao cDao = makeChannel();
 
-        Optional<ChannelDao> cDaoOpt = store.findChannel(cLid);
+        Optional<ChannelDao> cDaoOpt = store.findChannel(cDao.getSid());
         assertTrue(cDaoOpt.isPresent());
-        ChannelDao cDao = cDaoOpt.get();
-        assertEquals(cLid, cDao.getSid());
+        ChannelDao cDaoByFindSid = cDaoOpt.get();
+        assertEquals(cDaoByFindSid.getSid(), cDao.getSid());
 
         String cId = cDao.getId();
 
-        List<ChannelDao> channels = store.listChannels();
         boolean foundByLid = false;
         boolean foundById = false;
+
+        List<ChannelDao> channels = store.listChannels(cDao.getNetwork());
+        assertTrue(channels.size() > 0);
         for (ChannelDao channel : channels) {
-            if (channel.getSid() == cLid) {
+            if (channel.getSid() == cDao.getSid()) {
+                foundByLid = true;
+            }
+
+            if (channel.getId().equals(cId)) {
+                foundById = true;
+            }
+        }
+
+        assertTrue(foundByLid);
+        assertTrue(foundById);
+
+        foundByLid = false;
+        foundById = false;
+        channels = store.listChannels();
+        assertTrue(channels.size() > 0);
+        for (ChannelDao channel : channels) {
+            if (channel.getSid() == cDao.getSid()) {
                 foundByLid = true;
             }
 
@@ -161,7 +180,7 @@ public abstract class DataStoreTest {
 
     @Test
     public void saveAndReadChannelEvent() {
-        long cSid = makeChannel();
+        long cSid = makeChannel().getSid();
         ChannelEvent ev1 = ChannelEvent.forNotFound(cSid, EventID.from("sarce1", "example.org"));
         ChannelEvent evStored = store.saveEvent(ev1);
         ChannelEvent evRead = store.getEvent(evStored.getLid());
@@ -177,7 +196,7 @@ public abstract class DataStoreTest {
 
     @Test
     public void saveAndReadChannelState() {
-        long cSid = makeChannel();
+        long cSid = makeChannel().getSid();
         ChannelEvent ev1 = ChannelEvent.from(cSid, EventID.from("sarcs1", "example.org"), GsonUtil.parseObj("{\"hello\":\"world\"}"));
         ChannelEvent ev2 = ChannelEvent.from(cSid, EventID.from("sarcs2", "example.org"), GsonUtil.parseObj("{\"type\":\"world\",\"scope\":\"test\"}"));
         ev1 = store.saveEvent(ev1);
@@ -197,7 +216,7 @@ public abstract class DataStoreTest {
 
     @Test
     public void channelEventState() {
-        long cSid = makeChannel();
+        long cSid = makeChannel().getSid();
         BareCreateEvent bEv = new BareCreateEvent();
         bEv.getContent().setCreator(UserID.from("john", "example.org"));
         ChannelEvent ev = ChannelEvent.from(cSid, EventID.from("sarce2", "example.org"), bEv.getJson());
@@ -228,7 +247,7 @@ public abstract class DataStoreTest {
     @Test
     public void channelForwardExtremitiesReadAndWrite() {
         List<Long> data = Arrays.asList(1L, 2L, 3L);
-        long cLid = makeChannel();
+        long cLid = makeChannel().getSid();
         List<Long> extremities = store.getForwardExtremities(cLid);
         assertTrue(extremities.isEmpty());
 
@@ -245,7 +264,7 @@ public abstract class DataStoreTest {
     @Test
     public void channelBackwardExtremitiesReadAndWrite() {
         List<Long> data = Arrays.asList(1L, 2L, 3L);
-        long cLid = makeChannel();
+        long cLid = makeChannel().getSid();
         List<Long> extremities = store.getBackwardExtremities(cLid);
         assertTrue(extremities.isEmpty());
 

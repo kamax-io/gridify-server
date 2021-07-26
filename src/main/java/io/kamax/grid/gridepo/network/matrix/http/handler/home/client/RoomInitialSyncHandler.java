@@ -23,22 +23,19 @@ package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
+import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+import io.kamax.grid.gridepo.network.matrix.http.handler.AuthenticatedClientApiHandler;
 import org.apache.commons.lang3.StringUtils;
 
-public class RoomInitialSyncHandler extends ClientApiHandler {
-
-    private final Gridepo g;
+public class RoomInitialSyncHandler extends AuthenticatedClientApiHandler {
 
     public RoomInitialSyncHandler(Gridepo g) {
-        this.g = g;
+        super(g);
     }
 
     @Override
-    protected void handle(Exchange exchange) {
-        g.withToken(exchange.getAccessToken());
-
-        String rId = exchange.getPathVariable("roomId");
+    protected void handle(UserSession session, Exchange ex) {
+        String rId = ex.getPathVariable("roomId");
         if (StringUtils.isBlank(rId)) {
             throw new IllegalArgumentException("Room ID is invalid: " + rId);
         }
@@ -47,7 +44,7 @@ public class RoomInitialSyncHandler extends ClientApiHandler {
         response.addProperty("room_id", rId);
         response.addProperty("membership", "leave");
 
-        exchange.respond(response);
+        ex.respond(response);
     }
 
 }

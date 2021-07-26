@@ -22,47 +22,31 @@ package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
 
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.EntityGUID;
-import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
-import io.kamax.grid.gridepo.util.GsonUtil;
+import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+import io.kamax.grid.gridepo.network.matrix.http.handler.AuthenticatedClientApiHandler;
 import org.apache.commons.lang3.StringUtils;
 
-public class RoomInviteHandler extends ClientApiHandler {
-
-    private final Gridepo g;
+public class RoomInviteHandler extends AuthenticatedClientApiHandler {
 
     public RoomInviteHandler(Gridepo g) {
-        this.g = g;
+        super(g);
     }
 
     @Override
-    protected void handle(Exchange exchange) {
-        UserSession s = g.withToken(exchange.getAccessToken());
-        JsonObject body = exchange.parseJsonObject();
-
-        String mId = exchange.getPathVariable("roomId");
+    protected void handle(UserSession session, Exchange ex) {
+        String mId = ex.getPathVariable("roomId");
         if (StringUtils.isEmpty(mId)) {
             throw new IllegalArgumentException("Room ID is not provided");
         }
+        JsonObject body = ex.parseJsonObject();
 
-        EntityGUID uAl;
-        if (body.has("medium")) {
-            // This is 3PID invite, generic mapping to alias
-            String network = GsonUtil.getStringOrThrow(body, "medium");
-            String address = GsonUtil.getStringOrThrow(body, "address");
-            uAl = new EntityGUID(network, address);
-        } else if (body.has("user_id")) {
-            // This is a Matrix ID invite, mapping to alias
-            uAl = new EntityGUID("matrix", GsonUtil.getStringOrThrow(body, "user_id"));
-        } else {
-            // Nothing else is possible at this time, throwing error
-            throw new IllegalArgumentException("Not a Matrix ID or 3PID invite");
+        if (!body.has("user_id")) {
+            throw new IllegalArgumentException("No Matrix ID provided");
         }
 
-        s.inviteToChannel(mId, uAl);
-        exchange.respondJson("{}");
+        session.inviteToRoom(mId, body.get("user_id").getAsString());
+        ex.respondJson("{}");
     }
 
 }

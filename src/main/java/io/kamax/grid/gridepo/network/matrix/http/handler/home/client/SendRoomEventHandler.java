@@ -22,34 +22,29 @@ package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
 
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
-import io.kamax.grid.gridepo.util.GsonUtil;
+import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+import io.kamax.grid.gridepo.network.matrix.http.handler.AuthenticatedClientApiHandler;
 
-public class SendRoomEventHandler extends ClientApiHandler {
-
-    private final Gridepo g;
+public class SendRoomEventHandler extends AuthenticatedClientApiHandler {
 
     public SendRoomEventHandler(Gridepo g) {
-        this.g = g;
+        super(g);
     }
 
     @Override
-    protected void handle(Exchange exchange) {
-        UserSession session = g.withToken(exchange.getAccessToken());
+    protected void handle(UserSession session, Exchange ex) {
+        String roomId = ex.getPathVariable("roomId");
+        String evType = ex.getPathVariable("type");
+        String txnId = ex.getPathVariable("txnId"); // TODO support
 
-        String rId = exchange.getPathVariable("roomId");
-        String evType = exchange.getPathVariable("type");
-        String txnId = exchange.getPathVariable("txnId"); // TODO support
-
-        JsonObject content = exchange.parseJsonObject();
+        JsonObject content = ex.parseJsonObject();
         JsonObject ev = new JsonObject();
         ev.addProperty("type", evType);
         ev.add("content", content);
 
-        String evId = session.send(rId, ev);
-        exchange.respondJson(GsonUtil.makeObj("event_id", evId));
+        String evId = session.send(roomId, ev);
+        ex.respondJsonObject("event_id", evId);
     }
 
 }

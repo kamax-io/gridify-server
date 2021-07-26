@@ -18,27 +18,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
+package io.kamax.grid.gridepo.network.matrix.http.handler;
 
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
-import io.kamax.grid.gridepo.util.GsonUtil;
+import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
 
-public class FiltersPostHandler extends ClientApiHandler {
+public abstract class AuthenticatedClientApiHandler extends ClientApiHandler {
 
     private final Gridepo g;
 
-    public FiltersPostHandler(Gridepo g) {
+    public AuthenticatedClientApiHandler(Gridepo g) {
         this.g = g;
     }
 
     @Override
-    protected void handle(Exchange exchange) {
-        getSession(g, exchange);
-
-        // FIXME actually do an implementation
-        exchange.respond(GsonUtil.makeObj("filter_id", Long.toString(System.currentTimeMillis())));
+    protected void handle(Exchange ex) {
+        handle(getSession(g, ex), ex);
     }
+
+    protected abstract void handle(UserSession session, Exchange ex);
 
 }

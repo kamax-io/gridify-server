@@ -222,7 +222,7 @@ public class PostgreSQLDataStore implements DataStore {
 
     @Override
     public List<ChannelDao> listChannels() {
-        String sql = "SELECT * FROM channels WHERE network = 'grid'";
+        String sql = "SELECT * FROM channels";
         return withStmtFunction(sql, stmt -> {
             List<ChannelDao> channels = new ArrayList<>();
 
@@ -236,8 +236,24 @@ public class PostgreSQLDataStore implements DataStore {
     }
 
     @Override
+    public List<ChannelDao> listChannels(String network) {
+        String sql = "SELECT * FROM channels WHERE network = ?";
+        return withStmtFunction(sql, stmt -> {
+            stmt.setString(1, network);
+
+            List<ChannelDao> channels = new ArrayList<>();
+            ResultSet rSet = stmt.executeQuery();
+            while (rSet.next()) {
+                channels.add(new ChannelDao(rSet.getLong("lid"), rSet.getString("network"), rSet.getString("id"), rSet.getString("version")));
+            }
+
+            return channels;
+        });
+    }
+
+    @Override
     public Optional<ChannelDao> findChannel(long cLid) {
-        String sql = "SELECT * FROM channels WHERE network = 'grid' AND lid = ?";
+        String sql = "SELECT * FROM channels WHERE lid = ?";
         return withStmtFunction(sql, stmt -> {
             stmt.setLong(1, cLid);
             return findChannel(stmt.executeQuery());
@@ -286,11 +302,11 @@ public class PostgreSQLDataStore implements DataStore {
 
     @Override
     public ChannelDao saveChannel(ChannelDao ch) {
-        String sql = "INSERT INTO channels (network,id,version) VALUES (?,?) RETURNING lid";
+        String sql = "INSERT INTO channels (network,id,version) VALUES (?,?,?) RETURNING lid";
         return withStmtFunction(sql, stmt -> {
             stmt.setString(1, ch.getNetwork());
             stmt.setString(2, ch.getId());
-            stmt.setString(2, ch.getVersion());
+            stmt.setString(3, ch.getVersion());
             ResultSet rSet = stmt.executeQuery();
 
             if (!rSet.next()) {

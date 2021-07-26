@@ -21,31 +21,26 @@
 package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
 
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
+import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+import io.kamax.grid.gridepo.network.matrix.http.handler.AuthenticatedClientApiHandler;
 import org.apache.commons.lang3.StringUtils;
 
-public class RoomLeaveHandler extends ClientApiHandler {
-
-    private final Gridepo g;
+public class RoomLeaveHandler extends AuthenticatedClientApiHandler {
 
     public RoomLeaveHandler(Gridepo g) {
-        this.g = g;
+        super(g);
     }
 
     @Override
-    protected void handle(Exchange exchange) {
-        UserSession s = g.withToken(exchange.getAccessToken());
-
-        String mId = exchange.getPathVariable("roomId");
-        if (StringUtils.isEmpty(mId)) {
+    protected void handle(UserSession session, Exchange ex) {
+        String roomId = ex.getPathVariable("roomId");
+        if (StringUtils.isEmpty(roomId)) {
             throw new IllegalArgumentException("Missing Room ID in path");
         }
 
-        s.leaveChannel(mId);
-
-        exchange.respondJson("{}");
+        session.leaveRoom(roomId);
+        ex.respondJson("{}");
     }
 
 }

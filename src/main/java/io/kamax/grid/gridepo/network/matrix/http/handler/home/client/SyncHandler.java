@@ -23,44 +23,35 @@ package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.core.SyncData;
 import io.kamax.grid.gridepo.core.SyncOptions;
-import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.grid.http.handler.matrix.SyncResponse;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
+import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+import io.kamax.grid.gridepo.network.matrix.http.handler.AuthenticatedClientApiHandler;
 import org.apache.commons.lang3.StringUtils;
 
-public class SyncHandler extends ClientApiHandler {
-
-    private final Gridepo g;
+public class SyncHandler extends AuthenticatedClientApiHandler {
 
     public SyncHandler(Gridepo g) {
-        this.g = g;
+        super(g);
     }
 
     @Override
-    protected void handle(Exchange exchange) {
-        UserSession session = g.withToken(exchange.getAccessToken());
-        String since = StringUtils.defaultIfBlank(exchange.getQueryParameter("since"), "");
+    protected void handle(UserSession session, Exchange ex) {
+        String since = StringUtils.defaultIfBlank(ex.getQueryParameter("since"), "");
 
         SyncOptions options = new SyncOptions();
         options.setToken(since);
 
-        String timeout = exchange.getQueryParameter("timeout");
+        String timeout = ex.getQueryParameter("timeout");
         if (StringUtils.isNotEmpty(timeout)) {
             try {
-                long value = Long.parseLong(timeout);
-                if (value < 0) {
-                    throw new IllegalArgumentException("Timeout must be greater or equal to 0");
-                }
-                options.setTimeout(value);
+                options.setTimeout(Long.parseLong(timeout));
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException("Timeout is not a valid integer: " + timeout);
             }
         }
 
         SyncData data = session.sync(options);
-        String mxId = session.getUser().getNetworkId("matrix").full();
-        exchange.respondJson(SyncResponse.build(g, mxId, data));
+        ex.respondJson(data);
     }
 
 }
