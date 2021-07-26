@@ -21,12 +21,12 @@
 package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 
 import com.google.gson.JsonObject;
-import io.kamax.grid.gridepo.core.channel.ChannelJoinRule;
-import io.kamax.grid.gridepo.core.channel.ChannelMembership;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
-import io.kamax.grid.gridepo.core.channel.state.ChannelState;
 import io.kamax.grid.gridepo.exception.NotImplementedException;
 import io.kamax.grid.gridepo.network.matrix.core.event.*;
+import io.kamax.grid.gridepo.network.matrix.core.room.RoomJoinRule;
+import io.kamax.grid.gridepo.network.matrix.core.room.RoomMembership;
+import io.kamax.grid.gridepo.network.matrix.core.room.RoomState;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import org.apache.commons.lang3.StringUtils;
 
@@ -53,16 +53,16 @@ public class RoomAlgoV7 implements RoomAlgo {
         return getDefaultPowersEvent(creator).getContent();
     }
 
-    private boolean canDoMembership(long senderPl, ChannelMembership m, BarePowerEvent.Content pls) {
+    private boolean canDoMembership(long senderPl, RoomMembership m, BarePowerEvent.Content pls) {
         Long actionPl = null;
 
-        if (ChannelMembership.Kick.equals(m)) {
+        if (RoomMembership.Kick.equals(m)) {
             actionPl = pls.getMembership().getKick();
         }
-        if (ChannelMembership.Ban.equals(m)) {
+        if (RoomMembership.Ban.equals(m)) {
             actionPl = pls.getMembership().getBan();
         }
-        if (ChannelMembership.Invite.equals(m)) {
+        if (RoomMembership.Invite.equals(m)) {
             actionPl = pls.getMembership().getInvite();
         }
 
@@ -203,7 +203,7 @@ public class RoomAlgoV7 implements RoomAlgo {
     }
 
     @Override
-    public ChannelEventAuthorization authorize(ChannelState state, String evId, JsonObject evRaw) {
+    public ChannelEventAuthorization authorize(RoomState state, String evId, JsonObject evRaw) {
         BareGenericEvent ev = toProto(evRaw);
 
         ChannelEventAuthorization.Builder auth = new ChannelEventAuthorization.Builder(evId);
@@ -239,17 +239,17 @@ public class RoomAlgoV7 implements RoomAlgo {
 
         BarePowerEvent.Content pls = DefaultPowerEvent.applyDefaults(state.getPowers().orElseGet(() -> getDefaultPowers(cEv.getCreator())));
         String sender = ev.getSender();
-        ChannelMembership senderMs = state.findMembership(sender).orElse(ChannelMembership.Leave);
+        RoomMembership senderMs = state.findMembership(sender).orElse(RoomMembership.Leave);
         long senderPl = pls.getUsers().getOrDefault(sender, pls.getDef().getUser());
 
         if (RoomEventType.Member.match(evType)) {
             BareMemberEvent mEv = GsonUtil.fromJson(evRaw, BareMemberEvent.class);
             String membership = mEv.getContent().getAction();
             String target = mEv.getStateKey();
-            ChannelMembership targetMs = state.findMembership(target).orElse(ChannelMembership.Leave);
+            RoomMembership targetMs = state.findMembership(target).orElse(RoomMembership.Leave);
             long targetPl = pls.getUsers().getOrDefault(target, pls.getDef().getUser());
 
-            if (ChannelMembership.Join.match(membership)) {
+            if (RoomMembership.Join.match(membership)) {
                 if (!StringUtils.equals(sender, target)) {
                     return auth.deny("Sender and target are different");
                 }
@@ -272,54 +272,54 @@ public class RoomAlgoV7 implements RoomAlgo {
 
                     return auth.allow();
                 } else { // Regular joins
-                    if (ChannelMembership.Join.equals(targetMs)) {
+                    if (RoomMembership.Join.equals(targetMs)) {
                         return auth.allow();
                     }
 
-                    if (ChannelMembership.Invite.equals(targetMs)) {
+                    if (RoomMembership.Invite.equals(targetMs)) {
                         return auth.allow();
                     }
 
-                    ChannelJoinRule rule = state.getJoinRule().orElse(ChannelJoinRule.Private);
-                    if (ChannelJoinRule.Public.equals(rule)) {
+                    RoomJoinRule rule = state.getJoinRule().orElse(RoomJoinRule.Private);
+                    if (RoomJoinRule.Public.equals(rule)) {
                         return auth.allow();
                     } else {
                         return auth.deny("Public join is not allowed");
                     }
                 }
-            } else if (ChannelMembership.Invite.match(membership)) {
-                if (!ChannelMembership.Join.equals(senderMs)) {
+            } else if (RoomMembership.Invite.match(membership)) {
+                if (!RoomMembership.Join.equals(senderMs)) {
                     return auth.deny("Invite sender is not joined to the channel");
                 }
 
-                if (ChannelMembership.Ban.equals(targetMs)) {
+                if (RoomMembership.Ban.equals(targetMs)) {
                     return auth.deny("Invite target is banned");
                 }
 
-                if (ChannelMembership.Join.equals(targetMs)) {
+                if (RoomMembership.Join.equals(targetMs)) {
                     return auth.deny("Invite target is already joined");
                 }
 
-                if (!canDoMembership(senderPl, ChannelMembership.Invite, pls)) {
+                if (!canDoMembership(senderPl, RoomMembership.Invite, pls)) {
                     return auth.deny("Sender does not have the required Power Level to invite");
                 }
 
                 return auth.allow();
-            } else if (ChannelMembership.Leave.match(membership)) {
+            } else if (RoomMembership.Leave.match(membership)) {
                 boolean isSame = StringUtils.equals(sender, target);
-                if (isSame && senderMs.isAny(ChannelMembership.Join, ChannelMembership.Invite)) {
+                if (isSame && senderMs.isAny(RoomMembership.Join, RoomMembership.Invite)) {
                     return auth.allow();
                 }
 
-                if (!senderMs.equals(ChannelMembership.Join)) {
+                if (!senderMs.equals(RoomMembership.Join)) {
                     return auth.deny("Sender cannot send in a room they are not joined");
                 }
 
-                if (ChannelMembership.Ban.equals(targetMs) && canDoMembership(senderPl, ChannelMembership.Ban, pls)) {
+                if (RoomMembership.Ban.equals(targetMs) && canDoMembership(senderPl, RoomMembership.Ban, pls)) {
                     return auth.deny("Sender does not have the required Power Level to remove a ban");
                 }
 
-                if (canDoMembership(senderPl, ChannelMembership.Kick, pls)) {
+                if (canDoMembership(senderPl, RoomMembership.Kick, pls)) {
                     return auth.deny("Sender does not have the required Power Level to kick");
                 }
 
@@ -328,12 +328,12 @@ public class RoomAlgoV7 implements RoomAlgo {
                 }
 
                 return auth.allow();
-            } else if (ChannelMembership.Ban.match(membership)) {
-                if (!senderMs.equals(ChannelMembership.Join)) {
+            } else if (RoomMembership.Ban.match(membership)) {
+                if (!senderMs.equals(RoomMembership.Join)) {
                     return auth.deny("Sender cannot send in a room they are not joined");
                 }
 
-                if (canDoMembership(senderPl, ChannelMembership.Ban, pls)) {
+                if (canDoMembership(senderPl, RoomMembership.Ban, pls)) {
                     return auth.deny("Sender does not have the required Power Level to ban");
                 }
 
@@ -347,7 +347,7 @@ public class RoomAlgoV7 implements RoomAlgo {
             }
         }
 
-        if (!senderMs.equals(ChannelMembership.Join)) {
+        if (!senderMs.equals(RoomMembership.Join)) {
             return auth.deny("Sender cannot send in a room they are not joined");
         }
 
@@ -390,7 +390,7 @@ public class RoomAlgoV7 implements RoomAlgo {
         BareMemberEvent cJoinEv = new BareMemberEvent();
         cJoinEv.setSender(creator);
         cJoinEv.setStateKey(creator);
-        cJoinEv.getContent().setAction(ChannelMembership.Join.getId());
+        cJoinEv.getContent().setAction(RoomMembership.Join.getId());
 
         BarePowerEvent cPlEv = getDefaultPowersEvent(creator);
         cPlEv.setSender(creator);

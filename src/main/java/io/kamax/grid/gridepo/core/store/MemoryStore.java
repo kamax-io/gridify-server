@@ -90,7 +90,7 @@ public class MemoryStore implements DataStore, IdentityStore {
     private Map<String, Long> uNameToLid = new ConcurrentHashMap<>();
 
     private Map<Long, ChannelDao> channels = new ConcurrentHashMap<>();
-    private Map<ChannelID, ChannelDao> chIdToDao = new ConcurrentHashMap<>();
+    private Map<String, ChannelDao> chIdToDao = new ConcurrentHashMap<>();
     private Map<Long, ChannelEvent> chEvents = new ConcurrentHashMap<>();
     private Map<Long, ChannelState> chStates = new ConcurrentHashMap<>();
     private Map<Long, List<Long>> chFrontExtremities = new ConcurrentHashMap<>();
@@ -111,7 +111,7 @@ public class MemoryStore implements DataStore, IdentityStore {
         return makeRef(channels.get(ev.getChannelSid()).getId(), ev.getId());
     }
 
-    private String makeRef(ChannelID cId, EventID eId) {
+    private String makeRef(String cId, EventID eId) {
         return cId + "/" + eId;
     }
 
@@ -126,7 +126,7 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public Optional<ChannelDao> findChannel(ChannelID cId) {
+    public Optional<ChannelDao> findChannel(String cId) {
         return Optional.ofNullable(chIdToDao.get(cId));
     }
 
@@ -147,7 +147,7 @@ public class MemoryStore implements DataStore, IdentityStore {
     @Override
     public ChannelDao saveChannel(ChannelDao ch) {
         long sid = chSid.incrementAndGet();
-        ch = new ChannelDao(sid, ch.getId());
+        ch = new ChannelDao(sid, ch.getNetwork(), ch.getId(), ch.getVersion());
         channels.put(sid, ch);
         chIdToDao.put(ch.getId(), ch);
         return ch;
@@ -168,7 +168,7 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public synchronized ChannelEvent getEvent(ChannelID cId, EventID eId) throws ObjectNotFoundException {
+    public synchronized ChannelEvent getEvent(String cId, EventID eId) throws ObjectNotFoundException {
         log.debug("Getting Event {}/{}", cId, eId);
         return findEvent(cId, eId).orElseThrow(() -> new ObjectNotFoundException("Event", cId + "/" + eId));
     }
@@ -190,7 +190,7 @@ public class MemoryStore implements DataStore, IdentityStore {
 
     @Override
     public Optional<Long> findEventLid(ChannelID cId, EventID eId) {
-        return Optional.ofNullable(evRefToLid.get(makeRef(cId, eId)));
+        return Optional.ofNullable(evRefToLid.get(makeRef(cId.full(), eId)));
     }
 
     @Override
@@ -267,7 +267,7 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public synchronized Optional<ChannelEvent> findEvent(ChannelID cId, EventID eId) {
+    public synchronized Optional<ChannelEvent> findEvent(String cId, EventID eId) {
         return Optional.ofNullable(evRefToLid.get(makeRef(cId, eId)))
                 .flatMap(this::findEvent);
     }
@@ -471,8 +471,8 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public synchronized Set<String> findChannelAlias(ServerID srvId, ChannelID id) {
-        return getChIdToAlias(id).getOrDefault(srvId, new HashSet<>());
+    public synchronized Set<String> findChannelAlias(ServerID srvId, String id) {
+        return getChIdToAlias(ChannelID.fromRaw(id)).getOrDefault(srvId, new HashSet<>());
     }
 
     @Override

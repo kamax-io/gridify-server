@@ -117,7 +117,7 @@ public class BasicFederation extends Federation {
         assertEquals(g2Ev2Id, g1c1.getView().getHead().full());
         assertEquals(g2Ev2Id, g2c1.getView().getHead().full());
 
-        Optional<ChannelEvent> g1Ev1 = g1.getStore().findEvent(ChannelID.parse(cId), EventID.parse(g2Ev1Id));
+        Optional<ChannelEvent> g1Ev1 = g1.getStore().findEvent(cId, EventID.parse(g2Ev1Id));
         assertTrue(g1Ev1.isPresent());
     }
 
@@ -147,14 +147,14 @@ public class BasicFederation extends Federation {
         events.add(EventID.parse(s1.send(cId, BareMessageEvent.build(u1, "Final message").getJson())));
 
         for (EventID evId : events) {
-            Optional<ChannelEvent> g1c1evOpt = g1.getStore().findEvent(ChannelID.parse(cId), evId);
+            Optional<ChannelEvent> g1c1evOpt = g1.getStore().findEvent(cId, evId);
             assertTrue(g1c1evOpt.isPresent());
             ChannelEvent g1c1ev = g1c1evOpt.get();
             assertTrue(g1c1ev.getMeta().isPresent());
             assertTrue(g1c1ev.getMeta().isProcessed());
             assertTrue(g1c1ev.getMeta().isAllowed());
 
-            Optional<ChannelEvent> g2c1evOpt = g2.getStore().findEvent(ChannelID.parse(cId), evId);
+            Optional<ChannelEvent> g2c1evOpt = g2.getStore().findEvent(cId, evId);
             assertTrue(g2c1evOpt.isPresent());
             ChannelEvent g2c1ev = g2c1evOpt.get();
             assertTrue(g2c1ev.getMeta().isPresent());
@@ -179,7 +179,7 @@ public class BasicFederation extends Federation {
 
         User u3 = g3.register("shadow", pass);
 
-        UserSession s3 = g3.login("grid", u3);
+        UserSession s3 = g3.overGrid().forData().asClient().login(u3);
         UserID u3Id = s3.getUser().getGridId();
 
         String cId = makeSharedChannel();

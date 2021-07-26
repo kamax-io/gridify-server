@@ -23,10 +23,17 @@ package io.kamax.grid.gridepo.network.grid.core;
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.core.auth.UIAuthSession;
+import io.kamax.grid.gridepo.core.identity.User;
 
 public interface GridDataServerClient {
 
+    UserSession withToken(String token);
+
     UIAuthSession login();
+
+    UserSession login(User user);
+
+    UserSession login(UIAuthSession session);
 
     UserSession login(JsonObject doc);
 

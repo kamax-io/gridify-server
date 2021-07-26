@@ -190,11 +190,11 @@ public class Channel {
 
     private synchronized ChannelEvent processIfNotAlready(EventID evId) {
         process(evId, true, false);
-        return store.getEvent(getId(), evId);
+        return store.getEvent(getId().full(), evId);
     }
 
     private synchronized ChannelEventAuthorization process(EventID evId, boolean recursive, boolean force) {
-        ChannelEvent ev = store.getEvent(getId(), evId);
+        ChannelEvent ev = store.getEvent(getId().full(), evId);
         if (!ev.getMeta().isPresent() || (ev.getMeta().isProcessed() && !force)) {
             return new ChannelEventAuthorization.Builder(evId.full())
                     .authorize(ev.getMeta().isPresent() && ev.getMeta().isValid() && ev.getMeta().isAllowed(), "From previous computation");
@@ -222,7 +222,7 @@ public class Channel {
                         if (recursive) {
                             return processIfNotAlready(pEvId);
                         } else {
-                            return store.findEvent(getId(), pEvId).orElseGet(() -> ChannelEvent.forNotFound(getSid(), pEvId));
+                            return store.findEvent(getId().full(), pEvId).orElseGet(() -> ChannelEvent.forNotFound(getSid(), pEvId));
                         }
                     })
                     .filter(this::isUsable)
@@ -299,7 +299,7 @@ public class Channel {
             EventID evId = remaining.poll();
             ChannelEvent chEv = ChannelEvent.forNotFound(getSid(), evId);
 
-            Optional<ChannelEvent> storeEv = store.findEvent(getId(), evId);
+            Optional<ChannelEvent> storeEv = store.findEvent(getId().full(), evId);
             if (storeEv.isPresent()) {
                 chEv = storeEv.get();
                 if (chEv.getMeta().isPresent()) {
@@ -358,7 +358,7 @@ public class Channel {
         List<ChannelEventAuthorization> auths = new ArrayList<>();
         events.stream().sorted(Comparator.comparingLong(ev -> ev.getBare().getDepth())).forEach(event -> {
             log.info("Channel {} - Processing injection of Event {}", getId(), event.getId());
-            Optional<ChannelEvent> evStore = store.findEvent(getId(), event.getId());
+            Optional<ChannelEvent> evStore = store.findEvent(getId().full(), event.getId());
 
             if (evStore.isPresent() && evStore.get().getMeta().isPresent()) {
                 log.info("Event {} is known, skipping", event.getId());
@@ -522,7 +522,7 @@ public class Channel {
             throw new ForbiddenException(result.getReason());
         }
 
-        return store.getEvent(getId(), EventID.parse(result.getEventId()));
+        return store.getEvent(getId().full(), EventID.parse(result.getEventId()));
     }
 
 }

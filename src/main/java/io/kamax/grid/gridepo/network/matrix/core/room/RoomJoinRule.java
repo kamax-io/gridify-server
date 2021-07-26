@@ -18,24 +18,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
+package io.kamax.grid.gridepo.network.matrix.core.room;
 
-import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
+import org.apache.commons.lang3.StringUtils;
 
-public class LogoutHandler extends ClientApiHandler {
+public enum RoomJoinRule {
 
-    private final Gridepo g;
+    Public("public"),
+    Private("private");
 
-    public LogoutHandler(Gridepo g) {
-        this.g = g;
+    private String id;
+
+    RoomJoinRule(String id) {
+        this.id = id;
     }
 
-    @Override
-    protected void handle(Exchange exchange) {
-        g.destroySessionToken(exchange.getAccessToken());
-        exchange.respondJson("{}");
+    public String getId() {
+        return id;
+    }
+
+    public boolean isAny(RoomJoinRule... mem) {
+        for (RoomJoinRule o : mem) {
+            if (this.equals(o)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public boolean match(String id) {
+        return StringUtils.equals(this.id, id);
     }
 
 }

@@ -228,7 +228,7 @@ public class PostgreSQLDataStore implements DataStore {
 
             ResultSet rSet = stmt.executeQuery();
             while (rSet.next()) {
-                channels.add(new ChannelDao(rSet.getLong("lid"), ChannelID.fromRaw(rSet.getString("id"))));
+                channels.add(new ChannelDao(rSet.getLong("lid"), rSet.getString("network"), rSet.getString("id"), rSet.getString("version")));
             }
 
             return channels;
@@ -245,12 +245,17 @@ public class PostgreSQLDataStore implements DataStore {
     }
 
     @Override
-    public Optional<ChannelDao> findChannel(ChannelID cId) {
+    public Optional<ChannelDao> findChannel(String cId) {
         String sql = "SELECT * FROM channels WHERE network = 'grid' AND id = ?";
         return withStmtFunction(sql, stmt -> {
-            stmt.setString(1, cId.base());
+            stmt.setString(1, cId);
             return findChannel(stmt.executeQuery());
         });
+    }
+
+    @Override
+    public Optional<ChannelDao> findChannel(ChannelID cId) {
+        return findChannel(cId.full());
     }
 
     @Override
@@ -281,9 +286,11 @@ public class PostgreSQLDataStore implements DataStore {
 
     @Override
     public ChannelDao saveChannel(ChannelDao ch) {
-        String sql = "INSERT INTO channels (id,network) VALUES (?,'grid') RETURNING lid";
+        String sql = "INSERT INTO channels (network,id,version) VALUES (?,?) RETURNING lid";
         return withStmtFunction(sql, stmt -> {
-            stmt.setString(1, ch.getId().base());
+            stmt.setString(1, ch.getNetwork());
+            stmt.setString(2, ch.getId());
+            stmt.setString(2, ch.getVersion());
             ResultSet rSet = stmt.executeQuery();
 
             if (!rSet.next()) {
@@ -291,8 +298,7 @@ public class PostgreSQLDataStore implements DataStore {
             }
 
             long sid = rSet.getLong(1);
-            ChannelID id = ch.getId();
-            return new ChannelDao(sid, id);
+            return new ChannelDao(sid, ch.getNetwork(), ch.getId(), ch.getVersion());
         });
     }
 
@@ -337,7 +343,7 @@ public class PostgreSQLDataStore implements DataStore {
     }
 
     @Override
-    public ChannelEvent getEvent(ChannelID cId, EventID eId) throws IllegalStateException {
+    public ChannelEvent getEvent(String cId, EventID eId) throws IllegalStateException {
         return findEvent(cId, eId).orElseThrow(() -> new ObjectNotFoundException("Event", eId.full()));
     }
 
@@ -459,12 +465,12 @@ public class PostgreSQLDataStore implements DataStore {
     }
 
     @Override
-    public Optional<ChannelEvent> findEvent(ChannelID cId, EventID eId) {
+    public Optional<ChannelEvent> findEvent(String cId, EventID eId) {
         String sqlChIdToSid = "SELECT sid FROM channels WHERE id = ?";
         String sql = "SELECT * FROM channel_events WHERE id = ? and cSid = (" + sqlChIdToSid + ")";
         return withStmtFunction(sql, stmt -> {
             stmt.setString(1, eId.base());
-            stmt.setString(2, cId.base());
+            stmt.setString(2, cId);
             ResultSet rSet = stmt.executeQuery();
             if (!rSet.next()) {
                 return Optional.empty();
@@ -680,7 +686,7 @@ public class PostgreSQLDataStore implements DataStore {
                 throw new ObjectNotFoundException("Credentials of type " + type + " for user LID " + userLid);
             }
 
-            return new SecureCredentials(rSet.getString("type"), rSet.getString("data"));
+            return new SecureCredentials(rSet.getString("type"), rSet.getString("salt"), rSet.getString("data"));
         });
     }
 
@@ -784,11 +790,11 @@ public class PostgreSQLDataStore implements DataStore {
     }
 
     @Override
-    public Set<String> findChannelAlias(ServerID srvId, ChannelID cId) {
+    public Set<String> findChannelAlias(ServerID origin, String cId) {
         return withStmtFunction("SELECT * FROM channel_aliases WHERE server_id = ? AND channel_id = ?", stmt -> {
             Set<String> list = new HashSet<>();
-            stmt.setString(1, srvId.base());
-            stmt.setString(2, cId.base());
+            stmt.setString(1, origin.base());
+            stmt.setString(2, cId);
             ResultSet rSet = stmt.executeQuery();
             while (rSet.next()) {
                 list.add(rSet.getString("channel_alias"));

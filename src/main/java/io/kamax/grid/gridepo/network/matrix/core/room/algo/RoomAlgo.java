@@ -22,10 +22,10 @@ package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
-import io.kamax.grid.gridepo.core.channel.state.ChannelState;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.BarePowerEvent;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomID;
+import io.kamax.grid.gridepo.network.matrix.core.room.RoomState;
 import org.apache.commons.lang3.RandomStringUtils;
 
 import java.nio.ByteBuffer;
@@ -52,7 +52,7 @@ public interface RoomAlgo {
 
     String validate(JsonObject ev);
 
-    ChannelEventAuthorization authorize(ChannelState state, String evId, JsonObject ev);
+    ChannelEventAuthorization authorize(RoomState state, String evId, JsonObject ev);
 
     List<BareEvent<?>> getCreationEvents(String creator, JsonObject options);
 

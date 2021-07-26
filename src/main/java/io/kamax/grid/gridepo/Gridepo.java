@@ -80,17 +80,19 @@ public interface Gridepo {
 
     AuthService getAuth();
 
-    User register(String username, String password);
+    UserSession withToken(String token);
 
-    UserSession login(String network, User user);
+    String createSessionToken(String network, User usr);
+
+    User validateSessionToken(String token);
+
+    void destroySessionToken(String token);
+
+    User register(String username, String password);
 
     UIAuthSession login(String network);
 
-    UserSession login(UIAuthSession auth);
-
-    void logout(UserSession session);
-
-    UserSession withToken(String token);
+    User login(UIAuthSession auth, String stage);
 
     boolean isLocal(UserID uId);
 

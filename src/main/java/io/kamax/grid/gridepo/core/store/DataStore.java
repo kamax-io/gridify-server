@@ -59,7 +59,7 @@ public interface DataStore {
 
     ChannelEvent saveEvent(ChannelEvent ev);
 
-    ChannelEvent getEvent(ChannelID cId, EventID eId) throws ObjectNotFoundException;
+    ChannelEvent getEvent(String cId, EventID eId) throws ObjectNotFoundException;
 
     ChannelEvent getEvent(long eLid);
 
@@ -76,7 +76,7 @@ public interface DataStore {
 
     List<ChannelEvent> getTimelinePrevious(long cLid, long lastTid, long amount);
 
-    Optional<ChannelEvent> findEvent(ChannelID cId, EventID eId);
+    Optional<ChannelEvent> findEvent(String cId, EventID eId);
 
     Optional<ChannelEvent> findEvent(long eSid);
 

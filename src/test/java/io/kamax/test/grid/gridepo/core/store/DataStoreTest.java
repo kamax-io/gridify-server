@@ -50,8 +50,8 @@ public abstract class DataStoreTest {
     protected abstract DataStore getNewStore();
 
     private long makeChannel() {
-        ChannelID id = ChannelID.from(UUID.randomUUID().toString(), "example.org");
-        ChannelDao daoBefore = new ChannelDao(id);
+        String id = ChannelID.from(UUID.randomUUID().toString(), "example.org").full();
+        ChannelDao daoBefore = new ChannelDao("", id, "");
         assertEquals(id, daoBefore.getId());
         ChannelDao daoAfter = store.saveChannel(daoBefore);
         assertEquals(id, daoAfter.getId());
@@ -140,7 +140,7 @@ public abstract class DataStoreTest {
         ChannelDao cDao = cDaoOpt.get();
         assertEquals(cLid, cDao.getSid());
 
-        ChannelID cId = cDao.getId();
+        String cId = cDao.getId();
 
         List<ChannelDao> channels = store.listChannels();
         boolean foundByLid = false;

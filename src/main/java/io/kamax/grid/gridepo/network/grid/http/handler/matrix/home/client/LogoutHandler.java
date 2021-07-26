@@ -21,7 +21,6 @@
 package io.kamax.grid.gridepo.network.grid.http.handler.matrix.home.client;
 
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.http.handler.Exchange;
 import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
 
@@ -35,10 +34,7 @@ public class LogoutHandler extends ClientApiHandler {
 
     @Override
     protected void handle(Exchange exchange) {
-        UserSession s = g.withToken(exchange.getAccessToken());
-
-        g.logout(s);
-
+        g.destroySessionToken(exchange.getAccessToken());
         exchange.respondJson("{}");
     }
 

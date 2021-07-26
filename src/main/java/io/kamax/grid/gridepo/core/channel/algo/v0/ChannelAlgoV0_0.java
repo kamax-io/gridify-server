@@ -221,7 +221,7 @@ public class ChannelAlgoV0_0 implements ChannelAlgo {
             evId = EventID.parse(ev.getId());
         }
 
-        ChannelEventAuthorization.Builder auth = new ChannelEventAuthorization.Builder(evId);
+        ChannelEventAuthorization.Builder auth = new ChannelEventAuthorization.Builder(evId.full());
         String validation = validate(evRaw);
         if (StringUtils.isNotEmpty(validation)) {
             return auth.invalid(validation);

@@ -44,7 +44,7 @@ public class MonolithGridepoTest {
         g.start();
 
         User u = g.register("gridepo", "gridepo");
-        UserSession uSess = g.login("grid", u);
+        UserSession uSess = g.overGrid().forData().asClient().login(u);
         String uId = uSess.getUser().getGridId().full();
 
         Channel ch = g.getChannelManager().createChannel(uId);

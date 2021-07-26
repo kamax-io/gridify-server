@@ -100,7 +100,7 @@ public class RegisterPostHandler extends ClientApiHandler {
 
 
         User user = g.register(username, password);
-        UserSession session = g.login("grid", user);
+        UserSession session = g.overGrid().forData().asClient().login(user);
 
         JsonObject reply = new JsonObject();
         reply.addProperty("user_id", ProtocolEventMapper.forUserIdFromGridToMatrix(session.getUser().getGridId().full()));

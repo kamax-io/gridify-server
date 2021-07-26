@@ -93,7 +93,7 @@ public class Federation {
         g1 = mg1.start();
         g1.getFedPusher().setAsync(false);
         User u1b = g1.register(n1, pass);
-        s1 = g1.login("grid", u1b);
+        s1 = g1.overGrid().forData().asClient().login(u1b);
         s1.getUser().addThreePid(new GenericThreePid("g.id.net.grid.alias", a1));
         u1 = s1.getUser().getGridId();
 
@@ -102,7 +102,7 @@ public class Federation {
         g2 = mg2.start();
         g2.getFedPusher().setAsync(false);
         User u2b = g2.register(n2, pass);
-        s2 = g2.login("grid", u2b);
+        s2 = g2.overGrid().forData().asClient().login(u2b);
         s2.getUser().addThreePid(new GenericThreePid("g.id.net.grid.alias", a2));
         u2 = s2.getUser().getGridId();
     }

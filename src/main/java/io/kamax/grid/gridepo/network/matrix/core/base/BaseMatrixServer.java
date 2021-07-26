@@ -23,7 +23,6 @@ package io.kamax.grid.gridepo.network.matrix.core.base;
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.core.GridType;
-import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.core.auth.UIAuthSession;
 import io.kamax.grid.gridepo.core.identity.GenericThreePid;
 import io.kamax.grid.gridepo.core.identity.User;
@@ -37,10 +36,10 @@ import java.util.Optional;
 
 public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixDataServer {
 
-    private Gridepo g;
-    private MatrixIdentityServer is;
+    private final Gridepo g;
+    private final MatrixIdentityServer is;
 
-    private String domain;
+    private final String domain;
 
     public BaseMatrixServer(Gridepo g, String domain) {
         this.g = g;
@@ -66,7 +65,8 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
 
     @Override
     public UserSession withToken(String token) {
-        return g.withToken(token);
+        User u = g.validateSessionToken(token);
+        return new UserSession(g, domain, u.getNetworkId("matrix").full(), token);
     }
 
     @Override
@@ -78,13 +78,11 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
 
     @Override
     public UserSession login(User u) {
-        return g.login("matrix", u);
+        return withToken(g.createSessionToken("matrix", u));
     }
 
     @Override
     public UserSession login(String username, String password) {
-        UIAuthSession session = g.login("matrix");
-
         JsonObject id = new JsonObject();
         id.addProperty("type", "m.id.user");
         id.addProperty("user", username);
@@ -92,9 +90,7 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
         doc.addProperty("type", "m.login.password");
         doc.addProperty("password", password);
         doc.add("identifier", id);
-
-        session.complete(doc);
-        return g.login(session);
+        return login(doc);
     }
 
     @Override
@@ -108,7 +104,8 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
         }
 
         session.complete(credentials);
-        return g.login(session);
+        User u = g.login(session, "m.login.password");
+        return login(u);
     }
 
 }

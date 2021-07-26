@@ -18,24 +18,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
+package io.kamax.grid.gridepo.network.matrix.core.event;
 
-import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
+public class BareJoinRulesEvent extends BareEvent<BareJoinRulesEvent.Content> {
 
-public class LogoutHandler extends ClientApiHandler {
+    public static class Content {
 
-    private final Gridepo g;
+        private String rule;
 
-    public LogoutHandler(Gridepo g) {
-        this.g = g;
+        public String getRule() {
+            return rule;
+        }
+
+        public void setRule(String rule) {
+            this.rule = rule;
+        }
+
     }
 
-    @Override
-    protected void handle(Exchange exchange) {
-        g.destroySessionToken(exchange.getAccessToken());
-        exchange.respondJson("{}");
+    public BareJoinRulesEvent() {
+        setType(RoomEventType.JoinRules);
+        setStateKey("");
+        setContent(new BareJoinRulesEvent.Content());
     }
 
 }

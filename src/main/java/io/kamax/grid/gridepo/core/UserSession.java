@@ -119,7 +119,7 @@ public class UserSession {
             // FIXME we need to get the HEAD event of the timeline instead
             Channel c = g.getChannelManager().get(cId);
             EventID evID = c.getView().getHead();
-            data.getEvents().add(g.getStore().getEvent(cId, evID));
+            data.getEvents().add(g.getStore().getEvent(cId.full(), evID));
         });
 
         return data;

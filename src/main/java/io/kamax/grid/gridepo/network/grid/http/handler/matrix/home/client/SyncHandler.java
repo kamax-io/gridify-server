@@ -40,7 +40,7 @@ public class SyncHandler extends ClientApiHandler {
 
     @Override
     protected void handle(Exchange exchange) {
-        UserSession session = g.withToken(exchange.getAccessToken());
+        UserSession session = g.overGrid().forData().asClient().withToken(exchange.getAccessToken());
         String since = StringUtils.defaultIfBlank(exchange.getQueryParameter("since"), "");
 
         SyncOptions options = new SyncOptions();
