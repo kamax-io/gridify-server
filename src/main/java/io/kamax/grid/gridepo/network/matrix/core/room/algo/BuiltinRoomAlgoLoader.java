@@ -18,37 +18,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.core.room;
+package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 
-import io.kamax.grid.gridepo.core.channel.state.ChannelState;
-import io.kamax.grid.gridepo.exception.NotImplementedException;
+import java.util.Optional;
 
-import java.util.List;
+public class BuiltinRoomAlgoLoader implements RoomAlgoLoader {
 
-public class RoomView {
-
-    private final String eventId;
-    private final RoomState state;
-
-    public RoomView(String eventId, ChannelState state) {
-        this(eventId, new RoomState(state));
-    }
-
-    public RoomView(String eventId, RoomState state) {
-        this.eventId = eventId;
-        this.state = state;
-    }
-
-    public String getEventId() {
-        return eventId;
-    }
-
-    public RoomState getState() {
-        return state;
-    }
-
-    public List<String> getAllServers() {
-        throw new NotImplementedException();
+    @Override
+    public Optional<RoomAlgo> apply(String s) {
+        // FIXME all rooms will use this algo, must filter
+        return Optional.of(new RoomAlgoV7());
     }
 
 }

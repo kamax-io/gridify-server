@@ -21,7 +21,11 @@
 package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 
 import com.google.gson.JsonObject;
+import io.kamax.grid.gridepo.codec.GridHash;
+import io.kamax.grid.gridepo.codec.GridJson;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
+import io.kamax.grid.gridepo.core.crypto.Cryptopher;
+import io.kamax.grid.gridepo.core.crypto.Signature;
 import io.kamax.grid.gridepo.exception.NotImplementedException;
 import io.kamax.grid.gridepo.network.matrix.core.event.*;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomJoinRule;
@@ -30,6 +34,7 @@ import io.kamax.grid.gridepo.network.matrix.core.room.RoomState;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import org.apache.commons.lang3.StringUtils;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -38,6 +43,15 @@ public class RoomAlgoV7 implements RoomAlgo {
 
     public static final String Version = "7";
     static final long minDepth = 0;
+
+    private static final Map<String, Class<? extends BareEvent<?>>> bares = new HashMap<>();
+
+    static {
+        bares.put(RoomEventType.Create.getId(), BareCreateEvent.class);
+        bares.put(RoomEventType.Member.getId(), BareMemberEvent.class);
+        bares.put(RoomEventType.Power.getId(), BarePowerEvent.class);
+        bares.put(RoomEventType.JoinRules.getId(), BareJoinRulesEvent.class);
+    }
 
     private BareGenericEvent toProto(JsonObject ev) {
         return GsonUtil.fromJson(ev, BareGenericEvent.class);
@@ -169,7 +183,9 @@ public class RoomAlgoV7 implements RoomAlgo {
 
     @Override
     public String validate(JsonObject evRaw) {
+        String eventId = "!" + computeEventHash(evRaw);
         BareGenericEvent ev = toProto(evRaw);
+        ev.setId(eventId);
 
         if (StringUtils.isEmpty(ev.getId())) {
             return "Invalid event, no ID";
@@ -221,7 +237,7 @@ public class RoomAlgoV7 implements RoomAlgo {
             }
 
             if (ev.getDepth() != getCreateDepth()) { // FIXME Do this into some earlier event check
-                return auth.deny("Invalid event: Depth is not " + getCreateDepth());
+                return auth.deny("Invalid create event: Depth is not " + getCreateDepth());
             }
 
             if (!ev.getPreviousEvents().isEmpty()) { // FIXME Do this into some earlier event check
@@ -381,18 +397,29 @@ public class RoomAlgoV7 implements RoomAlgo {
     }
 
     @Override
-    public List<BareEvent<?>> getCreationEvents(String creator, JsonObject options) {
+    public String getEventId(JsonObject event) {
+        return "$" + computeEventHash(event);
+    }
+
+    @Override
+    public List<BareEvent<?>> getCreationEvents(String domain, String creator, JsonObject options) {
         List<BareEvent<?>> events = new ArrayList<>();
         BareCreateEvent createEv = new BareCreateEvent();
-        createEv.getContent().setCreator(creator);
+        createEv.setTimestamp(Instant.now().toEpochMilli());
+        createEv.setOrigin(domain);
         createEv.setSender(creator);
+        createEv.getContent().setCreator(creator);
 
         BareMemberEvent cJoinEv = new BareMemberEvent();
+        createEv.setTimestamp(Instant.now().toEpochMilli());
+        cJoinEv.setOrigin(domain);
         cJoinEv.setSender(creator);
         cJoinEv.setStateKey(creator);
         cJoinEv.getContent().setAction(RoomMembership.Join.getId());
 
         BarePowerEvent cPlEv = getDefaultPowersEvent(creator);
+        createEv.setTimestamp(Instant.now().toEpochMilli());
+        cPlEv.setOrigin(domain);
         cPlEv.setSender(creator);
 
         events.add(createEv);
@@ -402,6 +429,70 @@ public class RoomAlgoV7 implements RoomAlgo {
         // FIXME apply options
 
         return events;
+    }
+
+    public String computeHash(JsonObject event) {
+        String canonical = GridJson.encodeCanonical(event);
+        return GridHash.get().hashFromUtf8(canonical);
+    }
+
+    @Override
+    public String computeEventHash(JsonObject event) {
+        event = redact(event);
+        event.remove(EventKey.Age);
+        event.remove(EventKey.Signatures);
+        event.remove(EventKey.Unsigned);
+        return computeHash(event);
+    }
+
+    @Override
+    public String computeContentHash(JsonObject event) {
+        event = event.deepCopy();
+        event.remove(EventKey.Hashes);
+        event.remove(EventKey.Signatures);
+        event.remove(EventKey.Unsigned);
+        return computeHash(event);
+    }
+
+    @Override
+    public Signature computeSignature(JsonObject event, Cryptopher crypto) {
+        // We redact the event to its minimal state
+        JsonObject eventRedacted = redact(event);
+        // We get the canonical version
+        String eventCanonical = GridJson.encodeCanonical(eventRedacted);
+        // We generate the signature for the event
+        return crypto.sign(eventCanonical, crypto.getServerSigningKey().getId());
+    }
+
+    @Override
+    public JsonObject sign(JsonObject event, Cryptopher crypto, String domain) {
+        // We generate the signature for the event
+        Signature sign = computeSignature(event, crypto);
+        JsonObject signLocal = GsonUtil.makeObj(sign.getKey().getId(), sign.getSignature());
+
+        // We retrieve the signatures dictionary or generate an empty one if none exists
+        JsonObject signatures = GsonUtil.findObj(event, EventKey.Signatures).orElseGet(JsonObject::new);
+        // We add the signature to the signatures dictionary
+        signatures.add(domain, signLocal);
+        // We replace the event signatures original dictionary with the new one
+        event.add(EventKey.Signatures, signatures);
+
+        return event;
+    }
+
+    @Override
+    public JsonObject signOff(JsonObject doc, Cryptopher crypto, String domain) {
+        String hash = computeContentHash(doc);
+        doc.addProperty(EventKey.Hashes, hash);
+        return sign(doc, crypto, domain);
+    }
+
+    @Override
+    public JsonObject redact(JsonObject doc) {
+        String type = GsonUtil.getStringOrThrow(doc, EventKey.Type);
+        Class<? extends BareEvent<?>> evClass = bares.getOrDefault(type, BareGenericEvent.class);
+        BareEvent<?> minEv = GsonUtil.get().fromJson(doc, evClass);
+        return minEv.getJson();
     }
 
 }

@@ -61,7 +61,7 @@ public class RoomManager {
     }
 
     private Room fromDao(ChannelDao dao) {
-        return new Room(g, dao.getId(), RoomAlgos.get(dao.getVersion()));
+        return new Room(g, dao.getSid(), dao.getId(), RoomAlgos.get(dao.getVersion()));
     }
 
     public Room createRoom(String domain, String creator, JsonObject options) {
@@ -74,12 +74,12 @@ public class RoomManager {
         ChannelDao dao = new ChannelDao("matrix", algo.generateRoomId(domain), algo.getVersion());
         dao = g.getStore().saveChannel(dao);
 
-        Room r = new Room(g, dao.getId(), algo);
+        Room r = new Room(g, dao.getSid(), dao.getId(), algo);
         rooms.put(r.getId(), r);
 
-        List<BareEvent<?>> createEvents = algo.getCreationEvents(creator, options);
+        List<BareEvent<?>> createEvents = algo.getCreationEvents(domain, creator, options);
         createEvents.stream()
-                .map(r::offer)
+                .map(ev -> r.offer(domain, ev))
                 .filter(auth -> !auth.isAuthorized())
                 .findAny().ifPresent(auth -> {
             throw new RuntimeException("Room creation failed because of initial event(s) being rejected: " + auth.getReason());
@@ -101,7 +101,7 @@ public class RoomManager {
 
         ChannelDao dao = new ChannelDao("matrix", createEv.getRoomId(), roomVersion);
         dao = g.getStore().saveChannel(dao);
-        Room r = new Room(g, dao.getId(), RoomAlgos.get(dao.getVersion()));
+        Room r = new Room(g, dao.getSid(), dao.getId(), RoomAlgos.get(dao.getVersion()));
 
         ChannelEventAuthorization auth = r.inject(from, seedJson, stateJson);
         if (!auth.isAuthorized()) {
@@ -113,7 +113,7 @@ public class RoomManager {
     }
 
     public List<ChannelDao> list() {
-        return g.getStore().listChannels();
+        return g.getStore().listChannels("matrix");
     }
 
     public synchronized Optional<Room> find(String rId) {
@@ -128,7 +128,7 @@ public class RoomManager {
         return find(rId).orElseThrow(() -> new ObjectNotFoundException("Room", rId));
     }
 
-    public Room join(String rAliasRaw, String uIdRaw) {
+    public Room join(String rAliasRaw, String uIdRaw, String domain) {
         RoomAlias rAlias = RoomAlias.parse(rAliasRaw);
         UserID uId = UserID.parse(uIdRaw);
         RoomLookup data = g.overMatrix().roomDir().lookup(uId.network(), rAlias, true)
@@ -140,11 +140,12 @@ public class RoomManager {
             if (r.getView().getAllServers().stream().anyMatch(s -> StringUtils.equals(s, uId.network()))) {
                 // We are joined, so we can make our own event
                 BareMemberEvent bEv = new BareMemberEvent();
+                bEv.setOrigin(domain);
                 bEv.setRoomId(data.getId());
                 bEv.setSender(uIdRaw);
                 bEv.setStateKey(uIdRaw);
                 bEv.getContent().setAction(RoomMembership.Join);
-                ChannelEventAuthorization auth = r.offer(bEv);
+                ChannelEventAuthorization auth = r.offer(domain, bEv);
                 if (!auth.isAuthorized()) {
                     throw new ForbiddenException(auth.getReason());
                 }

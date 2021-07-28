@@ -64,8 +64,8 @@ public class BasicFederation extends Federation {
         assertEquals(ChannelMembership.Invite, g2u2c1);
 
         String joinEvId = s2.joinChannel(c1Id);
-        assertEquals(joinEvId, g1c1.getView().getHead().full());
-        assertEquals(joinEvId, g2c1.getView().getHead().full());
+        assertEquals(joinEvId, g1c1.getView().getHead());
+        assertEquals(joinEvId, g2c1.getView().getHead());
 
         g1u2c1 = g1c1.getView().getState().getMembership(u2);
         assertEquals(ChannelMembership.Join, g1u2c1);
@@ -91,12 +91,12 @@ public class BasicFederation extends Federation {
         Channel g2c1 = g2.getChannelManager().get(cId);
 
         String g1MsgEvId = s1.send(cId, BareMessageEvent.build(u1, "test from " + n1).getJson());
-        assertEquals(g1MsgEvId, g1c1.getView().getHead().full());
-        assertEquals(g1MsgEvId, g2c1.getView().getHead().full());
+        assertEquals(g1MsgEvId, g1c1.getView().getHead());
+        assertEquals(g1MsgEvId, g2c1.getView().getHead());
 
         String g2MsgEvId = s2.send(cId, BareMessageEvent.build(u2, "test from " + n2).getJson());
-        assertEquals(g2MsgEvId, g1c1.getView().getHead().full());
-        assertEquals(g2MsgEvId, g2c1.getView().getHead().full());
+        assertEquals(g2MsgEvId, g1c1.getView().getHead());
+        assertEquals(g2MsgEvId, g2c1.getView().getHead());
     }
 
     @Test
@@ -105,19 +105,19 @@ public class BasicFederation extends Federation {
         Channel g1c1 = g1.getChannelManager().get(cId);
         Channel g2c1 = g2.getChannelManager().get(cId);
 
-        String g1EvId = g1c1.getView().getHead().full();
+        String g1EvId = g1c1.getView().getHead();
 
         g2.getFedPusher().setEnabled(false);
         String g2Ev1Id = s2.send(cId, BareMessageEvent.build(u2, "Message 1 from " + n2).getJson());
-        assertEquals(g1EvId, g1c1.getView().getHead().full());
-        assertEquals(g2Ev1Id, g2c1.getView().getHead().full());
+        assertEquals(g1EvId, g1c1.getView().getHead());
+        assertEquals(g2Ev1Id, g2c1.getView().getHead());
 
         g2.getFedPusher().setEnabled(true);
         String g2Ev2Id = s2.send(cId, BareMessageEvent.build(u2, "Message 2 from " + n2).getJson());
-        assertEquals(g2Ev2Id, g1c1.getView().getHead().full());
-        assertEquals(g2Ev2Id, g2c1.getView().getHead().full());
+        assertEquals(g2Ev2Id, g1c1.getView().getHead());
+        assertEquals(g2Ev2Id, g2c1.getView().getHead());
 
-        Optional<ChannelEvent> g1Ev1 = g1.getStore().findEvent(cId, EventID.parse(g2Ev1Id));
+        Optional<ChannelEvent> g1Ev1 = g1.getStore().findEvent(cId, g2Ev1Id);
         assertTrue(g1Ev1.isPresent());
     }
 
@@ -147,14 +147,14 @@ public class BasicFederation extends Federation {
         events.add(EventID.parse(s1.send(cId, BareMessageEvent.build(u1, "Final message").getJson())));
 
         for (EventID evId : events) {
-            Optional<ChannelEvent> g1c1evOpt = g1.getStore().findEvent(cId, evId);
+            Optional<ChannelEvent> g1c1evOpt = g1.getStore().findEvent(cId, evId.full());
             assertTrue(g1c1evOpt.isPresent());
             ChannelEvent g1c1ev = g1c1evOpt.get();
             assertTrue(g1c1ev.getMeta().isPresent());
             assertTrue(g1c1ev.getMeta().isProcessed());
             assertTrue(g1c1ev.getMeta().isAllowed());
 
-            Optional<ChannelEvent> g2c1evOpt = g2.getStore().findEvent(cId, evId);
+            Optional<ChannelEvent> g2c1evOpt = g2.getStore().findEvent(cId, evId.full());
             assertTrue(g2c1evOpt.isPresent());
             ChannelEvent g2c1ev = g2c1evOpt.get();
             assertTrue(g2c1ev.getMeta().isPresent());

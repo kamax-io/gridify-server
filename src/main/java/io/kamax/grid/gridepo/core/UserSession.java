@@ -118,7 +118,7 @@ public class UserSession {
         g.getChannelManager().list().forEach(cId -> {
             // FIXME we need to get the HEAD event of the timeline instead
             Channel c = g.getChannelManager().get(cId);
-            EventID evID = c.getView().getHead();
+            String evID = c.getView().getHead();
             data.getEvents().add(g.getStore().getEvent(cId.full(), evID));
         });
 
@@ -205,7 +205,7 @@ public class UserSession {
 
     public String inviteToChannel(String cId, EntityGUID uAl) {
         Channel c = g.getChannelManager().get(cId);
-        String evId = c.invite(user.getNetworkId(network).full(), uAl).getId().full();
+        String evId = c.invite(user.getNetworkId(network).full(), uAl).getId();
         return evId;
     }
 

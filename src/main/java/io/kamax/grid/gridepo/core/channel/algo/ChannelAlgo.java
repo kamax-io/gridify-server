@@ -43,6 +43,10 @@ public interface ChannelAlgo {
 
     String validate(JsonObject ev);
 
+    default ChannelEventAuthorization authorize(ChannelState state, String evId, JsonObject ev) {
+        return authorize(state, EventID.parse(evId), ev);
+    }
+
     ChannelEventAuthorization authorize(ChannelState state, EventID evId, JsonObject ev);
 
     List<BareEvent> getCreationEvents(String creator);

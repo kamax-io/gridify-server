@@ -21,6 +21,8 @@
 package io.kamax.grid.gridepo.network.matrix.core.room;
 
 import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
+import io.kamax.grid.gridepo.core.channel.state.ChannelState;
+import io.kamax.grid.gridepo.core.store.ChannelStateDao;
 import io.kamax.grid.gridepo.network.matrix.core.event.*;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
@@ -67,6 +69,14 @@ public class RoomState {
         this(null, events);
     }
 
+    public RoomState(ChannelStateDao dao) {
+        this(dao.getSid(), dao.getEvents());
+    }
+
+    public RoomState(ChannelState state) {
+        this(state.getSid(), state.getEvents());
+    }
+
     public RoomState(Long sid, List<ChannelEvent> events) {
         this.sid = sid;
         events.forEach(this::addEvent);
@@ -78,8 +88,9 @@ public class RoomState {
     }
 
     private void addEvent(ChannelEvent ev) {
+        String type = GsonUtil.getStringOrThrow(ev.getData(), EventKey.Type);
         String scope = GsonUtil.getStringOrThrow(ev.getData(), EventKey.Scope);
-        String key = GsonUtil.getStringOrThrow(ev.getData(), EventKey.Type) + scope;
+        String key = type + scope;
         data.put(key, ev);
     }
 
@@ -89,6 +100,10 @@ public class RoomState {
 
     public Optional<ChannelEvent> find(String type, String scope) {
         return Optional.ofNullable(data.get(type + scope));
+    }
+
+    public Optional<ChannelEvent> find(RoomEventType type) {
+        return find(type.getId(), "");
     }
 
     public <T> Optional<T> find(String type, Class<T> c) {
@@ -111,17 +126,12 @@ public class RoomState {
         return new ArrayList<>(data.values());
     }
 
-    public BareCreateEvent getCreation() {
-        return find(RoomEventType.Create, BareCreateEvent.class)
-                .orElseThrow(IllegalStateException::new);
+    public ChannelEvent getCreation() {
+        return find(RoomEventType.Create).orElseThrow(IllegalStateException::new);
     }
 
     public String getCreationId() throws IllegalStateException {
         return getCreation().getId();
-    }
-
-    public String getCreator() {
-        return getCreation().getContent().getCreator();
     }
 
     public Optional<BarePowerEvent.Content> getPowers() {
@@ -146,7 +156,7 @@ public class RoomState {
     }
 
     public RoomState apply(ChannelEvent ev) {
-        String scope = ev.getBare().getScope();
+        String scope = GsonUtil.getStringOrNull(ev.getData(), EventKey.Scope);
         if (Objects.isNull(scope)) {
             return this;
         }

@@ -33,8 +33,8 @@ import io.kamax.grid.gridepo.core.channel.state.ChannelState;
 import io.kamax.grid.gridepo.core.identity.*;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 import io.kamax.grid.gridepo.network.grid.core.ChannelID;
-import io.kamax.grid.gridepo.network.grid.core.EventID;
 import io.kamax.grid.gridepo.network.grid.core.ServerID;
+import io.kamax.grid.gridepo.network.matrix.core.room.RoomState;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import io.kamax.grid.gridepo.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
@@ -92,7 +92,7 @@ public class MemoryStore implements DataStore, IdentityStore {
     private Map<Long, ChannelDao> channels = new ConcurrentHashMap<>();
     private Map<String, ChannelDao> chIdToDao = new ConcurrentHashMap<>();
     private Map<Long, ChannelEvent> chEvents = new ConcurrentHashMap<>();
-    private Map<Long, ChannelState> chStates = new ConcurrentHashMap<>();
+    private Map<Long, ChannelStateDao> chStates = new ConcurrentHashMap<>();
     private Map<Long, List<Long>> chFrontExtremities = new ConcurrentHashMap<>();
     private Map<Long, List<Long>> chBackExtremities = new ConcurrentHashMap<>();
     private Map<String, ChannelID> chAliasToId = new ConcurrentHashMap<>();
@@ -111,7 +111,7 @@ public class MemoryStore implements DataStore, IdentityStore {
         return makeRef(channels.get(ev.getChannelSid()).getId(), ev.getId());
     }
 
-    private String makeRef(String cId, EventID eId) {
+    private String makeRef(String cId, String eId) {
         return cId + "/" + eId;
     }
 
@@ -175,7 +175,7 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public synchronized ChannelEvent getEvent(String cId, EventID eId) throws ObjectNotFoundException {
+    public synchronized ChannelEvent getEvent(String cId, String eId) throws ObjectNotFoundException {
         log.debug("Getting Event {}/{}", cId, eId);
         return findEvent(cId, eId).orElseThrow(() -> new ObjectNotFoundException("Event", cId + "/" + eId));
     }
@@ -186,18 +186,18 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public EventID getEventId(long eSid) {
+    public String getEventId(long eSid) {
         return getEvent(eSid).getId();
     }
 
     @Override
-    public long getEventTid(long cLid, EventID eId) {
+    public long getEventTid(long cLid, String eId) {
         return getEvent(getChannel(cLid).getId(), eId).getSid();
     }
 
     @Override
-    public Optional<Long> findEventLid(ChannelID cId, EventID eId) {
-        return Optional.ofNullable(evRefToLid.get(makeRef(cId.full(), eId)));
+    public Optional<Long> findEventLid(String cId, String eId) {
+        return Optional.ofNullable(evRefToLid.get(makeRef(cId, eId)));
     }
 
     @Override
@@ -274,7 +274,7 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public synchronized Optional<ChannelEvent> findEvent(String cId, EventID eId) {
+    public synchronized Optional<ChannelEvent> findEvent(String cId, String eId) {
         return Optional.ofNullable(evRefToLid.get(makeRef(cId, eId)))
                 .flatMap(this::findEvent);
     }
@@ -328,12 +328,23 @@ public class MemoryStore implements DataStore, IdentityStore {
         }
 
         long sid = sSid.incrementAndGet();
-        chStates.put(sid, new ChannelState(sid, state));
+        chStates.put(sid, new ChannelStateDao(sid, state.getEvents()));
         return sid;
     }
 
     @Override
-    public ChannelState getState(long stateSid) throws IllegalStateException {
+    public long insertIfNew(long cLid, RoomState state) {
+        if (Objects.nonNull(state.getSid())) {
+            return state.getSid();
+        }
+
+        long sid = sSid.incrementAndGet();
+        chStates.put(sid, new ChannelStateDao(sid, state.getEvents()));
+        return sid;
+    }
+
+    @Override
+    public ChannelStateDao getState(long stateSid) throws IllegalStateException {
         return Optional.ofNullable(chStates.get(stateSid)).orElseThrow(IllegalStateException::new);
     }
 
@@ -343,13 +354,13 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public ChannelState getStateForEvent(long evSid) {
+    public ChannelStateDao getStateForEvent(long evSid) {
         Long sSid = evStates.get(evSid);
         if (Objects.isNull(sSid)) {
             throw new ObjectNotFoundException("State for Event SID", Long.toString(evSid));
         }
 
-        ChannelState state = chStates.get(sSid);
+        ChannelStateDao state = chStates.get(sSid);
         if (Objects.isNull(state)) {
             throw new ObjectNotFoundException("State SID", Long.toString(sSid));
         }

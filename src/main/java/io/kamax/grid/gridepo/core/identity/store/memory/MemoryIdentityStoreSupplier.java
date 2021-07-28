@@ -25,15 +25,11 @@ import io.kamax.grid.gridepo.core.identity.IdentityStore;
 import io.kamax.grid.gridepo.core.identity.IdentityStoreSupplier;
 import io.kamax.grid.gridepo.core.store.MemoryStore;
 import io.kamax.grid.gridepo.util.GsonUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Set;
 
 public class MemoryIdentityStoreSupplier implements IdentityStoreSupplier {
-
-    private static final Logger log = LoggerFactory.getLogger(MemoryIdentityStoreSupplier.class);
 
     @Override
     public Set<String> getSupportedTypes() {

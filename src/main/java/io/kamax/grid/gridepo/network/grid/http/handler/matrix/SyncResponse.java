@@ -160,7 +160,7 @@ public class SyncResponse {
                 room.getTimeline().getEvents().add(rEv);
                 if (data.isInitial()) {
                     // This is the first event, so we set the previous batch info
-                    room.getTimeline().setPrevBatch(ev.getId().full());
+                    room.getTimeline().setPrevBatch(ev.getId());
                     ChannelState state = g.getChannelManager().get(ev.getChannelId()).getState(ev);
                     state.getEvents().stream()
                             .sorted(Comparator.comparingLong(o -> o.getBare().getDepth())) // FIXME use Timeline ordering

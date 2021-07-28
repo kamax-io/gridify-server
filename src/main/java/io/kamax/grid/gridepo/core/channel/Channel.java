@@ -89,11 +89,12 @@ public class Channel {
     private void init() {
         // FIXME we need to resolve the extremities as a timeline, get the HEAD and its state
         List<ChannelEvent> extremities = store.getForwardExtremities(getSid()).stream().map(store::getEvent).collect(Collectors.toList());
-        EventID head = extremities.stream().max(Comparator.comparingLong(ChannelEvent::getSid)).map(ChannelEvent::getId).orElse(null);
+        String head = extremities.stream().max(Comparator.comparingLong(ChannelEvent::getSid)).map(ChannelEvent::getId).orElse(null);
         ChannelState state = extremities.stream()
                 .max(Comparator.comparingLong(ev -> ev.getBare().getDepth()))
                 .map(ChannelEvent::getLid)
                 .map(store::getStateForEvent)
+                .map(ChannelState::new)
                 .orElseGet(ChannelState::empty);
         view = new ChannelView(origin, head, state);
         log.info("Channel {}: Loaded saved state SID {}", getSid(), view.getState().getSid());
@@ -137,7 +138,7 @@ public class Channel {
         return store.getForwardExtremities(getSid());
     }
 
-    public List<EventID> getExtremityIds() {
+    public List<String> getExtremityIds() {
         return getExtremitySids().stream()
                 .map(store::getEventId)
                 .collect(Collectors.toList());
@@ -166,7 +167,6 @@ public class Channel {
         List<ChannelEvent> exts = getExtremities();
         List<String> extIds = exts.stream()
                 .map(ChannelEvent::getId)
-                .map(EventID::full)
                 .collect(Collectors.toList());
         long depth = exts.stream()
                 .map(ChannelEvent::getBare)
@@ -185,16 +185,16 @@ public class Channel {
     }
 
     public ChannelEventAuthorization authorize(JsonObject ev) {
-        return algo.authorize(getView().getState(), null, ev);
+        return algo.authorize(getView().getState(), (EventID) null, ev);
     }
 
     private synchronized ChannelEvent processIfNotAlready(EventID evId) {
         process(evId, true, false);
-        return store.getEvent(getId().full(), evId);
+        return store.getEvent(getId().full(), evId.full());
     }
 
     private synchronized ChannelEventAuthorization process(EventID evId, boolean recursive, boolean force) {
-        ChannelEvent ev = store.getEvent(getId().full(), evId);
+        ChannelEvent ev = store.getEvent(getId().full(), evId.full());
         if (!ev.getMeta().isPresent() || (ev.getMeta().isProcessed() && !force)) {
             return new ChannelEventAuthorization.Builder(evId.full())
                     .authorize(ev.getMeta().isPresent() && ev.getMeta().isValid() && ev.getMeta().isAllowed(), "From previous computation");
@@ -209,7 +209,7 @@ public class Channel {
 
     public synchronized ChannelEventAuthorization process(ChannelEvent ev, boolean recursive, boolean isSeed) {
         log.info("Processing event {} in channel {}", ev.getId(), ev.getChannelId());
-        ChannelEventAuthorization.Builder b = new ChannelEventAuthorization.Builder(ev.getId().full());
+        ChannelEventAuthorization.Builder b = new ChannelEventAuthorization.Builder(ev.getId());
         BareGenericEvent bEv = ev.getBare();
         ev.getMeta().setPresent(true);
 
@@ -222,7 +222,7 @@ public class Channel {
                         if (recursive) {
                             return processIfNotAlready(pEvId);
                         } else {
-                            return store.findEvent(getId().full(), pEvId).orElseGet(() -> ChannelEvent.forNotFound(getSid(), pEvId));
+                            return store.findEvent(getId().full(), pEvId.full()).orElseGet(() -> ChannelEvent.forNotFound(getSid(), pEvId.full()));
                         }
                     })
                     .filter(this::isUsable)
@@ -241,7 +241,7 @@ public class Channel {
             if (expectedDepth > bEv.getDepth()) {
                 b.invalid("Depth is " + bEv.getDepth() + " but was expected to be at least " + expectedDepth);
             } else {
-                ChannelEventAuthorization auth = algo.authorize(state, ev.getId(), ev.getData()); // FIXME do it on the parents
+                ChannelEventAuthorization auth = algo.authorize(state, EventID.parse(ev.getId()), ev.getData()); // FIXME do it on the parents
                 b.authorize(auth.isAuthorized(), auth.getReason());
                 if (auth.isAuthorized()) {
                     state = state.apply(ev);
@@ -261,13 +261,13 @@ public class Channel {
         }
 
         ev = store.saveEvent(ev);
-        state = store.getState(store.insertIfNew(getSid(), state));
+        state = new ChannelState(store.getState(store.insertIfNew(getSid(), state)));
         store.map(ev.getLid(), state.getSid());
         store.addToStream(ev.getLid());
 
         if (ev.getMeta().isAllowed()) {
             List<Long> toRemove = ev.getBare().getPreviousEvents().stream()
-                    .map(id -> store.findEventLid(getId(), EventID.parse(id)))
+                    .map(id -> store.findEventLid(getId().full(), id))
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .collect(Collectors.toList());
@@ -281,7 +281,7 @@ public class Channel {
         return auth;
     }
 
-    public void backfill(ChannelEvent ev, List<EventID> earliest, long minDepth) {
+    public void backfill(ChannelEvent ev, List<String> earliest, long minDepth) {
         if (ev.getBare().getPreviousEvents().isEmpty()) {
             log.info("Channel Event {} has no previous event, skipping backfill", ev.getId());
             return;
@@ -290,13 +290,13 @@ public class Channel {
         backfill(ev.getPreviousEvents(), earliest, minDepth);
     }
 
-    public void backfill(List<EventID> latest, List<EventID> earliest, long minDepth) {
-        BlockingQueue<EventID> remaining = new LinkedBlockingQueue<>(latest);
+    public void backfill(List<String> latest, List<String> earliest, long minDepth) {
+        BlockingQueue<String> remaining = new LinkedBlockingQueue<>(latest);
         Stack<ChannelEvent> events = new Stack<>();
 
         log.info("{}: Need to check backfill on {} events", getDomain(), remaining.size());
         while (!remaining.isEmpty()) {
-            EventID evId = remaining.poll();
+            String evId = remaining.poll();
             ChannelEvent chEv = ChannelEvent.forNotFound(getSid(), evId);
 
             Optional<ChannelEvent> storeEv = store.findEvent(getId().full(), evId);
@@ -333,7 +333,7 @@ public class Channel {
                     chEv.getMeta().setAllowed(false);
                     chEv.getMeta().setProcessed(false);
 
-                    List<EventID> parents = chEv.getPreviousEvents();
+                    List<String> parents = chEv.getPreviousEvents();
                     if (chEv.getBare().getDepth() > minDepth && Collections.disjoint(earliest, parents)) {
                         log.info("Found {} events still needing backfill", parents.size());
                         remaining.addAll(parents);
@@ -425,7 +425,7 @@ public class Channel {
         return offer(Collections.singletonList(cEv), false).get(0);
     }
 
-    public ChannelEventAuthorization offer(BareEvent ev) {
+    public ChannelEventAuthorization offer(BareEvent<?> ev) {
         return offer(evSvc.finalize(makeEvent(ev)));
     }
 
@@ -453,7 +453,7 @@ public class Channel {
     }
 
     public ChannelState getState(ChannelEvent ev) {
-        return store.getStateForEvent(ev.getLid());
+        return new ChannelState(store.getStateForEvent(ev.getLid()));
     }
 
     public ChannelEvent invite(String inviter, EntityGUID invitee) {
@@ -522,7 +522,7 @@ public class Channel {
             throw new ForbiddenException(result.getReason());
         }
 
-        return store.getEvent(getId().full(), EventID.parse(result.getEventId()));
+        return store.getEvent(getId().full(), result.getEventId());
     }
 
 }

@@ -99,6 +99,10 @@ public class GsonUtil {
     }
 
     public static JsonObject makeObj(Object o) {
+        if (o instanceof JsonObject) {
+            return (JsonObject) o;
+        }
+
         return instance.toJsonTree(o).getAsJsonObject();
     }
 

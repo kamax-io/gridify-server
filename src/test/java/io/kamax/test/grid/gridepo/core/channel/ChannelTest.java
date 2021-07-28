@@ -88,7 +88,7 @@ public class ChannelTest {
         Long sid = state.getSid();
         assertEquals(auth.getEventId(), state.getCreationId());
         assertEquals(1, c.getExtremities().size());
-        assertEquals(auth.getEventId(), c.getExtremityIds().get(0).full());
+        assertEquals(auth.getEventId(), c.getExtremityIds().get(0));
 
         BarePowerEvent.Content afterCreatePls = state.getPowers().orElseGet(c::getDefaultPls);
         assertEquals(Long.MAX_VALUE, (long) afterCreatePls.getUsers().get(janeId.full()));

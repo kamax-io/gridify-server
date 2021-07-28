@@ -83,7 +83,7 @@ public abstract class ClientApiHandler implements HttpHandler {
                 }
                 ex.respond(HttpStatus.SC_BAD_GATEWAY, code, e.getReason());
                 log.debug("Trigger:", e);
-            } catch (RuntimeException e) {
+            } catch (RuntimeException | Error e) {
                 log.error("Unknown error when handling {} - CHECK THE SURROUNDING LOG LINES TO KNOW THE ACTUAL CAUSE!", exchange.getRequestURL(), e);
                 ex.respond(HttpStatus.SC_INTERNAL_SERVER_ERROR, ex.buildErrorBody("M_UNKNOWN",
                         StringUtils.defaultIfBlank(

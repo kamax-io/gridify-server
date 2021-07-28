@@ -34,5 +34,7 @@ public class EventKey {
     public static final String Content = "content";
     public static final String Hashes = "hashes";
     public static final String Signatures = "signatures";
+    public static final String Unsigned = "unsigned";
+    public static final String Age = "age_ts";
 
 }

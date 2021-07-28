@@ -24,6 +24,7 @@ import io.kamax.grid.gridepo.core.channel.ChannelJoinRule;
 import io.kamax.grid.gridepo.core.channel.ChannelMembership;
 import io.kamax.grid.gridepo.core.channel.event.*;
 import io.kamax.grid.gridepo.core.event.EventKey;
+import io.kamax.grid.gridepo.core.store.ChannelStateDao;
 import io.kamax.grid.gridepo.network.grid.core.UserID;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
@@ -68,6 +69,10 @@ public class ChannelState {
 
     private ChannelState(List<ChannelEvent> events) {
         this(null, events);
+    }
+
+    public ChannelState(ChannelStateDao dao) {
+        this(dao.getSid(), dao.getEvents());
     }
 
     public ChannelState(Long sid, List<ChannelEvent> events) {

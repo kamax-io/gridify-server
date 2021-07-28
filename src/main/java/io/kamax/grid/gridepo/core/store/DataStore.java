@@ -28,8 +28,8 @@ import io.kamax.grid.gridepo.core.channel.state.ChannelState;
 import io.kamax.grid.gridepo.core.identity.ThreePid;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 import io.kamax.grid.gridepo.network.grid.core.ChannelID;
-import io.kamax.grid.gridepo.network.grid.core.EventID;
 import io.kamax.grid.gridepo.network.grid.core.ServerID;
+import io.kamax.grid.gridepo.network.matrix.core.room.RoomState;
 
 import java.util.List;
 import java.util.Optional;
@@ -61,15 +61,15 @@ public interface DataStore {
 
     ChannelEvent saveEvent(ChannelEvent ev);
 
-    ChannelEvent getEvent(String cId, EventID eId) throws ObjectNotFoundException;
+    ChannelEvent getEvent(String cId, String eId) throws ObjectNotFoundException;
 
     ChannelEvent getEvent(long eLid);
 
-    EventID getEventId(long eLid);
+    String getEventId(long eLid);
 
-    long getEventTid(long cLid, EventID eId);
+    long getEventTid(long cLid, String eId);
 
-    Optional<Long> findEventLid(ChannelID cId, EventID eId);
+    Optional<Long> findEventLid(String cId, String eId);
 
     // Get the N next events. next = Higher SID. last SID is not included.
     List<ChannelEvent> getNext(long lastSid, long amount);
@@ -78,7 +78,7 @@ public interface DataStore {
 
     List<ChannelEvent> getTimelinePrevious(long cLid, long lastTid, long amount);
 
-    Optional<ChannelEvent> findEvent(String cId, EventID eId);
+    Optional<ChannelEvent> findEvent(String cId, String eId);
 
     Optional<ChannelEvent> findEvent(long eSid);
 
@@ -92,11 +92,13 @@ public interface DataStore {
 
     long insertIfNew(long cLid, ChannelState state);
 
-    ChannelState getState(long sLid);
+    long insertIfNew(long cLid, RoomState state);
+
+    ChannelStateDao getState(long sLid);
 
     void map(long evSid, long sLid);
 
-    ChannelState getStateForEvent(long evLid);
+    ChannelStateDao getStateForEvent(long evLid);
 
     boolean hasUsername(String username);
 

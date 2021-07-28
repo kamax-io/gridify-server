@@ -56,6 +56,7 @@ import io.kamax.grid.gridepo.core.store.crypto.MemoryKeyStore;
 import io.kamax.grid.gridepo.core.store.postgres.PostgreSQLDataStore;
 import io.kamax.grid.gridepo.exception.InternalServerError;
 import io.kamax.grid.gridepo.exception.InvalidTokenException;
+import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 import io.kamax.grid.gridepo.exception.UnauthenticatedException;
 import io.kamax.grid.gridepo.network.grid.core.*;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixCore;
@@ -66,6 +67,7 @@ import io.kamax.grid.gridepo.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
+import java.lang.invoke.MethodHandles;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.*;
@@ -73,7 +75,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class MonolithGridepo implements Gridepo {
 
-    private static final Logger log = KxLog.make(MonolithGridepo.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private final ServerID origin;
     private final Algorithm jwtAlgo;
@@ -83,6 +85,7 @@ public class MonolithGridepo implements Gridepo {
     private final SignalBus bus;
     private final DataStore store;
     private final KeyStore kStore;
+    private final Cryptopher crypto;
     private final AuthService authSvc;
     private final IdentityManager idMgr;
     private final EventService evSvc;
@@ -137,7 +140,7 @@ public class MonolithGridepo implements Gridepo {
         }
 
         dsMgr = new DataServerManager();
-        Cryptopher crypto = new Ed25519Cryptopher(kStore);
+        crypto = new Ed25519Cryptopher(kStore);
 
         String jwtSeed = cfg.getCrypto().getSeed().get("jwt");
         if (StringUtils.isEmpty(jwtSeed)) {
@@ -152,8 +155,9 @@ public class MonolithGridepo implements Gridepo {
 
         evSvc = new EventService(origin, crypto);
 
-        authSvc = new MultiStoreAuthService(cfg);
         idMgr = new IdentityManager(cfg.getIdentity(), store, crypto);
+        authSvc = new MultiStoreAuthService(this);
+
         chMgr = new ChannelManager(this, bus, evSvc, store, dsMgr);
         rMgr = new RoomManager(this);
         streamer = new EventStreamer(store);
@@ -171,6 +175,11 @@ public class MonolithGridepo implements Gridepo {
     @Override
     public void start() {
         isStopping = false;
+
+        if (idMgr.isUsernameAvailable("admin")) {
+            log.info("Creating initial admin account");
+            register("admin", "admin");
+        }
     }
 
     @Override
@@ -270,8 +279,6 @@ public class MonolithGridepo implements Gridepo {
     public User register(String username, String password) {
         User user = getIdentity().createUserWithKey();
         user.addThreePid(new GenericThreePid(GridType.id().local().username(), username));
-        user.addThreePid(new GenericThreePid("m.id.user", username));
-        user.addThreePid(new GenericThreePid("g.id.net.matrix", "@" + username + ":" + cfg.getDomain()));
         user.addCredentials(new Credentials("g.auth.id.password", password));
         return user;
     }
@@ -314,6 +321,8 @@ public class MonolithGridepo implements Gridepo {
             DecodedJWT data = jwtVerifier.verify(JWT.decode(token));
             String uid = data.getClaim(GridType.of("id.internal")).asString();
             return getIdentity().getUser(uid); // FIXME check in cluster for missing events
+        } catch (ObjectNotFoundException e) {
+            throw new InvalidTokenException(e.getMessage());
         } catch (JWTVerificationException e) {
             throw new InvalidTokenException("Invalid token");
         }
@@ -395,6 +404,11 @@ public class MonolithGridepo implements Gridepo {
     @Override
     public DataStore getStore() {
         return store;
+    }
+
+    @Override
+    public Cryptopher getCrypto() {
+        return crypto;
     }
 
     @Override

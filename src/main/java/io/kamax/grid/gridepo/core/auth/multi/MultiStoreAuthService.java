@@ -20,7 +20,7 @@
 
 package io.kamax.grid.gridepo.core.auth.multi;
 
-import io.kamax.grid.gridepo.config.GridepoConfig;
+import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.config.IdentityConfig;
 import io.kamax.grid.gridepo.config.UIAuthConfig;
 import io.kamax.grid.gridepo.core.auth.AuthService;
@@ -61,28 +61,24 @@ public class MultiStoreAuthService implements AuthService {
         });
     }
 
-    public MultiStoreAuthService(GridepoConfig cfg) {
+    public MultiStoreAuthService(Gridepo g) {
         // We configure some default identity stores if none was given in the config
-        if (cfg.getIdentity().getStores().isEmpty()) {
-            if ("memory".equals(cfg.getStorage().getDatabase().getType())) {
-                IdentityConfig.Store idCfg = new IdentityConfig.Store();
-                idCfg.setType("memory");
-                cfg.getIdentity().getStores().put("memory-default", idCfg);
-
-
+        if (g.getConfig().getIdentity().getStores().isEmpty()) {
+            if (g.getStore() instanceof IdentityStore) {
+                stores.add((IdentityStore) g.getStore());
             }
         }
 
-        cfg.getIdentity().getStores().forEach((label, storeCfg) -> {
+        g.getConfig().getIdentity().getStores().forEach((label, storeCfg) -> {
             IdentityStore store = forLabel(label, storeCfg);
             stores.add(store);
 
-            if (cfg.getIdentity().getStores().size() == 1 && store instanceof MemoryStore) {
+            if (g.getConfig().getIdentity().getStores().size() == 1 && store instanceof MemoryStore) {
                 MemoryStore storeMem = (MemoryStore) store;
                 long uLid = storeMem.addUser("a");
                 storeMem.addThreePid(uLid, new GenericThreePid("g.id.local.username", "a"));
                 storeMem.addThreePid(uLid, new GenericThreePid("m.id.user", "a"));
-                storeMem.addThreePid(uLid, new GenericThreePid("g.id.net.matrix", "@a:" + cfg.getDomain()));
+                storeMem.addThreePid(uLid, new GenericThreePid("g.id.net.matrix", "@a:" + g.getConfig().getDomain()));
                 storeMem.addCredentials(uLid, new Credentials("g.auth.id.password", "a"));
                 storeMem.addCredentials(uLid, new Credentials("m.login.password", "a"));
             }

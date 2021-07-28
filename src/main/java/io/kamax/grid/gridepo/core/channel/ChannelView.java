@@ -23,7 +23,6 @@ package io.kamax.grid.gridepo.core.channel;
 import io.kamax.grid.gridepo.core.channel.event.BareMemberEvent;
 import io.kamax.grid.gridepo.core.channel.event.ChannelEventType;
 import io.kamax.grid.gridepo.core.channel.state.ChannelState;
-import io.kamax.grid.gridepo.network.grid.core.EventID;
 import io.kamax.grid.gridepo.network.grid.core.ServerID;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
@@ -33,14 +32,14 @@ import java.util.stream.Collectors;
 public class ChannelView {
 
     private ServerID origin;
-    private EventID head;
+    private String head;
     private ChannelState state;
 
     public ChannelView(ServerID origin) {
         this(origin, null, ChannelState.empty());
     }
 
-    public ChannelView(ServerID origin, EventID head, ChannelState state) {
+    public ChannelView(ServerID origin, String head, ChannelState state) {
         this.origin = origin;
         this.head = head;
         this.state = state;
@@ -48,7 +47,7 @@ public class ChannelView {
 
     // FIXME this does not make sense and HEAD should be moved to timeline
     // Only used as a fast hack until v0.1
-    public EventID getHead() {
+    public String getHead() {
         return head;
     }
 

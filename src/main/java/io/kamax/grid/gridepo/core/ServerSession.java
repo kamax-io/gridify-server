@@ -190,7 +190,7 @@ public class ServerSession {
     public Optional<ChannelEvent> getEvent(ChannelID cId, EventID eId) {
         markActive();
 
-        return g.getStore().findEvent(cId.full(), eId);
+        return g.getStore().findEvent(cId.full(), eId.full());
     }
 
 }

@@ -18,37 +18,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.core.room;
+package io.kamax.grid.gridepo.util;
 
-import io.kamax.grid.gridepo.core.channel.state.ChannelState;
-import io.kamax.grid.gridepo.exception.NotImplementedException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
-import java.util.List;
+public class Base64Codec {
 
-public class RoomView {
+    public static final Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
 
-    private final String eventId;
-    private final RoomState state;
-
-    public RoomView(String eventId, ChannelState state) {
-        this(eventId, new RoomState(state));
+    public static String encode(String input) {
+        return encoder.encodeToString(input.getBytes(StandardCharsets.UTF_8));
     }
 
-    public RoomView(String eventId, RoomState state) {
-        this.eventId = eventId;
-        this.state = state;
-    }
-
-    public String getEventId() {
-        return eventId;
-    }
-
-    public RoomState getState() {
-        return state;
-    }
-
-    public List<String> getAllServers() {
-        throw new NotImplementedException();
+    public static String decode(String input) {
+        return new String(Base64.getUrlDecoder().decode(input), StandardCharsets.UTF_8);
     }
 
 }

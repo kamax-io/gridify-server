@@ -181,14 +181,14 @@ public abstract class DataStoreTest {
     @Test
     public void saveAndReadChannelEvent() {
         long cSid = makeChannel().getSid();
-        ChannelEvent ev1 = ChannelEvent.forNotFound(cSid, EventID.from("sarce1", "example.org"));
+        ChannelEvent ev1 = ChannelEvent.forNotFound(cSid, EventID.from("sarce1", "example.org").full());
         ChannelEvent evStored = store.saveEvent(ev1);
         ChannelEvent evRead = store.getEvent(evStored.getLid());
         assertEquals(evStored.getLid(), evRead.getLid());
 
         BareCreateEvent bEv2 = new BareCreateEvent();
         bEv2.getContent().setCreator(UserID.from("john", "example.org"));
-        ChannelEvent ev2 = ChannelEvent.from(cSid, EventID.from("sarce2", "example.org"), bEv2.getJson());
+        ChannelEvent ev2 = ChannelEvent.from(cSid, EventID.from("sarce2", "example.org").full(), bEv2.getJson());
         assertNotNull(ev2.getData());
         ev2 = store.saveEvent(ev2);
         assertNotNull(ev2.getData());
@@ -197,14 +197,14 @@ public abstract class DataStoreTest {
     @Test
     public void saveAndReadChannelState() {
         long cSid = makeChannel().getSid();
-        ChannelEvent ev1 = ChannelEvent.from(cSid, EventID.from("sarcs1", "example.org"), GsonUtil.parseObj("{\"hello\":\"world\"}"));
-        ChannelEvent ev2 = ChannelEvent.from(cSid, EventID.from("sarcs2", "example.org"), GsonUtil.parseObj("{\"type\":\"world\",\"scope\":\"test\"}"));
+        ChannelEvent ev1 = ChannelEvent.from(cSid, EventID.from("sarcs1", "example.org").full(), GsonUtil.parseObj("{\"hello\":\"world\"}"));
+        ChannelEvent ev2 = ChannelEvent.from(cSid, EventID.from("sarcs2", "example.org").full(), GsonUtil.parseObj("{\"type\":\"world\",\"scope\":\"test\"}"));
         ev1 = store.saveEvent(ev1);
         ev2 = store.saveEvent(ev2);
         ChannelState state = ChannelState.empty().apply(ev1).apply(ev2);
         long evAmountBefore = state.getEvents().size();
         Long sSid = store.insertIfNew(cSid, state);
-        ChannelState stateRead = store.getState(sSid);
+        ChannelState stateRead = new ChannelState(store.getState(sSid)); // FIXME test Dao
         long evAmountAfter = stateRead.getEvents().size();
         assertEquals(stateRead.getSid(), sSid);
         assertEquals(evAmountBefore, evAmountAfter);
@@ -219,13 +219,13 @@ public abstract class DataStoreTest {
         long cSid = makeChannel().getSid();
         BareCreateEvent bEv = new BareCreateEvent();
         bEv.getContent().setCreator(UserID.from("john", "example.org"));
-        ChannelEvent ev = ChannelEvent.from(cSid, EventID.from("sarce2", "example.org"), bEv.getJson());
+        ChannelEvent ev = ChannelEvent.from(cSid, EventID.from("sarce2", "example.org").full(), bEv.getJson());
         assertNotNull(ev.getData());
         ev = store.saveEvent(ev);
 
-        ChannelState state = store.getState(store.insertIfNew(cSid, ChannelState.empty().apply(ev)));
+        ChannelState state = new ChannelState(store.getState(store.insertIfNew(cSid, ChannelState.empty().apply(ev)))); // FIXME test Dao
         store.map(ev.getLid(), state.getSid());
-        ChannelState stateRead = store.getStateForEvent(ev.getLid());
+        ChannelState stateRead = new ChannelState(store.getStateForEvent(ev.getLid())); // FIXME test Dao
         assertEquals(state.getSid(), stateRead.getSid());
     }
 

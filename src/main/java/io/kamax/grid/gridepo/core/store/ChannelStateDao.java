@@ -18,37 +18,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.core.room;
+package io.kamax.grid.gridepo.core.store;
 
-import io.kamax.grid.gridepo.core.channel.state.ChannelState;
-import io.kamax.grid.gridepo.exception.NotImplementedException;
+import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
 
+import java.util.ArrayList;
 import java.util.List;
 
-public class RoomView {
+public class ChannelStateDao {
 
-    private final String eventId;
-    private final RoomState state;
+    private long sid;
+    private List<ChannelEvent> events = new ArrayList<>();
 
-    public RoomView(String eventId, ChannelState state) {
-        this(eventId, new RoomState(state));
+    public ChannelStateDao(long sid, List<ChannelEvent> events) {
+        this.sid = sid;
+        this.events = events;
     }
 
-    public RoomView(String eventId, RoomState state) {
-        this.eventId = eventId;
-        this.state = state;
+    public long getSid() {
+        return sid;
     }
 
-    public String getEventId() {
-        return eventId;
+    public void setSid(long sid) {
+        this.sid = sid;
     }
 
-    public RoomState getState() {
-        return state;
+    public List<ChannelEvent> getEvents() {
+        return events;
     }
 
-    public List<String> getAllServers() {
-        throw new NotImplementedException();
+    public void setEventSids(List<ChannelEvent> events) {
+        this.events = events;
     }
 
 }

@@ -20,24 +20,21 @@
 
 package io.kamax.test.grid.gridepo.core;
 
+import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.config.GridepoConfig;
 import io.kamax.grid.gridepo.core.MonolithGridepo;
-import io.kamax.grid.gridepo.core.SyncData;
-import io.kamax.grid.gridepo.core.SyncOptions;
-import io.kamax.grid.gridepo.core.UserSession;
-import io.kamax.grid.gridepo.core.channel.Channel;
-import io.kamax.grid.gridepo.core.channel.ChannelMembership;
 import io.kamax.grid.gridepo.core.identity.User;
-import org.apache.commons.lang3.StringUtils;
-
-import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.*;
+import io.kamax.grid.gridepo.network.matrix.core.MatrixDataClient;
+import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+import io.kamax.grid.gridepo.network.matrix.core.room.Room;
+import org.junit.Test;
 
 public class MonolithGridepoTest {
 
-    //@Test
-    public void basicRoomCreate() {
+    /*
+    @Test
+    public void basicChannelCreate() {
         GridepoConfig cfg = GridepoConfig.inMemory();
         cfg.setDomain("localhost");
         Gridepo g = new MonolithGridepo(cfg);
@@ -56,6 +53,20 @@ public class MonolithGridepoTest {
         assertNotEquals("0", data.getPosition());
 
         g.stop();
+    }
+    */
+
+    @Test
+    public void basicRoomCreate() {
+        GridepoConfig cfg = GridepoConfig.inMemory();
+        cfg.setDomain("localhost");
+        Gridepo g = new MonolithGridepo(cfg);
+        g.start();
+        MatrixDataClient client = g.overMatrix().vHost("localhost").asClient();
+
+        User u = client.register("test", "test");
+        UserSession session = client.login(u);
+        Room r = session.createRoom(new JsonObject());
     }
 
 }

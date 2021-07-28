@@ -26,6 +26,7 @@ import io.kamax.grid.gridepo.core.auth.AuthService;
 import io.kamax.grid.gridepo.core.auth.UIAuthSession;
 import io.kamax.grid.gridepo.core.channel.ChannelDirectory;
 import io.kamax.grid.gridepo.core.channel.ChannelManager;
+import io.kamax.grid.gridepo.core.crypto.Cryptopher;
 import io.kamax.grid.gridepo.core.event.EventService;
 import io.kamax.grid.gridepo.core.event.EventStreamer;
 import io.kamax.grid.gridepo.core.federation.DataServerManager;
@@ -63,6 +64,8 @@ public interface Gridepo {
     SignalBus getBus();
 
     DataStore getStore();
+
+    Cryptopher getCrypto();
 
     IdentityManager getIdentity();
 

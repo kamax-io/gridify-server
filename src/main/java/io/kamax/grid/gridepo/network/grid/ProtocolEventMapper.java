@@ -55,7 +55,7 @@ public class ProtocolEventMapper {
 
             RoomCreationContent mEvC = new RoomCreationContent();
             mEvC.setCreator(forUserIdFromGridToMatrix(gEv.getContent().getCreator()));
-            RoomEvent mEv = mapCommon(ev.getId().full(), gEv);
+            RoomEvent mEv = mapCommon(ev.getId(), gEv);
             mEv.setType("m.room.create");
             mEv.setStateKey("");
             mEv.setContent(mEvC);
@@ -66,7 +66,7 @@ public class ProtocolEventMapper {
             BareMemberEvent gEv = GsonUtil.get().fromJson(ev.getData(), BareMemberEvent.class);
             RoomMemberContent mEvC = new RoomMemberContent();
             mEvC.setMembership(gEv.getContent().getAction());
-            RoomEvent mEv = mapCommon(ev.getId().full(), gEv);
+            RoomEvent mEv = mapCommon(ev.getId(), gEv);
             mEv.setType("m.room.member");
             mEv.setContent(mEvC);
             return mEv;
@@ -85,7 +85,7 @@ public class ProtocolEventMapper {
             mEvC.setUsersDefault(c.getDef().getUser());
             c.getUsers().forEach((id, pl) -> mEvC.getUsers().put(forUserIdFromGridToMatrix(id), pl));
 
-            RoomEvent mEv = mapCommon(ev.getId().full(), gEv);
+            RoomEvent mEv = mapCommon(ev.getId(), gEv);
             mEv.setType("m.room.power_levels");
             mEv.setStateKey("");
             mEv.setContent(mEvC);
@@ -102,7 +102,7 @@ public class ProtocolEventMapper {
                 mEvC.setAlias(c.getAlias().replaceFirst("@", ":"));
             }
 
-            RoomEvent mEv = mapCommon(ev.getId().full(), gEv);
+            RoomEvent mEv = mapCommon(ev.getId(), gEv);
             mEv.setType("m.room.canonical_alias");
             mEv.setContent(mEvC);
 
@@ -116,7 +116,7 @@ public class ProtocolEventMapper {
             RoomAliasContent mEvC = new RoomAliasContent();
             c.getAliases().forEach(alias -> mEvC.getAliases().add(alias.replaceFirst("@", ":")));
 
-            RoomEvent mEv = mapCommon(ev.getId().full(), gEv);
+            RoomEvent mEv = mapCommon(ev.getId(), gEv);
             mEv.setType("m.room.aliases");
             mEv.setStateKey(ServerID.parse(gEv.getScope()).tryDecodeDns().orElseGet(() -> gEv.getScope().substring(1)));
             mEv.setContent(mEvC);
@@ -139,7 +139,7 @@ public class ProtocolEventMapper {
                 }
             }
 
-            RoomEvent mEv = mapCommon(ev.getId().full(), gEv);
+            RoomEvent mEv = mapCommon(ev.getId(), gEv);
             mEv.setType("m.room.message");
             mEv.setContent(mEvC);
 
@@ -152,7 +152,7 @@ public class ProtocolEventMapper {
             RoomJoinRuleContent mEvC = new RoomJoinRuleContent();
             mEvC.setJoinRule(gEv.getContent().getRule());
 
-            RoomEvent mEv = mapCommon(ev.getId().full(), gEv);
+            RoomEvent mEv = mapCommon(ev.getId(), gEv);
             mEv.setType("m.room.join_rules");
             mEv.setContent(mEvC);
 
@@ -161,7 +161,7 @@ public class ProtocolEventMapper {
 
         // Default mapper
         g2mMappers.put(WildcardType, gEv -> {
-            RoomEvent mEv = mapCommon(gEv.getId().full(), gEv.getBare());
+            RoomEvent mEv = mapCommon(gEv.getId(), gEv.getBare());
 
             String type = gEv.getBare().getType();
 

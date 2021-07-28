@@ -34,25 +34,25 @@ public class ChannelTimeline {
     }
 
     public TimelineChunk getNext(EventID evId, long amount) {
-        long eTid = store.getEventTid(id, evId);
+        long eTid = store.getEventTid(id, evId.full());
         TimelineChunk chunk = new TimelineChunk();
         chunk.setStart(evId);
         chunk.setEnd(evId);
         chunk.setEvents(store.getTimelineNext(id, eTid, amount));
         if (!chunk.getEvents().isEmpty()) {
-            chunk.setEnd(chunk.getEvents().get(chunk.getEvents().size() - 1).getId());
+            chunk.setEnd(EventID.parse(chunk.getEvents().get(chunk.getEvents().size() - 1).getId()));
         }
         return chunk;
     }
 
     public TimelineChunk getPrevious(EventID evId, long amount) {
-        long eTid = store.getEventTid(id, evId);
+        long eTid = store.getEventTid(id, evId.full());
         TimelineChunk chunk = new TimelineChunk();
         chunk.setStart(evId);
         chunk.setEnd(evId);
         chunk.setEvents(store.getTimelinePrevious(id, eTid, amount));
         if (!chunk.getEvents().isEmpty()) {
-            chunk.setEnd(chunk.getEvents().get(chunk.getEvents().size() - 1).getId());
+            chunk.setEnd(EventID.parse(chunk.getEvents().get(chunk.getEvents().size() - 1).getId()));
         }
         return chunk;
     }

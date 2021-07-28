@@ -22,20 +22,14 @@ package io.kamax.grid.gridepo.core.channel.event;
 
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.core.store.postgres.ChannelEventMeta;
-import io.kamax.grid.gridepo.network.grid.core.EventID;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class ChannelEvent {
 
     public static ChannelEvent forNotFound(long cSid, String evId) {
-        return forNotFound(cSid, EventID.parse(evId));
-    }
-
-    public static ChannelEvent forNotFound(long cSid, EventID evId) {
         return from(cSid, evId, null);
     }
 
@@ -43,7 +37,7 @@ public class ChannelEvent {
         return from(cSid, null, raw);
     }
 
-    public static ChannelEvent from(long cSid, EventID id, JsonObject raw) {
+    public static ChannelEvent from(long cSid, String id, JsonObject raw) {
         ChannelEvent ev = new ChannelEvent(cSid);
         ev.id = id;
         ev.setData(raw);
@@ -54,12 +48,12 @@ public class ChannelEvent {
     private long cSid;
     private Long lid;
     private Long sid;
-    private EventID id;
+    private String id;
     private JsonObject data;
     private ChannelEventMeta meta;
 
     private transient BareGenericEvent bare;
-    private transient List<EventID> prevEvents;
+    private transient List<String> prevEvents;
 
     public ChannelEvent() {
         meta = new ChannelEventMeta();
@@ -118,11 +112,12 @@ public class ChannelEvent {
         this.sid = sid;
     }
 
-    public EventID getId() {
-        if (Objects.isNull(id)) {
-            id = EventID.parse(getBare().getId());
-        }
+    public String getId() {
         return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getOrigin() {
@@ -142,9 +137,9 @@ public class ChannelEvent {
         bare = null;
     }
 
-    public List<EventID> getPreviousEvents() {
+    public List<String> getPreviousEvents() {
         if (Objects.isNull(prevEvents)) {
-            prevEvents = getBare().getPreviousEvents().stream().map(EventID::parse).collect(Collectors.toList());
+            prevEvents = getBare().getPreviousEvents();
         }
 
         return prevEvents;

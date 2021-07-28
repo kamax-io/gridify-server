@@ -22,10 +22,13 @@ package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
+import io.kamax.grid.gridepo.core.crypto.Cryptopher;
+import io.kamax.grid.gridepo.core.crypto.Signature;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.BarePowerEvent;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomID;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomState;
+import io.kamax.grid.gridepo.util.Base64Codec;
 import org.apache.commons.lang3.RandomStringUtils;
 
 import java.nio.ByteBuffer;
@@ -40,8 +43,9 @@ public interface RoomAlgo {
     default String generateRoomId(String domain) {
         ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
         buffer.putLong(Instant.now().toEpochMilli());
-        String localpart = new String(buffer.array(), StandardCharsets.UTF_8) + RandomStringUtils.randomAlphanumeric(4);
-        return RoomID.from(localpart, domain).full();
+        String localpartBytes = new String(buffer.array(), StandardCharsets.UTF_8) + RandomStringUtils.randomAlphanumeric(4);
+        String localpart = Base64Codec.encode(localpartBytes);
+        return RoomID.Sigill + localpart + RoomID.Delimiter + domain;
     }
 
     long getBaseDepth();
@@ -54,8 +58,24 @@ public interface RoomAlgo {
 
     ChannelEventAuthorization authorize(RoomState state, String evId, JsonObject ev);
 
-    List<BareEvent<?>> getCreationEvents(String creator, JsonObject options);
+    List<BareEvent<?>> getCreationEvents(String domain, String creator, JsonObject options);
 
     JsonObject buildJoinEvent(String origin, JsonObject template);
+
+    String getEventId(JsonObject event);
+
+    String computeHash(JsonObject event);
+
+    String computeEventHash(JsonObject event);
+
+    String computeContentHash(JsonObject event);
+
+    Signature computeSignature(JsonObject doc, Cryptopher crypto);
+
+    JsonObject sign(JsonObject doc, Cryptopher crypto, String domain);
+
+    JsonObject signOff(JsonObject doc, Cryptopher crypto, String domain);
+
+    JsonObject redact(JsonObject doc);
 
 }

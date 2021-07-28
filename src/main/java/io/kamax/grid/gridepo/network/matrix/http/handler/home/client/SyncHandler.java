@@ -21,11 +21,11 @@
 package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
 
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.SyncData;
 import io.kamax.grid.gridepo.core.SyncOptions;
 import io.kamax.grid.gridepo.http.handler.Exchange;
 import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
 import io.kamax.grid.gridepo.network.matrix.http.handler.AuthenticatedClientApiHandler;
+import io.kamax.grid.gridepo.network.matrix.http.json.SyncResponse;
 import org.apache.commons.lang3.StringUtils;
 
 public class SyncHandler extends AuthenticatedClientApiHandler {
@@ -50,7 +50,7 @@ public class SyncHandler extends AuthenticatedClientApiHandler {
             }
         }
 
-        SyncData data = session.sync(options);
+        SyncResponse data = session.sync(options);
         ex.respondJson(data);
     }
 
