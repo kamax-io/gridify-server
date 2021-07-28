@@ -29,6 +29,7 @@ import io.kamax.grid.gridepo.network.grid.core.UserID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -95,14 +96,21 @@ public class User {
 
     @Deprecated
     public UserID getGridId() {
-        return getNetworkId("grid");
+        return UserID.parse(getNetworkId("grid"));
     }
 
-    public UserID getNetworkId(String network) {
-        return store.listThreePid(lid, "g.id.net." + network).stream()
-                .findFirst()
-                .map(id -> UserID.parse(id.getAddress()))
-                .orElseThrow(IllegalStateException::new);
+    public String getUsername() {
+        return store.listThreePid(lid, "g.id.local.username").stream().findFirst()
+                .orElseThrow(IllegalStateException::new)
+                .getAddress();
+    }
+
+    public Optional<String> findNetworkId(String network) {
+        return store.listThreePid(lid, "g.id.net." + network).stream().findFirst().map(ThreePid::getAddress);
+    }
+
+    public String getNetworkId(String network) {
+        return findNetworkId(network).orElseThrow(IllegalStateException::new);
     }
 
 }

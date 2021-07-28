@@ -79,6 +79,7 @@ public abstract class DataStoreTest {
         long uLid = store.addUser(user);
         char[] password = RandomStringUtils.randomAlphanumeric(12).toCharArray();
         store.addCredentials(uLid, new Credentials("g.auth.id.password", password));
+        store.addThreePid(uLid, new GenericThreePid("g.id.local.username", user));
 
         assertTrue(store.hasUsername(user));
         Optional<UserDao> dao = store.findUser(user);
@@ -107,8 +108,10 @@ public abstract class DataStoreTest {
 
         long uLid1 = store.addUser(user1);
         store.addCredentials(uLid1, new Credentials("g.auth.id.password", user1));
+        store.addThreePid(uLid1, new GenericThreePid("g.id.local.username", user1));
         long uLid2 = store.addUser(user2);
         store.addCredentials(uLid2, new Credentials("g.auth.id.password", user2));
+        store.addThreePid(uLid2, new GenericThreePid("g.id.local.username", user2));
 
         assertTrue(store.hasUsername(user1));
         Optional<UserDao> u1Dao = store.findUser(user1);

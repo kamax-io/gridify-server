@@ -648,10 +648,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
     @Override
     public boolean hasUsername(String username) {
-        return withStmtFunction("SELECT * FROM identity_users WHERE id = ? LIMIT 1", stmt -> {
-            stmt.setString(1, username);
-            return stmt.executeQuery().next();
-        });
+        return findUserByTreePid(new GenericThreePid("g.id.local.username", username)).isPresent();
     }
 
     @Override
@@ -763,7 +760,19 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
     @Override
     public Optional<UserDao> findUserByTreePid(ThreePid tpid) {
-        return Optional.empty();
+        return withStmtFunction("SELECT u.* FROM identity_user_threepids tpids JOIN identity_users u ON u.lid = tpids.user_lid WHERE medium = ? AND address = ?", stmt -> {
+            stmt.setString(1, tpid.getMedium());
+            stmt.setString(2, tpid.getAddress());
+            ResultSet rSet = stmt.executeQuery();
+            if (!rSet.next()) {
+                return Optional.empty();
+            }
+
+            UserDao dao = new UserDao();
+            dao.setLid(rSet.getLong("lid"));
+            dao.setId(rSet.getString("id"));
+            return Optional.of(dao);
+        });
     }
 
     @Override
@@ -777,7 +786,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
     @Override
     public void insertUserAccessToken(long uLid, String token) {
-        withStmtConsumer("INSERT INTO user_access_tokens (ulid, token) VALUES (?,?)", stmt -> {
+        withStmtConsumer("INSERT INTO user_access_tokens (user_lid, token) VALUES (?,?)", stmt -> {
             stmt.setLong(1, uLid);
             stmt.setString(2, token);
             int rc = stmt.executeUpdate();

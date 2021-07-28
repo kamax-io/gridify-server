@@ -47,7 +47,7 @@ public class UserLookupHandler extends GridApiHandler {
         ThreePid tpid = new GenericThreePid(type, value);
         User u = g.getIdentity().findUser(tpid).orElseThrow(() -> new ObjectNotFoundException("User with 3PID " + tpid));
 
-        exchange.respond(GsonUtil.makeObj("id", u.getNetworkId("grid").full()));
+        exchange.respond(GsonUtil.makeObj("id", u.getNetworkId("grid")));
     }
 
 }

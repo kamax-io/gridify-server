@@ -58,20 +58,28 @@ public class LocalAuthIdentityStore implements AuthIdentityStore {
     @Override
     public Optional<AuthResult> authenticate(String type, JsonObject docJson) {
         AuthPasswordDocument doc = AuthPasswordDocument.from(docJson);
+        if ("m.login.password".equals(doc.getType())) {
+            doc.setType(GridType.of("auth.id.password"));
+        }
         Credentials creds = new Credentials(doc.getType(), doc.getPassword());
 
         ThreePid username = new GenericThreePid(doc.getIdentifier().getType(), doc.getIdentifier().getValue());
+        log.debug("Authenticating {}", username);
         Optional<UserDao> daoOpt = store.findUserByTreePid(username);
         if (!daoOpt.isPresent()) {
-            log.info("Authentication of {}: no user found", doc.getIdentifier().getValue());
-            return Optional.empty();
+            username = new GenericThreePid("g.id.local.username", doc.getIdentifier().getValue());
+            daoOpt = store.findUserByTreePid(username);
+            if (!daoOpt.isPresent()) {
+                log.info("Authentication of {}: no user found", doc.getIdentifier().getValue());
+                return Optional.empty();
+            }
         }
 
         UserDao dao = daoOpt.get();
         SecureCredentials pass = store.getCredentials(dao.getLid(), creds.getType());
         if (pass.matches(creds)) {
             log.info("Authentication of {}: via password: success", dao.getId());
-            return Optional.of(AuthResult.success(new GenericThreePid(GridType.id().local("store.memory.id"), dao.getId())));
+            return Optional.of(AuthResult.success(username));
         } else {
             log.info("Authentication of {}: via password: failure", dao.getId());
             return Optional.of(AuthResult.failed());

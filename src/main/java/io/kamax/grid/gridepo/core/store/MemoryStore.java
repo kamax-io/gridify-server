@@ -20,17 +20,15 @@
 
 package io.kamax.grid.gridepo.core.store;
 
-import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.config.IdentityConfig;
 import io.kamax.grid.gridepo.core.GridType;
-import io.kamax.grid.gridepo.core.auth.AuthPasswordDocument;
-import io.kamax.grid.gridepo.core.auth.AuthResult;
 import io.kamax.grid.gridepo.core.auth.Credentials;
 import io.kamax.grid.gridepo.core.auth.SecureCredentials;
 import io.kamax.grid.gridepo.core.channel.ChannelDao;
 import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
 import io.kamax.grid.gridepo.core.channel.state.ChannelState;
 import io.kamax.grid.gridepo.core.identity.*;
+import io.kamax.grid.gridepo.core.identity.store.local.LocalAuthIdentityStore;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 import io.kamax.grid.gridepo.network.grid.core.ChannelID;
 import io.kamax.grid.gridepo.network.grid.core.ServerID;
@@ -559,37 +557,7 @@ public class MemoryStore implements DataStore, IdentityStore {
 
     @Override
     public AuthIdentityStore forAuth() {
-        return new AuthIdentityStore() {
-
-            @Override
-            public Set<String> getSupportedTypes() {
-                return new HashSet<>(Arrays.asList(GridType.of("auth.id.password"), "m.login.password"));
-            }
-
-            @Override
-            public Optional<AuthResult> authenticate(String type, JsonObject docJson) {
-                AuthPasswordDocument doc = AuthPasswordDocument.from(docJson);
-                Credentials creds = new Credentials(doc.getType(), doc.getPassword());
-
-                ThreePid username = new GenericThreePid(doc.getIdentifier().getType(), doc.getIdentifier().getValue());
-                Optional<UserDao> daoOpt = findUserByTreePid(username);
-                if (!daoOpt.isPresent()) {
-                    log.info("Authentication of {}: no user found", doc.getIdentifier().getValue());
-                    return Optional.empty();
-                }
-
-                UserDao dao = daoOpt.get();
-                SecureCredentials pass = userCreds.computeIfAbsent(dao.getLid(), i -> new ConcurrentHashMap<>()).get(creds.getType());
-                if (pass.matches(creds)) {
-                    log.info("Authentication of {}: via password: success", dao.getId());
-                    return Optional.of(AuthResult.success(new GenericThreePid(GridType.id().local("store.memory.id"), dao.getId())));
-                } else {
-                    log.info("Authentication of {}: via password: failure", dao.getId());
-                    return Optional.of(AuthResult.failed());
-                }
-            }
-
-        };
+        return new LocalAuthIdentityStore(this);
     }
 
     @Override

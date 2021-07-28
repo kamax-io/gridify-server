@@ -407,6 +407,7 @@ public class Channel {
     public List<ChannelEventAuthorization> offer(String from, List<JsonObject> events, boolean isSeed) {
         return offer(events.stream().map(raw -> {
             ChannelEvent ev = ChannelEvent.from(getSid(), raw);
+            ev.setId(ev.getBare().getId());
             ev.getMeta().setSeed(isSeed);
             ev.getMeta().setReceivedFrom(from);
             ev.getMeta().setReceivedAt(Instant.now());
@@ -420,6 +421,7 @@ public class Channel {
 
     public ChannelEventAuthorization offer(JsonObject ev) {
         ChannelEvent cEv = ChannelEvent.from(getSid(), ev);
+        cEv.setId(cEv.getBare().getId());
         cEv.getMeta().setReceivedAt(Instant.now());
 
         return offer(Collections.singletonList(cEv), false).get(0);
@@ -432,6 +434,7 @@ public class Channel {
     public ChannelEventAuthorization inject(String from, JsonObject event, List<JsonObject> state) {
         state.stream().map(raw -> {
             ChannelEvent ev = ChannelEvent.from(getSid(), raw);
+            ev.setId(ev.getBare().getId());
             ev.getMeta().setReceivedFrom(from);
             ev.getMeta().setReceivedAt(Instant.now());
             return ev;
@@ -443,6 +446,7 @@ public class Channel {
         });
 
         ChannelEvent ev = ChannelEvent.from(getSid(), event);
+        ev.setId(ev.getBare().getId());
         ev.getMeta().setReceivedFrom(from);
         ev.getMeta().setReceivedAt(Instant.now());
         return process(ev, false, true);

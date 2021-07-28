@@ -66,7 +66,8 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
     @Override
     public UserSession withToken(String token) {
         User u = g.validateSessionToken(token);
-        return new UserSession(g, domain, u.getNetworkId("matrix").full(), token);
+        String userId = u.findNetworkId("matrix").orElseGet(() -> "@" + u.getUsername() + ":" + domain);
+        return new UserSession(g, domain, userId, token);
     }
 
     @Override
@@ -95,6 +96,14 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
 
     @Override
     public UserSession login(JsonObject credentials) {
+        if ("m.login.password".equals(GsonUtil.getStringOrNull(credentials, "type"))) {
+            GsonUtil.findObj(credentials, "identifier").ifPresent(id -> {
+                if ("m.id.user".equals(GsonUtil.getStringOrNull(id, "type"))) {
+                    id.addProperty("type", "g.id.net.matrix.localpart");
+                    id.addProperty("value", GsonUtil.getStringOrNull(id, "user"));
+                }
+            });
+        }
         Optional<String> sessionId = GsonUtil.findString(credentials, "session");
         UIAuthSession session;
         if (sessionId.isPresent()) {

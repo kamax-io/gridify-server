@@ -35,6 +35,9 @@ public class ChannelID extends GridEntityID {
     }
 
     public static ChannelID fromRaw(String rawId) {
+        if (StringUtils.startsWith(rawId, Sigill)) {
+            rawId = StringUtils.substring(rawId, 1);
+        }
         return new ChannelID(rawId);
     }
 
