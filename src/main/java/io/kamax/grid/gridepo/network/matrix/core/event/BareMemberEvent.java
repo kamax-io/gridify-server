@@ -20,41 +20,34 @@
 
 package io.kamax.grid.gridepo.network.matrix.core.event;
 
-import io.kamax.grid.gridepo.network.grid.core.UserID;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomMembership;
+
+import java.time.Instant;
 
 public class BareMemberEvent extends BareEvent<BareMemberEvent.Content> {
 
-    public static BareMemberEvent joinAs(UserID uId) {
+    public static BareMemberEvent leave(String userId) {
         BareMemberEvent ev = new BareMemberEvent();
-        ev.setSender(uId.full());
-        ev.setStateKey(uId.full());
-        ev.getContent().setAction(RoomMembership.Join);
-        return ev;
-    }
-
-    public static BareMemberEvent inviteAs(UserID invitee, UserID inviter) {
-        BareMemberEvent ev = new BareMemberEvent();
-        ev.setSender(inviter.full());
-        ev.setStateKey(invitee.full());
-        ev.getContent().setAction(RoomMembership.Invite);
+        ev.setSender(userId);
+        ev.setStateKey(userId);
+        ev.getContent().setMembership(RoomMembership.Leave);
         return ev;
     }
 
     public static class Content {
 
-        private String action;
+        private String membership;
 
-        public String getAction() {
-            return action;
+        public String getMembership() {
+            return membership;
         }
 
-        public void setAction(String action) {
-            this.action = action;
+        public void setMembership(String membership) {
+            this.membership = membership;
         }
 
-        public void setAction(RoomMembership m) {
-            setAction(m.getId());
+        public void setMembership(RoomMembership m) {
+            setMembership(m.getId());
         }
 
     }
@@ -62,6 +55,7 @@ public class BareMemberEvent extends BareEvent<BareMemberEvent.Content> {
     public BareMemberEvent() {
         setType(RoomEventType.Member);
         setStateKey("");
+        setTimestamp(Instant.now().toEpochMilli());
         setContent(new BareMemberEvent.Content());
     }
 

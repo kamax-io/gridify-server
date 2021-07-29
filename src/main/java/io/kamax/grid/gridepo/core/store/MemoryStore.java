@@ -26,13 +26,11 @@ import io.kamax.grid.gridepo.core.auth.Credentials;
 import io.kamax.grid.gridepo.core.auth.SecureCredentials;
 import io.kamax.grid.gridepo.core.channel.ChannelDao;
 import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
-import io.kamax.grid.gridepo.core.channel.state.ChannelState;
 import io.kamax.grid.gridepo.core.identity.*;
 import io.kamax.grid.gridepo.core.identity.store.local.LocalAuthIdentityStore;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 import io.kamax.grid.gridepo.network.grid.core.ChannelID;
 import io.kamax.grid.gridepo.network.grid.core.ServerID;
-import io.kamax.grid.gridepo.network.matrix.core.room.RoomState;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import io.kamax.grid.gridepo.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
@@ -49,7 +47,7 @@ public class MemoryStore implements DataStore, IdentityStore {
 
     private static final Logger log = KxLog.make(MemoryStore.class);
 
-    private static Map<String, MemoryStore> singleton = new ConcurrentHashMap<>();
+    private final static Map<String, MemoryStore> singleton = new ConcurrentHashMap<>();
 
     public static synchronized MemoryStore getNew() {
         return get(UUID.randomUUID().toString());
@@ -74,32 +72,32 @@ public class MemoryStore implements DataStore, IdentityStore {
         return cfg;
     }
 
-    private AtomicLong uLid = new AtomicLong(0);
-    private AtomicLong chSid = new AtomicLong(0);
-    private AtomicLong evLid = new AtomicLong(0);
-    private AtomicLong evSid = new AtomicLong(0);
-    private AtomicLong sSid = new AtomicLong(0);
+    private final AtomicLong uLid = new AtomicLong(0);
+    private final AtomicLong chSid = new AtomicLong(0);
+    private final AtomicLong evLid = new AtomicLong(0);
+    private final AtomicLong evSid = new AtomicLong(0);
+    private final AtomicLong sSid = new AtomicLong(0);
 
-    private Map<Long, UserDao> users = new ConcurrentHashMap<>();
-    private Map<Long, Set<ThreePid>> userStoreIds = new ConcurrentHashMap<>();
-    private Map<Long, Map<String, SecureCredentials>> userCreds = new ConcurrentHashMap<>();
-    private Map<Long, List<String>> uTokens = new ConcurrentHashMap<>();
-    private Map<Long, Set<ThreePid>> userThreepids = new ConcurrentHashMap<>();
-    private Map<String, Long> uNameToLid = new ConcurrentHashMap<>();
+    private final Map<Long, UserDao> users = new ConcurrentHashMap<>();
+    private final Map<Long, Set<ThreePid>> userStoreIds = new ConcurrentHashMap<>();
+    private final Map<Long, Map<String, SecureCredentials>> userCreds = new ConcurrentHashMap<>();
+    private final Map<Long, List<String>> uTokens = new ConcurrentHashMap<>();
+    private final Map<Long, Set<ThreePid>> userThreepids = new ConcurrentHashMap<>();
+    private final Map<String, Long> uNameToLid = new ConcurrentHashMap<>();
 
-    private Map<Long, ChannelDao> channels = new ConcurrentHashMap<>();
-    private Map<String, ChannelDao> chIdToDao = new ConcurrentHashMap<>();
-    private Map<Long, ChannelEvent> chEvents = new ConcurrentHashMap<>();
-    private Map<Long, ChannelStateDao> chStates = new ConcurrentHashMap<>();
-    private Map<Long, List<Long>> chFrontExtremities = new ConcurrentHashMap<>();
-    private Map<Long, List<Long>> chBackExtremities = new ConcurrentHashMap<>();
-    private Map<String, ChannelID> chAliasToId = new ConcurrentHashMap<>();
-    private Map<ChannelID, Map<ServerID, Set<String>>> chIdToAlias = new ConcurrentHashMap<>();
+    private final Map<Long, ChannelDao> channels = new ConcurrentHashMap<>();
+    private final Map<String, ChannelDao> chIdToDao = new ConcurrentHashMap<>();
+    private final Map<Long, ChannelEvent> chEvents = new ConcurrentHashMap<>();
+    private final Map<Long, ChannelStateDao> chStates = new ConcurrentHashMap<>();
+    private final Map<Long, List<Long>> chFrontExtremities = new ConcurrentHashMap<>();
+    private final Map<Long, List<Long>> chBackExtremities = new ConcurrentHashMap<>();
+    private final Map<String, ChannelID> chAliasToId = new ConcurrentHashMap<>();
+    private final Map<ChannelID, Map<ServerID, Set<String>>> chIdToAlias = new ConcurrentHashMap<>();
 
-    private Map<Long, Long> evStates = new ConcurrentHashMap<>();
-    private Map<String, Long> evRefToLid = new ConcurrentHashMap<>();
-    private Map<Long, Long> evSidToLid = new ConcurrentHashMap<>();
-    private Map<Long, Long> evLidToSid = new ConcurrentHashMap<>();
+    private final Map<Long, Long> evStates = new ConcurrentHashMap<>();
+    private final Map<String, Long> evRefToLid = new ConcurrentHashMap<>();
+    private final Map<Long, Long> evSidToLid = new ConcurrentHashMap<>();
+    private final Map<Long, Long> evLidToSid = new ConcurrentHashMap<>();
 
     private MemoryStore() {
         // only via static
@@ -131,8 +129,17 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public Optional<ChannelDao> findChannel(String cId) {
-        return Optional.ofNullable(chIdToDao.get(cId));
+    public Optional<ChannelDao> findChannel(String network, String cId) {
+        ChannelDao dao = chIdToDao.get(cId);
+        if (Objects.isNull(dao)) {
+            return Optional.empty();
+        }
+
+        if (!StringUtils.equals(network, dao.getNetwork())) {
+            return Optional.empty();
+        }
+
+        return Optional.of(dao);
     }
 
     @Override
@@ -320,18 +327,7 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public long insertIfNew(long cSid, ChannelState state) {
-        if (Objects.nonNull(state.getSid())) {
-            return state.getSid();
-        }
-
-        long sid = sSid.incrementAndGet();
-        chStates.put(sid, new ChannelStateDao(sid, state.getEvents()));
-        return sid;
-    }
-
-    @Override
-    public long insertIfNew(long cLid, RoomState state) {
+    public long insertIfNew(long cSid, ChannelStateDao state) {
         if (Objects.nonNull(state.getSid())) {
             return state.getSid();
         }

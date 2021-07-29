@@ -21,6 +21,7 @@
 package io.kamax.grid.gridepo.network.matrix.core.event;
 
 import com.google.gson.JsonObject;
+import com.google.gson.annotations.SerializedName;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
 import java.util.Optional;
@@ -35,13 +36,19 @@ public class BareCreateEvent extends BareEvent<BareCreateEvent.Content> {
     }
 
     public static Optional<String> findVersion(JsonObject event) {
-        return GsonUtil.findObj(event, EventKey.Content).flatMap(o -> GsonUtil.findString(o, "version"));
+        return GsonUtil.findObj(event, EventKey.Content).flatMap(o -> GsonUtil.findString(o, Content.RoomVersion));
     }
 
     public static class Content {
 
+        public static final String RoomVersion = "room_version";
+        public static final String Federate = "m.federate";
+
         private String creator;
+        @SerializedName(RoomVersion)
         private String version;
+        @SerializedName(Federate)
+        private Boolean federate;
 
         public String getCreator() {
             return creator;

@@ -32,6 +32,7 @@ public class RoomEvent {
     private Long originServerTs;
     private String sender;
     private String stateKey;
+    private JsonObject unsigned;
     private Object content;
     private JsonObject grid;
 
@@ -89,6 +90,14 @@ public class RoomEvent {
 
     public void setStateKey(String stateKey) {
         this.stateKey = stateKey;
+    }
+
+    public JsonObject getUnsigned() {
+        return unsigned;
+    }
+
+    public void setUnsigned(JsonObject unsigned) {
+        this.unsigned = unsigned;
     }
 
     public Object getContent() {

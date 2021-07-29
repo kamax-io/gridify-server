@@ -25,7 +25,6 @@ import io.kamax.grid.gridepo.core.auth.Credentials;
 import io.kamax.grid.gridepo.core.auth.SecureCredentials;
 import io.kamax.grid.gridepo.core.channel.ChannelDao;
 import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
-import io.kamax.grid.gridepo.core.channel.state.ChannelState;
 import io.kamax.grid.gridepo.core.identity.*;
 import io.kamax.grid.gridepo.core.identity.store.local.LocalAuthIdentityStore;
 import io.kamax.grid.gridepo.core.store.ChannelStateDao;
@@ -35,14 +34,14 @@ import io.kamax.grid.gridepo.core.store.UserDao;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 import io.kamax.grid.gridepo.network.grid.core.ChannelID;
 import io.kamax.grid.gridepo.network.grid.core.ServerID;
-import io.kamax.grid.gridepo.network.matrix.core.room.RoomState;
 import io.kamax.grid.gridepo.util.GsonUtil;
+import io.kamax.grid.gridepo.util.KxLog;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.util.*;
@@ -52,7 +51,7 @@ import java.util.stream.Collectors;
 
 public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
-    private static final Logger log = LoggerFactory.getLogger(PostgreSQLDataStore.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private interface ConnFunction<T, R> {
 
@@ -76,7 +75,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
         void run(T stmt) throws SQLException;
     }
 
-    private SqlConnectionPool pool;
+    private final SqlConnectionPool pool;
 
     public PostgreSQLDataStore(StorageConfig cfg) {
         this(new SqlConnectionPool(cfg));
@@ -262,17 +261,13 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public Optional<ChannelDao> findChannel(String cId) {
-        String sql = "SELECT * FROM channels WHERE network = 'grid' AND id = ?";
+    public Optional<ChannelDao> findChannel(String network, String networkId) {
+        String sql = "SELECT * FROM channels WHERE network = ? AND id = ?";
         return withStmtFunction(sql, stmt -> {
-            stmt.setString(1, cId);
+            stmt.setString(1, network);
+            stmt.setString(2, networkId);
             return findChannel(stmt.executeQuery());
         });
-    }
-
-    @Override
-    public Optional<ChannelDao> findChannel(ChannelID cId) {
-        return findChannel(cId.full());
     }
 
     @Override
@@ -280,11 +275,12 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
         String sql = "INSERT INTO channel_event_stream (lid) VALUES (?) RETURNING sid";
         return withStmtFunction(sql, stmt -> {
             stmt.setLong(1, eLid);
-            ResultSet rSet = stmt.executeQuery();
-            if (!rSet.next()) {
-                throw new IllegalStateException("Inserted event " + eLid + " in stream but got no SID back");
+            try (ResultSet rSet = stmt.executeQuery()) {
+                if (!rSet.next()) {
+                    throw new IllegalStateException("Inserted event " + eLid + " in stream but got no SID back");
+                }
+                return rSet.getLong(1);
             }
-            return rSet.getLong(1);
         });
     }
 
@@ -399,7 +395,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
     @Override
     public Optional<Long> findEventLid(String cId, String eId) throws ObjectNotFoundException {
-        String sql = "SELECT e.lid FROM channels c JOIN channel_events e ON e.channel_lid = c.sid WHERE c.id = ? AND e.id = ?";
+        String sql = "SELECT e.lid FROM channels c JOIN channel_events e ON e.channel_lid = c.lid WHERE c.id = ? AND e.id = ?";
         return withStmtFunction(sql, stmt -> {
             stmt.setString(1, cId);
             stmt.setString(2, eId);
@@ -414,7 +410,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
     @Override
     public List<ChannelEvent> getNext(long lastSid, long amount) {
-        String sql = "SELECT * FROM channel_event_stream s JOIN channel_events e ON s.eLid = e.lid WHERE s.sid > ? ORDER BY s.sid ASC LIMIT ?";
+        String sql = "SELECT * FROM channel_event_stream s JOIN channel_events e ON s.lid = e.lid WHERE s.sid > ? ORDER BY s.sid ASC LIMIT ?";
         return withStmtFunction(sql, stmt -> {
             stmt.setLong(1, lastSid);
             stmt.setLong(2, amount);
@@ -465,8 +461,9 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
     private ChannelEvent make(ResultSet rSet) throws SQLException {
         long cLid = rSet.getLong("channel_lid");
         long sid = rSet.getLong("lid");
+        String id = rSet.getString("id");
         ChannelEventMeta meta = GsonUtil.parse(rSet.getString("meta"), ChannelEventMeta.class);
-        ChannelEvent ev = new ChannelEvent(cLid, sid, meta);
+        ChannelEvent ev = new ChannelEvent(cLid, sid, id, meta);
         if (ev.getMeta().isPresent()) {
             ev.setData(GsonUtil.parseObj(rSet.getString("data")));
         }
@@ -483,8 +480,8 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
     @Override
     public Optional<ChannelEvent> findEvent(String cId, String eId) {
-        String sqlChIdToSid = "SELECT sid FROM channels WHERE id = ?";
-        String sql = "SELECT * FROM channel_events WHERE id = ? and cSid = (" + sqlChIdToSid + ")";
+        String sqlChIdToSid = "SELECT lid FROM channels WHERE id = ?";
+        String sql = "SELECT * FROM channel_events WHERE id = ? and channel_lid = (" + sqlChIdToSid + ")";
         return withStmtFunction(sql, stmt -> {
             stmt.setString(1, eId);
             stmt.setString(2, cId);
@@ -565,7 +562,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public long insertIfNew(long cLid, ChannelState state) {
+    public long insertIfNew(long cLid, ChannelStateDao state) {
         if (Objects.nonNull(state.getSid())) {
             return state.getSid();
         }
@@ -595,11 +592,6 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
             return sSid;
         });
-    }
-
-    @Override
-    public long insertIfNew(long cLid, RoomState state) {
-        return insertIfNew(cLid, new ChannelState(state.getSid(), state.getEvents()));
     }
 
     @Override

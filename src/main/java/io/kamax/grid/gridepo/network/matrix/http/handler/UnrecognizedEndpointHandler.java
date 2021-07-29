@@ -1,6 +1,6 @@
 /*
  * Gridepo - Grid Data Server
- * Copyright (C) 2019 Kamax Sarl
+ * Copyright (C) 2021 Kamax Sarl
  *
  * https://www.kamax.io/
  *
@@ -22,11 +22,11 @@ package io.kamax.grid.gridepo.network.matrix.http.handler;
 
 import io.kamax.grid.gridepo.http.handler.Exchange;
 
-public class NotFoundHandler extends ClientApiHandler {
+public class UnrecognizedEndpointHandler extends ClientApiHandler {
 
     @Override
-    protected void handle(Exchange ex) {
-        ex.respond(404, "M_NOT_FOUND", "No such endpoint");
+    protected void handle(Exchange exchange) {
+        exchange.respond(404, "M_UNRECOGNIZED", "No such endpoint");
     }
 
 }

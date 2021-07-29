@@ -29,7 +29,7 @@ import java.util.ServiceLoader;
 public class RoomAlgos {
 
     public static String defaultVersion() {
-        return RoomAlgoV7.Version;
+        return RoomAlgoV6.Version;
     }
 
     public static RoomAlgo get(String version) throws NoSuchElementException {

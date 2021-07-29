@@ -27,17 +27,17 @@ import java.util.Optional;
 
 public class Loader implements RoomAlgoLoader {
 
-    private RoomAlgoV7 obj;
+    private RoomAlgoV6 obj;
 
     @Override
     public Optional<RoomAlgo> apply(String version) {
-        if (!StringUtils.equals(RoomAlgoV7.Version, version)) {
+        if (!StringUtils.equals(RoomAlgoV6.Version, version)) {
             return Optional.empty();
         }
 
         synchronized (this) {
             if (Objects.isNull(obj)) {
-                obj = new RoomAlgoV7();
+                obj = new RoomAlgoV6();
             }
         }
 

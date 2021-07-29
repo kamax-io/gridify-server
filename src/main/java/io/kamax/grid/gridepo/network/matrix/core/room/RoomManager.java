@@ -118,7 +118,7 @@ public class RoomManager {
 
     public synchronized Optional<Room> find(String rId) {
         if (!rooms.containsKey(rId)) {
-            g.getStore().findChannel(rId).ifPresent(dao -> rooms.put(rId, fromDao(dao)));
+            g.getStore().findChannel("matrix", rId).ifPresent(dao -> rooms.put(rId, fromDao(dao)));
         }
 
         return Optional.ofNullable(rooms.get(rId));
@@ -144,7 +144,7 @@ public class RoomManager {
                 bEv.setRoomId(data.getId());
                 bEv.setSender(uIdRaw);
                 bEv.setStateKey(uIdRaw);
-                bEv.getContent().setAction(RoomMembership.Join);
+                bEv.getContent().setMembership(RoomMembership.Join);
                 ChannelEventAuthorization auth = r.offer(domain, bEv);
                 if (!auth.isAuthorized()) {
                     throw new ForbiddenException(auth.getReason());

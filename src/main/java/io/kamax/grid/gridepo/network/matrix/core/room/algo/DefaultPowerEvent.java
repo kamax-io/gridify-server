@@ -27,28 +27,28 @@ import java.util.Objects;
 public class DefaultPowerEvent extends BarePowerEvent {
 
     public static Content applyDefaults(Content c) {
-        if (Objects.isNull(c.getDef().getEvent())) {
-            c.getDef().setEvent(0L);
+        if (Objects.isNull(c.getEventsDefault())) {
+            c.setEventsDefault(0L);
         }
 
-        if (Objects.isNull(c.getDef().getState())) {
-            c.getDef().setState(50L);
+        if (Objects.isNull(c.getStateDefault())) {
+            c.setStateDefault(50L);
         }
 
-        if (Objects.isNull(c.getDef().getUser())) {
-            c.getDef().setUser(0L);
+        if (Objects.isNull(c.getUsersDefault())) {
+            c.setUsersDefault(0L);
         }
 
-        if (Objects.isNull(c.getMembership().getBan())) {
-            c.getMembership().setBan(50L);
+        if (Objects.isNull(c.getBan())) {
+            c.setBan(50L);
         }
 
-        if (Objects.isNull(c.getMembership().getInvite())) {
-            c.getMembership().setInvite(c.getDef().getUser());
+        if (Objects.isNull(c.getInvite())) {
+            c.setInvite(c.getUsersDefault());
         }
 
-        if (Objects.isNull(c.getMembership().getKick())) {
-            c.getMembership().setKick(50L);
+        if (Objects.isNull(c.getKick())) {
+            c.setKick(50L);
         }
 
         return c;

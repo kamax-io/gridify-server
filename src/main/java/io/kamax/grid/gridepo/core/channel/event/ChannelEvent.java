@@ -71,8 +71,19 @@ public class ChannelEvent {
         this.lid = lid;
     }
 
+    public ChannelEvent(long cSid, long lid, String id) {
+        this(cSid);
+        this.lid = lid;
+        this.id = id;
+    }
+
     public ChannelEvent(long cSid, long lid, ChannelEventMeta meta) {
         this(cSid, lid);
+        this.meta = meta;
+    }
+
+    public ChannelEvent(long cSid, long lid, String id, ChannelEventMeta meta) {
+        this(cSid, lid, id);
         this.meta = meta;
     }
 

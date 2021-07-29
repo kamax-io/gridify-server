@@ -36,14 +36,10 @@ public class SendRoomEventHandler extends AuthenticatedClientApiHandler {
     protected void handle(UserSession session, Exchange ex) {
         String roomId = ex.getPathVariable("roomId");
         String evType = ex.getPathVariable("type");
-        String txnId = ex.getPathVariable("txnId"); // TODO support
-
+        String txnId = ex.getPathVariable("txnId");
         JsonObject content = ex.parseJsonObject();
-        JsonObject ev = new JsonObject();
-        ev.addProperty("type", evType);
-        ev.add("content", content);
 
-        String evId = session.send(roomId, ev);
+        String evId = session.send(roomId, evType, txnId, content);
         ex.respondJsonObject("event_id", evId);
     }
 

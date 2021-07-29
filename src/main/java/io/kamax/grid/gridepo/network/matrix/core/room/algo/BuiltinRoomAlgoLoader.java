@@ -27,7 +27,7 @@ public class BuiltinRoomAlgoLoader implements RoomAlgoLoader {
     @Override
     public Optional<RoomAlgo> apply(String s) {
         // FIXME all rooms will use this algo, must filter
-        return Optional.of(new RoomAlgoV7());
+        return Optional.of(new RoomAlgoV6());
     }
 
 }

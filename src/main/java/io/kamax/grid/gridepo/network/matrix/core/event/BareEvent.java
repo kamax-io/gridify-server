@@ -47,6 +47,8 @@ public abstract class BareEvent<T> {
     private List<String> previousEvents;
     @SerializedName(EventKey.Depth)
     private Long depth;
+    @SerializedName(EventKey.Unsigned)
+    private JsonObject unsigned = new JsonObject();
     @SerializedName(EventKey.Content)
     private T content;
 
@@ -126,8 +128,16 @@ public abstract class BareEvent<T> {
         return depth;
     }
 
-    public void setDepth(long depth) {
+    public void setDepth(Long depth) {
         this.depth = depth;
+    }
+
+    public JsonObject getUnsigned() {
+        return unsigned;
+    }
+
+    public void setUnsigned(JsonObject unsigned) {
+        this.unsigned = unsigned;
     }
 
     public T getContent() {

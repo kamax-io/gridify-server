@@ -28,9 +28,13 @@ import io.kamax.grid.gridepo.core.channel.ChannelMembership;
 import io.kamax.grid.gridepo.core.channel.TimelineChunk;
 import io.kamax.grid.gridepo.core.channel.TimelineDirection;
 import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
+import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.core.channel.state.ChannelState;
 import io.kamax.grid.gridepo.core.signal.SignalTopic;
+import io.kamax.grid.gridepo.exception.ForbiddenException;
 import io.kamax.grid.gridepo.exception.NotImplementedException;
+import io.kamax.grid.gridepo.network.matrix.core.event.BareGenericEvent;
+import io.kamax.grid.gridepo.network.matrix.core.event.BareMemberEvent;
 import io.kamax.grid.gridepo.network.matrix.core.room.Room;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomAliasLookup;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomMembership;
@@ -247,15 +251,27 @@ public class UserSession {
     }
 
     public void leaveRoom(String roomId) {
-        throw new NotImplementedException();
+        BareMemberEvent bareEvent = BareMemberEvent.leave(userId);
+        g.overMatrix().roomMgr().get(roomId).offer(vHost, bareEvent);
     }
 
     public void inviteToRoom(String roomId, String userId) {
         throw new NotImplementedException();
     }
 
-    public String send(String roomId, JsonObject doc) {
-        throw new NotImplementedException();
+    public String send(String roomId, String type, String txnId, JsonObject content) {
+        // TODO support txnId
+        BareGenericEvent event = new BareGenericEvent();
+        event.setOrigin(vHost);
+        event.setSender(userId);
+        event.setType(type);
+        event.getUnsigned().addProperty("transaction_id", txnId);
+        event.setContent(content);
+        ChannelEventAuthorization auth = g.overMatrix().roomMgr().get(roomId).offer(vHost, event);
+        if (!auth.isAuthorized()) {
+            throw new ForbiddenException(auth.getReason());
+        }
+        return auth.getEventId();
     }
 
     public TimelineChunk paginateTimeline(String roomId, String anchor, TimelineDirection direction, long maxEvents) {

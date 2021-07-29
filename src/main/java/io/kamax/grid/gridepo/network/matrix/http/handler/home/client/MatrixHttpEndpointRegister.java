@@ -27,8 +27,8 @@ import io.kamax.grid.gridepo.network.matrix.http.HomeClientAPI;
 import io.kamax.grid.gridepo.network.matrix.http.HomeClientAPIr0;
 import io.kamax.grid.gridepo.network.matrix.http.handler.EmptyJsonObjectHandler;
 import io.kamax.grid.gridepo.network.matrix.http.handler.JsonObjectHandler;
-import io.kamax.grid.gridepo.network.matrix.http.handler.NotFoundHandler;
 import io.kamax.grid.gridepo.network.matrix.http.handler.OptionsHandler;
+import io.kamax.grid.gridepo.network.matrix.http.handler.UnrecognizedEndpointHandler;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import io.undertow.server.RoutingHandler;
 
@@ -96,9 +96,11 @@ public class MatrixHttpEndpointRegister {
                 .get(HomeClientAPIr0.Base + "/thirdparty/protocols", new EmptyJsonObjectHandler(g, true))
 
                 .post(HomeClientAPIr0.Base + "/keys/query", new EmptyJsonObjectHandler(g, true))
+                .post(HomeClientAPIr0.Base + "/keys/upload", new EmptyJsonObjectHandler(g, true))
+                .get(HomeClientAPI.Base + "/unstable/room_keys/version", new UnrecognizedEndpointHandler())
 
-                .setFallbackHandler(new NotFoundHandler())
-                .setInvalidMethodHandler(new NotFoundHandler());
+                .setFallbackHandler(new UnrecognizedEndpointHandler())
+                .setInvalidMethodHandler(new UnrecognizedEndpointHandler());
     }
 
 }

@@ -43,10 +43,10 @@ public interface DataStore {
 
     Optional<ChannelDao> findChannel(long cLid);
 
-    Optional<ChannelDao> findChannel(String cId);
+    Optional<ChannelDao> findChannel(String network, String cId);
 
     default Optional<ChannelDao> findChannel(ChannelID cId) {
-        return findChannel(cId.full());
+        return findChannel("grid", cId.full());
     }
 
     default ChannelDao getChannel(long cLid) {
@@ -90,9 +90,15 @@ public interface DataStore {
 
     List<Long> getForwardExtremities(long cLid);
 
-    long insertIfNew(long cLid, ChannelState state);
+    long insertIfNew(long cLid, ChannelStateDao state);
 
-    long insertIfNew(long cLid, RoomState state);
+    default long insertIfNew(long channelLocalId, ChannelState state) {
+        return insertIfNew(channelLocalId, new ChannelStateDao(state.getSid(), state.getEvents()));
+    }
+
+    default long insertIfNew(long cLid, RoomState state) {
+        return insertIfNew(cLid, new ChannelStateDao(state.getSid(), state.getEvents()));
+    }
 
     ChannelStateDao getState(long sLid);
 

@@ -124,7 +124,9 @@ public class Room {
     }
 
     public JsonObject finalize(String origin, JsonObject event) {
-        return algo.signOff(event, g.getCrypto(), origin);
+        JsonObject signedOff = algo.signOff(event, g.getCrypto(), origin);
+        log.debug("Signed off event: {}", GsonUtil.getPrettyForLog(signedOff));
+        return signedOff;
     }
 
     public ChannelEventAuthorization offer(JsonObject event) {
@@ -268,7 +270,8 @@ public class Room {
         }
 
         event = g.getStore().saveEvent(event);
-        state = new RoomState(g.getStore().getState(g.getStore().insertIfNew(sid, state)));
+        long stateStoreId = g.getStore().insertIfNew(sid, state);
+        state = new RoomState(stateStoreId, state);
         g.getStore().map(event.getLid(), state.getSid());
         g.getStore().addToStream(event.getLid());
 

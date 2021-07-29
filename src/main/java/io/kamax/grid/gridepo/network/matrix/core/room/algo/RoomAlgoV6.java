@@ -39,9 +39,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class RoomAlgoV7 implements RoomAlgo {
+public class RoomAlgoV6 implements RoomAlgo {
 
-    public static final String Version = "7";
+    public static final String Version = "6";
     static final long minDepth = 0;
 
     private static final Map<String, Class<? extends BareEvent<?>>> bares = new HashMap<>();
@@ -71,13 +71,13 @@ public class RoomAlgoV7 implements RoomAlgo {
         Long actionPl = null;
 
         if (RoomMembership.Kick.equals(m)) {
-            actionPl = pls.getMembership().getKick();
+            actionPl = pls.getKick();
         }
         if (RoomMembership.Ban.equals(m)) {
-            actionPl = pls.getMembership().getBan();
+            actionPl = pls.getBan();
         }
         if (RoomMembership.Invite.equals(m)) {
-            actionPl = pls.getMembership().getInvite();
+            actionPl = pls.getInvite();
         }
 
         if (Objects.isNull(actionPl)) {
@@ -91,9 +91,9 @@ public class RoomAlgoV7 implements RoomAlgo {
         Long defPl;
 
         if (StringUtils.isNotEmpty(ev.getStateKey())) {
-            defPl = pls.getDef().getState();
+            defPl = pls.getStateDefault();
         } else {
-            defPl = pls.getDef().getEvent();
+            defPl = pls.getEventsDefault();
         }
 
         return senderPl >= pls.getEvents().getOrDefault(ev.getType(), defPl);
@@ -122,25 +122,25 @@ public class RoomAlgoV7 implements RoomAlgo {
     }
 
     private boolean canReplace(String sender, long withPl, BarePowerEvent.Content pls, BarePowerEvent.Content newPls) {
-        boolean basic = canSetTo(pls.getDef().getEvent(), newPls.getDef().getEvent(), withPl) &&
-                canSetTo(pls.getDef().getState(), newPls.getDef().getState(), withPl) &&
-                canSetTo(pls.getDef().getUser(), newPls.getDef().getUser(), withPl);
+        boolean basic = canSetTo(pls.getEventsDefault(), newPls.getEventsDefault(), withPl) &&
+                canSetTo(pls.getStateDefault(), newPls.getStateDefault(), withPl) &&
+                canSetTo(pls.getUsersDefault(), newPls.getUsersDefault(), withPl);
         if (!basic) {
             return false;
         }
 
-        boolean membership = canSetTo(pls.getMembership().getBan(), newPls.getMembership().getBan(), withPl) &&
-                canSetTo(pls.getMembership().getKick(), newPls.getMembership().getKick(), withPl) &&
-                canSetTo(pls.getMembership().getInvite(), newPls.getMembership().getInvite(), withPl);
+        boolean membership = canSetTo(pls.getBan(), newPls.getBan(), withPl) &&
+                canSetTo(pls.getKick(), newPls.getKick(), withPl) &&
+                canSetTo(pls.getInvite(), newPls.getInvite(), withPl);
         if (!membership) {
             return false;
         }
 
-        if (willFail(withPl, pls.getDef().getEvent(), pls.getEvents(), newPls.getEvents())) {
+        if (willFail(withPl, pls.getEventsDefault(), pls.getEvents(), newPls.getEvents())) {
             return false;
         }
 
-        if (willFail(withPl, pls.getDef().getUser(), pls.getUsers(), newPls.getUsers())) {
+        if (willFail(withPl, pls.getUsersDefault(), pls.getUsers(), newPls.getUsers())) {
             return false;
         }
 
@@ -153,8 +153,8 @@ public class RoomAlgoV7 implements RoomAlgo {
                         return true;
                     }
 
-                    long oldTargetPl = pls.getUsers().getOrDefault(id, pls.getDef().getUser());
-                    long newTargetPl = newPls.getUsers().getOrDefault(id, newPls.getDef().getUser());
+                    long oldTargetPl = pls.getUsers().getOrDefault(id, pls.getUsersDefault());
+                    long newTargetPl = newPls.getUsers().getOrDefault(id, newPls.getUsersDefault());
                     if (oldTargetPl == newTargetPl) {
                         // The PL is not changing, so it's OK
                         return true;
@@ -231,7 +231,7 @@ public class RoomAlgoV7 implements RoomAlgo {
         String evType = ev.getType();
 
         Optional<BareCreateEvent> cOpt = state.find(RoomEventType.Create.getId(), BareCreateEvent.class);
-        if (RoomEventType.Create.match(evType)) {
+        if (RoomEventType.Create.match(evType)) { //TODO check that the room version matches what we support
             if (cOpt.isPresent()) {
                 return auth.deny("Room is already created");
             }
@@ -256,14 +256,14 @@ public class RoomAlgoV7 implements RoomAlgo {
         BarePowerEvent.Content pls = DefaultPowerEvent.applyDefaults(state.getPowers().orElseGet(() -> getDefaultPowers(cEv.getCreator())));
         String sender = ev.getSender();
         RoomMembership senderMs = state.findMembership(sender).orElse(RoomMembership.Leave);
-        long senderPl = pls.getUsers().getOrDefault(sender, pls.getDef().getUser());
+        long senderPl = pls.getUsers().getOrDefault(sender, pls.getUsersDefault());
 
         if (RoomEventType.Member.match(evType)) {
             BareMemberEvent mEv = GsonUtil.fromJson(evRaw, BareMemberEvent.class);
-            String membership = mEv.getContent().getAction();
+            String membership = mEv.getContent().getMembership();
             String target = mEv.getStateKey();
             RoomMembership targetMs = state.findMembership(target).orElse(RoomMembership.Leave);
-            long targetPl = pls.getUsers().getOrDefault(target, pls.getDef().getUser());
+            long targetPl = pls.getUsers().getOrDefault(target, pls.getUsersDefault());
 
             if (RoomMembership.Join.match(membership)) {
                 if (!StringUtils.equals(sender, target)) {
@@ -373,11 +373,11 @@ public class RoomAlgoV7 implements RoomAlgo {
 
         if (RoomEventType.Power.match(evType)) {
             BarePowerEvent.Content newPls = DefaultPowerEvent.applyDefaults(GsonUtil.fromJson(evRaw, DefaultPowerEvent.class).getContent());
-            if (pls.getDef().getEvent() > senderPl || newPls.getDef().getEvent() > senderPl) {
+            if (pls.getEventsDefault() > senderPl || newPls.getEventsDefault() > senderPl) {
                 return auth.deny("Sender is missing minimum Power Level to change Power Level settings");
             }
 
-            if (pls.getDef().getState() > senderPl || newPls.getDef().getState() > senderPl) {
+            if (pls.getStateDefault() > senderPl || newPls.getStateDefault() > senderPl) {
                 return auth.deny("Sender is missing minimum Power Level to change Power Level settings");
             }
 
@@ -409,13 +409,14 @@ public class RoomAlgoV7 implements RoomAlgo {
         createEv.setOrigin(domain);
         createEv.setSender(creator);
         createEv.getContent().setCreator(creator);
+        createEv.getContent().setVersion(Version);
 
         BareMemberEvent cJoinEv = new BareMemberEvent();
         createEv.setTimestamp(Instant.now().toEpochMilli());
         cJoinEv.setOrigin(domain);
         cJoinEv.setSender(creator);
         cJoinEv.setStateKey(creator);
-        cJoinEv.getContent().setAction(RoomMembership.Join.getId());
+        cJoinEv.getContent().setMembership(RoomMembership.Join.getId());
 
         BarePowerEvent cPlEv = getDefaultPowersEvent(creator);
         createEv.setTimestamp(Instant.now().toEpochMilli());

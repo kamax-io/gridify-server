@@ -27,19 +27,19 @@ import java.util.List;
 
 public class ChannelStateDao {
 
-    private long sid;
+    private Long sid;
     private List<ChannelEvent> events = new ArrayList<>();
 
-    public ChannelStateDao(long sid, List<ChannelEvent> events) {
+    public ChannelStateDao(Long sid, List<ChannelEvent> events) {
         this.sid = sid;
         this.events = events;
     }
 
-    public long getSid() {
+    public Long getSid() {
         return sid;
     }
 
-    public void setSid(long sid) {
+    public void setSid(Long sid) {
         this.sid = sid;
     }
 

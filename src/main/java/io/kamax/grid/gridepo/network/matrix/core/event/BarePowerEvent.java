@@ -20,8 +20,6 @@
 
 package io.kamax.grid.gridepo.network.matrix.core.event;
 
-import com.google.gson.annotations.SerializedName;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,93 +27,23 @@ public class BarePowerEvent extends BareEvent<BarePowerEvent.Content> {
 
     public static class Content {
 
-        public static class Default {
-
-            private Long event;
-            private Long state;
-            private Long user;
-
-            public Long getEvent() {
-                return event;
-            }
-
-            public void setEvent(Long event) {
-                this.event = event;
-            }
-
-            public Long getState() {
-                return state;
-            }
-
-            public void setState(Long state) {
-                this.state = state;
-            }
-
-            public Long getUser() {
-                return user;
-            }
-
-            public void setUser(Long user) {
-                this.user = user;
-            }
-
-        }
-
-        public static class Membership {
-
-            private Long ban;
-            private Long kick; // FIXME would using 'leave' and a map instead of hardcoded value work?
-            private Long invite;
-
-            public Long getBan() {
-                return ban;
-            }
-
-            public void setBan(Long ban) {
-                this.ban = ban;
-            }
-
-            public Long getKick() {
-                return kick;
-            }
-
-            public void setKick(Long kick) {
-                this.kick = kick;
-            }
-
-            public Long getInvite() {
-                return invite;
-            }
-
-            public void setInvite(Long invite) {
-                this.invite = invite;
-            }
-
-        }
-
-        @SerializedName("default")
-        private BarePowerEvent.Content.Default def = new BarePowerEvent.Content.Default();
-        @SerializedName("member")
-        private BarePowerEvent.Content.Membership membership = new BarePowerEvent.Content.Membership();
-        @SerializedName("events")
+        private Long ban;
         private Map<String, Long> events = new HashMap<>();
-        @SerializedName("users")
+        private Long eventsDefault;
+        private Long invite;
+        private Long kick;
+        private Map<String, Long> notifications = new HashMap<>();
+        private Long redact;
+        private Long stateDefault;
         private Map<String, Long> users = new HashMap<>();
+        private Long usersDefault;
 
-        public BarePowerEvent.Content.Default getDef() {
-            return def;
+        public Long getBan() {
+            return ban;
         }
 
-        public void setDef(BarePowerEvent.Content.Default def) {
-            this.def = def;
-        }
-
-        public BarePowerEvent.Content.Membership getMembership() {
-            return membership;
-        }
-
-        public void setMembership(BarePowerEvent.Content.Membership membership) {
-            this.membership = membership;
+        public void setBan(Long ban) {
+            this.ban = ban;
         }
 
         public Map<String, Long> getEvents() {
@@ -126,12 +54,68 @@ public class BarePowerEvent extends BareEvent<BarePowerEvent.Content> {
             this.events = events;
         }
 
+        public Long getEventsDefault() {
+            return eventsDefault;
+        }
+
+        public void setEventsDefault(Long eventsDefault) {
+            this.eventsDefault = eventsDefault;
+        }
+
+        public Long getInvite() {
+            return invite;
+        }
+
+        public void setInvite(Long invite) {
+            this.invite = invite;
+        }
+
+        public Long getKick() {
+            return kick;
+        }
+
+        public void setKick(Long kick) {
+            this.kick = kick;
+        }
+
+        public Map<String, Long> getNotifications() {
+            return notifications;
+        }
+
+        public void setNotifications(Map<String, Long> notifications) {
+            this.notifications = notifications;
+        }
+
+        public Long getRedact() {
+            return redact;
+        }
+
+        public void setRedact(Long redact) {
+            this.redact = redact;
+        }
+
+        public Long getStateDefault() {
+            return stateDefault;
+        }
+
+        public void setStateDefault(Long stateDefault) {
+            this.stateDefault = stateDefault;
+        }
+
         public Map<String, Long> getUsers() {
             return users;
         }
 
         public void setUsers(Map<String, Long> users) {
             this.users = users;
+        }
+
+        public Long getUsersDefault() {
+            return usersDefault;
+        }
+
+        public void setUsersDefault(Long usersDefault) {
+            this.usersDefault = usersDefault;
         }
 
     }

@@ -141,7 +141,7 @@ public class RoomState {
 
     public Optional<RoomMembership> findMembership(String userId) {
         return find(RoomEventType.Member, userId, BareMemberEvent.class)
-                .map(ev -> ev.getContent().getAction())
+                .map(ev -> ev.getContent().getMembership())
                 .flatMap(membershipMapper());
     }
 
