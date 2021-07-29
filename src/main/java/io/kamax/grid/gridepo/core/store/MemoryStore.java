@@ -206,6 +206,11 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
+    public List<ChannelDao> searchForRoomsInUserEvents(String network, String type, String stateKey) {
+        return null;
+    }
+
+    @Override
     public List<ChannelEvent> getNext(long lastSid, long amount) {
         List<ChannelEvent> events = new ArrayList<>();
         while (events.size() < amount) {

@@ -61,8 +61,8 @@ public class RoomMessagesHandler extends ClientApiHandler {
                 .forEach(events::add);
 
         JsonObject response = new JsonObject();
-        response.addProperty("start", chunk.getStart().full());
-        response.addProperty("end", chunk.getEnd().full());
+        response.addProperty("start", chunk.getStart());
+        response.addProperty("end", chunk.getEnd());
         response.add("chunk", events);
 
         exchange.respond(response);

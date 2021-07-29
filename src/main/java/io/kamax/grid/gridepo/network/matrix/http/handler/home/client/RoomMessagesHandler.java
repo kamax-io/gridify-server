@@ -20,15 +20,12 @@
 
 package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.channel.TimelineChunk;
 import io.kamax.grid.gridepo.core.channel.TimelineDirection;
 import io.kamax.grid.gridepo.http.handler.Exchange;
 import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+import io.kamax.grid.gridepo.network.matrix.core.room.RoomTimelineChunck;
 import io.kamax.grid.gridepo.network.matrix.http.handler.AuthenticatedClientApiHandler;
-import io.kamax.grid.gridepo.util.GsonUtil;
 import org.apache.commons.lang3.StringUtils;
 
 public class RoomMessagesHandler extends AuthenticatedClientApiHandler {
@@ -44,17 +41,8 @@ public class RoomMessagesHandler extends AuthenticatedClientApiHandler {
         String dir = ex.getQueryParameter("dir");
         TimelineDirection direction = StringUtils.equals("b", dir) ? TimelineDirection.Backward : TimelineDirection.Forward;
 
-        TimelineChunk chunk = session.paginateTimeline(roomId, anchor, direction, 10);
-
-        JsonArray events = new JsonArray();
-        chunk.getEvents().stream().map(GsonUtil::makeObj).forEach(events::add);
-
-        JsonObject response = new JsonObject();
-        response.addProperty("start", chunk.getStart().full());
-        response.addProperty("end", chunk.getEnd().full());
-        response.add("chunk", events);
-
-        ex.respond(response);
+        RoomTimelineChunck chunk = session.paginateTimeline(roomId, anchor, direction, 10);
+        ex.respondJson(chunk);
     }
 
 }

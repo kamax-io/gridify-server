@@ -27,6 +27,7 @@ import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.core.signal.ChannelMessageProcessed;
 import io.kamax.grid.gridepo.core.signal.SignalTopic;
 import io.kamax.grid.gridepo.exception.NotImplementedException;
+import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareGenericEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.EventKey;
@@ -99,6 +100,14 @@ public class Room {
         return g.getStore().getForwardExtremities(sid).stream()
                 .map(id -> g.getStore().getEvent(id))
                 .collect(Collectors.toList());
+    }
+
+    public Optional<ChannelEvent> findEvent(String eventId) {
+        return g.getStore().findEvent(id, eventId);
+    }
+
+    public ChannelEvent getEvent(String eventId) {
+        return findEvent(eventId).orElseThrow(() -> new ObjectNotFoundException("Event ID", eventId));
     }
 
     public List<String> getExtremityIds() {
@@ -191,7 +200,7 @@ public class Room {
     }
 
     public void backfill(ChannelEvent event, List<String> extremities, long minDepth) {
-
+        // FIXME needed for federation
     }
 
     public boolean isUsable(ChannelEvent ev) {
@@ -302,6 +311,10 @@ public class Room {
 
     public RoomState getState(String eventId) {
         throw new NotImplementedException();
+    }
+
+    public RoomTimeline getTimeline() {
+        return new RoomTimeline(sid, g.getStore());
     }
 
 }

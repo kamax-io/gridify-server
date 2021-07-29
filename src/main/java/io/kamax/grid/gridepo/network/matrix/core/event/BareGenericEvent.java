@@ -21,8 +21,13 @@
 package io.kamax.grid.gridepo.network.matrix.core.event;
 
 import com.google.gson.JsonObject;
+import io.kamax.grid.gridepo.util.GsonUtil;
 
 public class BareGenericEvent extends BareEvent<JsonObject> {
+
+    public static Long extractDepth(JsonObject doc) {
+        return GsonUtil.getLong(doc, EventKey.Depth);
+    }
 
     public BareGenericEvent() {
         setContent(new JsonObject());

@@ -20,11 +20,21 @@
 
 package io.kamax.grid.gridepo.network.matrix.core.event;
 
+import com.google.gson.JsonObject;
+import com.google.gson.annotations.SerializedName;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomMembership;
+import io.kamax.grid.gridepo.util.GsonUtil;
 
 import java.time.Instant;
+import java.util.Optional;
 
 public class BareMemberEvent extends BareEvent<BareMemberEvent.Content> {
+
+    public static Optional<String> findMembership(JsonObject doc) {
+        return GsonUtil
+                .findObj(doc, EventKey.Content)
+                .flatMap(c -> GsonUtil.findString(c, BareMemberEvent.Content.MembershipKey));
+    }
 
     public static BareMemberEvent leave(String userId) {
         BareMemberEvent ev = new BareMemberEvent();
@@ -36,6 +46,9 @@ public class BareMemberEvent extends BareEvent<BareMemberEvent.Content> {
 
     public static class Content {
 
+        public static final String MembershipKey = "membership";
+
+        @SerializedName(MembershipKey)
         private String membership;
 
         public String getMembership() {

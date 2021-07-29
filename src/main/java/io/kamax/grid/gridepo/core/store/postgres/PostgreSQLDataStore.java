@@ -220,6 +220,10 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
         return Optional.of(dao);
     }
 
+    private ChannelDao makeChannel(ResultSet rSet) throws SQLException {
+        return new ChannelDao(rSet.getLong("lid"), rSet.getString("network"), rSet.getString("id"), rSet.getString("version"));
+    }
+
     @Override
     public List<ChannelDao> listChannels() {
         String sql = "SELECT * FROM channels";
@@ -380,7 +384,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
     @Override
     public long getEventTid(long cLid, String eId) {
-        String sql = "SELECT * FROM channel_events e LEFT JOIN channel_event_stream s ON s.eLid = e.lid WHERE e.channel_lid = ? AND e.id = ?";
+        String sql = "SELECT * FROM channel_events e LEFT JOIN channel_event_stream s ON s.lid = e.lid WHERE e.channel_lid = ? AND e.id = ?";
         return withStmtFunction(sql, stmt -> {
             stmt.setLong(1, cLid);
             stmt.setString(2, eId);
@@ -405,6 +409,32 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
             }
 
             return Optional.of(rSet.getLong("lid"));
+        });
+    }
+
+    @Override
+    public List<ChannelDao> searchForRoomsInUserEvents(String network, String type, String stateKey) {
+        String sql = String.join(" ",
+                "SELECT DISTINCT c.*",
+                "FROM channel_events e",
+                "JOIN channels c ON e.channel_lid = c.lid",
+                "WHERE network = ?",
+                "  AND meta->>'processed' = 'true'",
+                "  AND meta->>'allowed' = 'true'",
+                "  AND DATA->>'type' = ?",
+                "  AND DATA->>'state_key' = ?");
+
+        return withStmtFunction(sql, stmt -> {
+            stmt.setString(1, network);
+            stmt.setString(2, type);
+            stmt.setString(3, stateKey);
+            try (ResultSet rSet = stmt.executeQuery()) {
+                List<ChannelDao> rooms = new ArrayList<>();
+                while (rSet.next()) {
+                    rooms.add(makeChannel(rSet));
+                }
+                return rooms;
+            }
         });
     }
 

@@ -1,6 +1,6 @@
 /*
  * Gridepo - Grid Data Server
- * Copyright (C) 2019 Kamax Sarl
+ * Copyright (C) 2021 Kamax Sarl
  *
  * https://www.kamax.io/
  *
@@ -18,41 +18,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.core.channel;
+package io.kamax.grid.gridepo.network.matrix.core.room;
 
-import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
+import io.kamax.grid.gridepo.network.matrix.http.json.RoomEvent;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-public class TimelineChunk {
+public class RoomTimelineChunck {
 
-    private String start;
-    private List<ChannelEvent> events = new ArrayList<>();
-    private String end;
+    private final String start;
+    private final String end;
+    private final List<RoomEvent> chunk;
+
+    public RoomTimelineChunck(String start, String end, List<RoomEvent> chunk) {
+        this.start = start;
+        this.end = end;
+        this.chunk = Collections.unmodifiableList(chunk);
+    }
 
     public String getStart() {
         return start;
-    }
-
-    public void setStart(String start) {
-        this.start = start;
-    }
-
-    public List<ChannelEvent> getEvents() {
-        return events;
-    }
-
-    public void setEvents(List<ChannelEvent> events) {
-        this.events = events;
     }
 
     public String getEnd() {
         return end;
     }
 
-    public void setEnd(String end) {
-        this.end = end;
+    public List<RoomEvent> getChunk() {
+        return chunk;
     }
 
 }

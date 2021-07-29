@@ -28,7 +28,12 @@ import io.kamax.grid.gridepo.core.identity.User;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixDataClient;
 import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
 import io.kamax.grid.gridepo.network.matrix.core.room.Room;
+import io.kamax.grid.gridepo.network.matrix.core.room.RoomMembership;
 import org.junit.Test;
+
+import java.util.Optional;
+
+import static org.junit.Assert.assertTrue;
 
 public class MonolithGridepoTest {
 
@@ -67,6 +72,10 @@ public class MonolithGridepoTest {
         User u = client.register("test", "test");
         UserSession session = client.login(u);
         Room r = session.createRoom(new JsonObject());
+
+        Optional<RoomMembership> membership = r.getView().getState().findMembership(u.getNetworkId("matrix"));
+        assertTrue(membership.isPresent());
+        assertTrue(RoomMembership.Join.isAny(membership.get()));
     }
 
 }

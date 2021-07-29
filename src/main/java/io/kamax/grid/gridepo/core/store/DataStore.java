@@ -71,6 +71,8 @@ public interface DataStore {
 
     Optional<Long> findEventLid(String cId, String eId);
 
+    List<ChannelDao> searchForRoomsInUserEvents(String network, String type, String stateKey);
+
     // Get the N next events. next = Higher SID. last SID is not included.
     List<ChannelEvent> getNext(long lastSid, long amount);
 

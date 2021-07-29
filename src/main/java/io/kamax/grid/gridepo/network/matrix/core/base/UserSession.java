@@ -24,25 +24,26 @@ import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.core.SyncData;
 import io.kamax.grid.gridepo.core.SyncOptions;
+import io.kamax.grid.gridepo.core.channel.ChannelDao;
 import io.kamax.grid.gridepo.core.channel.ChannelMembership;
 import io.kamax.grid.gridepo.core.channel.TimelineChunk;
 import io.kamax.grid.gridepo.core.channel.TimelineDirection;
 import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
-import io.kamax.grid.gridepo.core.channel.state.ChannelState;
+import io.kamax.grid.gridepo.core.signal.AppStopping;
+import io.kamax.grid.gridepo.core.signal.ChannelMessageProcessed;
 import io.kamax.grid.gridepo.core.signal.SignalTopic;
 import io.kamax.grid.gridepo.exception.ForbiddenException;
 import io.kamax.grid.gridepo.exception.NotImplementedException;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareGenericEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareMemberEvent;
-import io.kamax.grid.gridepo.network.matrix.core.room.Room;
-import io.kamax.grid.gridepo.network.matrix.core.room.RoomAliasLookup;
-import io.kamax.grid.gridepo.network.matrix.core.room.RoomMembership;
-import io.kamax.grid.gridepo.network.matrix.core.room.RoomState;
+import io.kamax.grid.gridepo.network.matrix.core.event.RoomEventType;
+import io.kamax.grid.gridepo.network.matrix.core.room.*;
 import io.kamax.grid.gridepo.network.matrix.http.json.RoomEvent;
 import io.kamax.grid.gridepo.network.matrix.http.json.SyncResponse;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import io.kamax.grid.gridepo.util.KxLog;
+import net.engio.mbassy.listener.Handler;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
@@ -67,6 +68,22 @@ public class UserSession {
         this.accessToken = accessToken;
     }
 
+    @Handler
+    private void signal(AppStopping signal) {
+        log.debug("Got {} signal, interrupting sync wait", signal.getClass().getSimpleName());
+        synchronized (this) {
+            notifyAll();
+        }
+    }
+
+    @Handler
+    private void signal(ChannelMessageProcessed signal) {
+        log.debug("Got {} signal, interrupting sync wait", signal.getClass().getSimpleName());
+        synchronized (this) {
+            notifyAll();
+        }
+    }
+
     public String getUser() {
         return userId;
     }
@@ -76,7 +93,11 @@ public class UserSession {
     }
 
     public RoomEvent buildSyncEvent(ChannelEvent ev) {
-        return GsonUtil.map(ev.getData(), RoomEvent.class);
+        RoomEvent roomEvent = GsonUtil.map(ev.getData(), RoomEvent.class);
+        if (StringUtils.isEmpty(roomEvent.getEventId())) {
+            roomEvent.setEventId(ev.getId());
+        }
+        return roomEvent;
     }
 
     public SyncResponse buildSync(SyncData data) {
@@ -86,25 +107,22 @@ public class UserSession {
         for (ChannelEvent ev : data.getEvents()) {
             try {
                 RoomEvent rEv = buildSyncEvent(ev);
-                if (StringUtils.isEmpty(rEv.getEventId())) {
-                    rEv.setEventId(ev.getId());
-                }
                 SyncResponse.Room room = roomCache.computeIfAbsent(rEv.getRoomId(), id -> new SyncResponse.Room());
                 room.getTimeline().getEvents().add(rEv);
                 if (data.isInitial()) {
                     // This is the first event, so we set the previous batch info
-                    room.getTimeline().setPrevBatch(ev.getId());
-                    ChannelState state = g.getChannelManager().get(ev.getChannelId()).getState(ev);
+                    room.getTimeline().setPrevBatch(rEv.getEventId());
+                    RoomState state = getRoom(rEv.getRoomId()).getView().getState();
                     state.getEvents().stream()
-                            .sorted(Comparator.comparingLong(o -> o.getBare().getDepth())) // FIXME use Timeline ordering
+                            // FIXME use Timeline ordering
+                            .sorted(Comparator.comparingLong(o -> BareGenericEvent.extractDepth(o.getData())))
                             .forEach(stateEv -> room.getState().getEvents().add(buildSyncEvent(stateEv)));
                 }
                 r.rooms.join.put(rEv.getRoomId(), room);
 
-                if ("m.room.member".equals(rEv.getType()) && userId.equals(rEv.getStateKey())) {
-                    JsonObject c = GsonUtil.parseObj(GsonUtil.toJson(rEv.getContent()));
-                    GsonUtil.findString(c, "membership").ifPresent(m -> {
-                        if ("invite".equals(m)) {
+                if (RoomEventType.Member.match(rEv.getType()) && userId.equals(rEv.getStateKey())) {
+                    BareMemberEvent.findMembership(ev.getData()).ifPresent(m -> {
+                        if (RoomMembership.Invite.match(m)) {
                             r.rooms.join.remove(rEv.getRoomId());
                             r.rooms.invite.put(rEv.getRoomId(), room);
                             r.rooms.leave.remove(rEv.getRoomId());
@@ -114,7 +132,7 @@ public class UserSession {
                             room.state.events.clear();
                         }
 
-                        if ("leave".equals(m) || "ban".equals(m)) {
+                        if (RoomMembership.Leave.match(m) || RoomMembership.Ban.match(m)) {
                             r.rooms.invite.remove(rEv.getRoomId());
                             r.rooms.join.remove(rEv.getRoomId());
                             r.rooms.leave.put(rEv.getRoomId(), room);
@@ -128,10 +146,9 @@ public class UserSession {
                             room.inviteState.events.clear();
 
                             room.state.events.clear();
-                            // FIXME why?
-                            g.getChannelManager().get(rEv.getChannelId()).getState(ev).getEvents().forEach(sEv -> {
-                                if (sEv.getLid() != ev.getLid()) {
-                                    room.state.events.add(buildSyncEvent(sEv));
+                            getRoom(rEv.getRoomId()).getState(ev.getId()).getEvents().forEach(stateEv -> {
+                                if (stateEv.getLid() != ev.getLid()) {
+                                    room.state.events.add(buildSyncEvent(stateEv));
                                 }
                             });
                         }
@@ -147,36 +164,45 @@ public class UserSession {
 
     // FIXME evaluate if we should compute the exact state at the stream position in an atomic way
     public SyncResponse syncInitial() {
+        log.debug("Computing initial sync for {}", userId);
         SyncData data = new SyncData();
         data.setInitial(true);
         data.setPosition(Long.toString(g.getStreamer().getPosition()));
-
-        // FIXME this doesn't scale - we only care about channels where the user has ever been into
-        // so we shouldn't even deal with those. Need to make storage smarter in this case
-        // or use a caching mechanism to know what's the membership status of a given user
-        g.overMatrix().roomMgr().list().forEach(dao -> {
-            // FIXME we need to get the HEAD event of the timeline instead
-            Room r = g.overMatrix().roomMgr().get(dao.getId());
-            String headEventId = r.getView().getEventId();
-            data.getEvents().add(g.getStore().getEvent(r.getId(), headEventId));
+        List<ChannelDao> rooms = g.overMatrix().roomMgr().listInvolved(userId);
+        log.debug("Found involvement with {} rooms", rooms.size());
+        rooms.forEach(dao -> {
+            Room r = getRoom(dao.getId());
+            log.debug("Processing room {}", r.getId());
+            RoomView roomView = r.getView();
+            RoomState state = r.getView().getState();
+            state.findMembership(userId).ifPresent(membership -> {
+                log.debug("Membership is {}", membership);
+                if (RoomMembership.Join.isAny(membership)) {
+                    data.getEvents().add(r.getEvent(roomView.getEventId()));
+                }
+                if (RoomMembership.Invite.isAny(membership)) {
+                    state.find(RoomEventType.Member.getId(), userId)
+                            .ifPresent(ev -> data.getEvents().add(ev));
+                }
+            });
         });
 
         return buildSync(data);
     }
 
     public SyncResponse sync(SyncOptions options) {
+        if (StringUtils.isEmpty(options.getToken())) {
+            return syncInitial();
+        }
+
         try {
+            Instant end = Instant.now().plusMillis(options.getTimeout());
+
             g.getBus().getMain().subscribe(this);
             g.getBus().forTopic(SignalTopic.Channel).subscribe(this);
 
-            Instant end = Instant.now().plusMillis(options.getTimeout());
-
             SyncData data = new SyncData();
             data.setPosition(options.getToken());
-
-            if (StringUtils.isEmpty(options.getToken())) {
-                return syncInitial();
-            }
 
             long sid = Long.parseLong(options.getToken());
             do {
@@ -274,8 +300,16 @@ public class UserSession {
         return auth.getEventId();
     }
 
-    public TimelineChunk paginateTimeline(String roomId, String anchor, TimelineDirection direction, long maxEvents) {
-        throw new NotImplementedException();
+    public RoomTimelineChunck paginateTimeline(String roomId, String anchor, TimelineDirection direction, long maxEvents) {
+        TimelineChunk chunck;
+        if (TimelineDirection.Forward.equals(direction)) {
+            chunck = getRoom(roomId).getTimeline().getNext(anchor, maxEvents);
+        } else {
+            chunck = getRoom(roomId).getTimeline().getPrevious(anchor, maxEvents);
+        }
+
+        List<RoomEvent> events = chunck.getEvents().stream().map(this::buildSyncEvent).collect(Collectors.toList());
+        return new RoomTimelineChunck(chunck.getStart(), chunck.getEnd(), events);
     }
 
     public void addRoomAlias(String roomAlias, String roomId) {

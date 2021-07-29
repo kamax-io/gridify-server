@@ -1,6 +1,6 @@
 /*
  * Gridepo - Grid Data Server
- * Copyright (C) 2019 Kamax Sarl
+ * Copyright (C) 2021 Kamax Sarl
  *
  * https://www.kamax.io/
  *
@@ -18,39 +18,39 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.core.channel;
+package io.kamax.grid.gridepo.network.matrix.core.room;
 
+import io.kamax.grid.gridepo.core.channel.TimelineChunk;
 import io.kamax.grid.gridepo.core.store.DataStore;
-import io.kamax.grid.gridepo.network.grid.core.EventID;
 
-public class ChannelTimeline {
+public class RoomTimeline {
 
-    private long id;
-    private DataStore store;
+    private final long roomLid;
+    private final DataStore store;
 
-    public ChannelTimeline(long id, DataStore store) {
-        this.id = id;
+    public RoomTimeline(long roomLid, DataStore store) {
+        this.roomLid = roomLid;
         this.store = store;
     }
 
-    public TimelineChunk getNext(EventID evId, long amount) {
-        long eTid = store.getEventTid(id, evId.full());
+    public TimelineChunk getNext(String evId, long amount) {
+        long eTid = store.getEventTid(roomLid, evId);
         TimelineChunk chunk = new TimelineChunk();
-        chunk.setStart(evId.full());
-        chunk.setEnd(evId.full());
-        chunk.setEvents(store.getTimelineNext(id, eTid, amount));
+        chunk.setStart(evId);
+        chunk.setEnd(evId);
+        chunk.setEvents(store.getTimelineNext(roomLid, eTid, amount));
         if (!chunk.getEvents().isEmpty()) {
             chunk.setEnd(chunk.getEvents().get(chunk.getEvents().size() - 1).getId());
         }
         return chunk;
     }
 
-    public TimelineChunk getPrevious(EventID evId, long amount) {
-        long eTid = store.getEventTid(id, evId.full());
+    public TimelineChunk getPrevious(String evId, long amount) {
+        long eTid = store.getEventTid(roomLid, evId);
         TimelineChunk chunk = new TimelineChunk();
-        chunk.setStart(evId.full());
-        chunk.setEnd(evId.full());
-        chunk.setEvents(store.getTimelinePrevious(id, eTid, amount));
+        chunk.setStart(evId);
+        chunk.setEnd(evId);
+        chunk.setEvents(store.getTimelinePrevious(roomLid, eTid, amount));
         if (!chunk.getEvents().isEmpty()) {
             chunk.setEnd(chunk.getEvents().get(chunk.getEvents().size() - 1).getId());
         }

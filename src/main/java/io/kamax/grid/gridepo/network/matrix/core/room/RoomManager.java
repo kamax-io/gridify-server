@@ -32,6 +32,7 @@ import io.kamax.grid.gridepo.network.matrix.core.UserID;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareCreateEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareMemberEvent;
+import io.kamax.grid.gridepo.network.matrix.core.event.RoomEventType;
 import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServer;
 import io.kamax.grid.gridepo.network.matrix.core.federation.RoomJoinTemplate;
 import io.kamax.grid.gridepo.network.matrix.core.room.algo.RoomAlgo;
@@ -114,6 +115,10 @@ public class RoomManager {
 
     public List<ChannelDao> list() {
         return g.getStore().listChannels("matrix");
+    }
+
+    public List<ChannelDao> listInvolved(String userId) {
+        return g.getStore().searchForRoomsInUserEvents("matrix", RoomEventType.Member.getId(), userId);
     }
 
     public synchronized Optional<Room> find(String rId) {
