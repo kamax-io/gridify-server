@@ -35,6 +35,7 @@ import io.kamax.grid.gridepo.core.signal.ChannelMessageProcessed;
 import io.kamax.grid.gridepo.core.signal.SignalTopic;
 import io.kamax.grid.gridepo.exception.ForbiddenException;
 import io.kamax.grid.gridepo.exception.NotImplementedException;
+import io.kamax.grid.gridepo.network.matrix.core.event.BareEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareGenericEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareMemberEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.RoomEventType;
@@ -90,6 +91,10 @@ public class UserSession {
 
     public String getAccessToken() {
         return accessToken;
+    }
+
+    public String getDomain() {
+        return vHost;
     }
 
     public RoomEvent buildSyncEvent(ChannelEvent ev) {
@@ -269,7 +274,7 @@ public class UserSession {
     }
 
     public Room joinRoom(String roomIdOrAlias) {
-        throw new NotImplementedException();
+        return g.overMatrix().roomMgr().join(userId, roomIdOrAlias);
     }
 
     public Room getRoom(String roomId) {
@@ -285,7 +290,10 @@ public class UserSession {
         throw new NotImplementedException();
     }
 
-    public String send(String roomId, BareGenericEvent event) {
+    public String send(String roomId, BareEvent<?> event) {
+        event.setOrigin(vHost);
+        event.setSender(userId);
+
         ChannelEventAuthorization auth = g.overMatrix().roomMgr().get(roomId).offer(vHost, event);
         if (!auth.isAuthorized()) {
             throw new ForbiddenException(auth.getReason());
@@ -295,8 +303,6 @@ public class UserSession {
 
     public String send(String roomId, String type, String txnId, JsonObject content) {
         BareGenericEvent event = new BareGenericEvent();
-        event.setOrigin(vHost);
-        event.setSender(userId);
         event.setType(type);
         event.getUnsigned().addProperty("transaction_id", txnId);
         event.setContent(content);
@@ -305,8 +311,6 @@ public class UserSession {
 
     public String sendState(String roomId, String type, String stateKey, JsonObject content) {
         BareGenericEvent event = new BareGenericEvent();
-        event.setOrigin(vHost);
-        event.setSender(userId);
         event.setType(type);
         event.setStateKey(stateKey);
         event.setContent(content);
@@ -333,8 +337,8 @@ public class UserSession {
         throw new NotImplementedException();
     }
 
-    public Optional<RoomAliasLookup> lookupRoomAlias(String roomAlias) {
-        throw new NotImplementedException();
+    public Optional<RoomLookup> lookupRoomAlias(String roomAlias) {
+        return g.overMatrix().roomDir().lookup(vHost, RoomAlias.parse(roomAlias), true);
     }
 
 }

@@ -28,6 +28,10 @@ public class RoomAlias extends EntityAlias {
     public static final String Sigill = "#";
     public static final String Delimiter = ":";
 
+    public static boolean sigillMatch(String raw) {
+        return StringUtils.startsWith(raw, Sigill);
+    }
+
     public static RoomAlias parse(String raw) {
         // We could also do this in regex, but for the sake of readability and clarity, we keep it linear
         if (StringUtils.isBlank(raw)) {
@@ -50,7 +54,11 @@ public class RoomAlias extends EntityAlias {
         return new RoomAlias(localpart, domain);
     }
 
-    private RoomAlias(String local, String network) {
+    public static RoomAlias from(String local, String domain) {
+        return new RoomAlias(local, domain);
+    }
+
+    RoomAlias(String local, String network) {
         super(Sigill, Delimiter, local, network);
     }
 

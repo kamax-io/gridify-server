@@ -26,7 +26,6 @@ import io.kamax.grid.gridepo.core.identity.GenericThreePid;
 import io.kamax.grid.gridepo.core.identity.User;
 import io.kamax.grid.gridepo.exception.ForbiddenException;
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
 import java.util.Optional;

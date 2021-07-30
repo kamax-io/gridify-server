@@ -33,7 +33,7 @@ import io.kamax.grid.gridepo.network.matrix.core.event.BareCreateEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareMemberEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.RoomEventType;
-import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServer;
+import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerLink;
 import io.kamax.grid.gridepo.network.matrix.core.federation.RoomJoinTemplate;
 import io.kamax.grid.gridepo.network.matrix.core.room.algo.RoomAlgo;
 import io.kamax.grid.gridepo.network.matrix.core.room.algo.RoomAlgos;
@@ -42,10 +42,7 @@ import io.kamax.grid.gridepo.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class RoomManager {
@@ -133,11 +130,16 @@ public class RoomManager {
         return find(rId).orElseThrow(() -> new ObjectNotFoundException("Room", rId));
     }
 
-    public Room join(String rAliasRaw, String uIdRaw, String domain) {
-        RoomAlias rAlias = RoomAlias.parse(rAliasRaw);
-        UserID uId = UserID.parse(uIdRaw);
-        RoomLookup data = g.overMatrix().roomDir().lookup(uId.network(), rAlias, true)
-                .orElseThrow(() -> new ObjectNotFoundException("Room alias", rAlias.full()));
+    public Room join(String userIdRaw, String roomIdOrAlias) {
+        UserID uId = UserID.parse(userIdRaw);
+        RoomLookup data;
+        if (RoomAlias.sigillMatch(roomIdOrAlias)) {
+            RoomAlias rAlias = RoomAlias.parse(roomIdOrAlias);
+            data = g.overMatrix().roomDir().lookup(uId.network(), rAlias, true)
+                    .orElseThrow(() -> new ObjectNotFoundException("Room alias", rAlias.full()));
+        } else {
+            data = new RoomLookup("", roomIdOrAlias, Collections.emptySet());
+        }
 
         Optional<Room> cOpt = find(data.getId());
         if (cOpt.isPresent()) {
@@ -145,12 +147,12 @@ public class RoomManager {
             if (r.getView().getAllServers().stream().anyMatch(s -> StringUtils.equals(s, uId.network()))) {
                 // We are joined, so we can make our own event
                 BareMemberEvent bEv = new BareMemberEvent();
-                bEv.setOrigin(domain);
+                bEv.setOrigin(uId.network());
                 bEv.setRoomId(data.getId());
-                bEv.setSender(uIdRaw);
-                bEv.setStateKey(uIdRaw);
+                bEv.setSender(userIdRaw);
+                bEv.setStateKey(userIdRaw);
                 bEv.getContent().setMembership(RoomMembership.Join);
-                ChannelEventAuthorization auth = r.offer(domain, bEv);
+                ChannelEventAuthorization auth = r.offer(uId.network(), bEv);
                 if (!auth.isAuthorized()) {
                     throw new ForbiddenException(auth.getReason());
                 }
@@ -165,10 +167,10 @@ public class RoomManager {
             throw new EntityUnreachableException();
         }
 
-        for (HomeServer srv : g.overMatrix().hsMgr().get(data.getServers(), true)) {
-            String origin = srv.getOrigin();
+        for (HomeServerLink srv : g.overMatrix().hsMgr().getLink(uId.network(), data.getServers(), true)) {
+            String origin = srv.getDomain();
             try {
-                RoomJoinTemplate joinTemplate = srv.getJoinTemplate(data.getId(), uIdRaw);
+                RoomJoinTemplate joinTemplate = srv.getJoinTemplate(data.getId(), userIdRaw);
                 RoomAlgo algo = RoomAlgos.get(joinTemplate.getRoomVersion());
                 JsonObject joinEvent = algo.buildJoinEvent(uId.network(), joinTemplate.getEvent());
                 JsonObject response = srv.sendJoin(joinEvent);

@@ -88,7 +88,7 @@ public class RoomDirectory {
         }
 
         log.info("Looking recursively on {} for {}", alias.network(), alias);
-        return srvMgr.get(alias.network()).lookup(origin, alias.full());
+        return srvMgr.getLink(origin, alias.network()).lookup(origin, alias.full());
     }
 
     public Set<String> getAliases(String rId) {

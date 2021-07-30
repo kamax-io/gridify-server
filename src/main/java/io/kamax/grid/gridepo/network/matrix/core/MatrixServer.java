@@ -22,6 +22,8 @@ package io.kamax.grid.gridepo.network.matrix.core;
 
 public interface MatrixServer {
 
+    String getDomain();
+
     MatrixIdentityServer forIdentity();
 
     MatrixDataClient asClient();

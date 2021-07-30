@@ -18,33 +18,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.core.room;
+package io.kamax.grid.gridepo.network.matrix.http.handler.home.server;
 
-import java.util.ArrayList;
-import java.util.List;
+import io.kamax.grid.gridepo.Gridepo;
+import io.kamax.grid.gridepo.http.handler.Exchange;
+import io.kamax.grid.gridepo.network.matrix.core.base.ServerSession;
 
-public class RoomAliasLookup {
+public abstract class AuthenticatedServerApiHandler extends ServerApiHandler {
 
-    private final String alias;
-    private final String id;
-    private final List<String> residentServers;
+    private final Gridepo g;
 
-    public RoomAliasLookup(String alias, String id, List<String> residentServers) {
-        this.alias = alias;
-        this.id = id;
-        this.residentServers = new ArrayList<>(residentServers);
+    public AuthenticatedServerApiHandler(Gridepo g) {
+        this.g = g;
     }
 
-    public String getAlias() {
-        return alias;
+    @Override
+    protected void handle(Exchange ex) {
+        handle(getSession(g, ex), ex);
     }
 
-    public String getId() {
-        return id;
-    }
-
-    public List<String> getResidentServers() {
-        return residentServers;
-    }
+    protected abstract void handle(ServerSession session, Exchange ex);
 
 }

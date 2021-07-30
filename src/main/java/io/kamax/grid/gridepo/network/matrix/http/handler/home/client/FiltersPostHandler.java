@@ -22,7 +22,6 @@ package io.kamax.grid.gridepo.network.matrix.http.handler.home.client;
 
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
 public class FiltersPostHandler extends ClientApiHandler {

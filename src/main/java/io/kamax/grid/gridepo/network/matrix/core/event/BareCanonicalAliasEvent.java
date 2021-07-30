@@ -18,25 +18,39 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.http.handler;
+package io.kamax.grid.gridepo.network.matrix.core.event;
 
-import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+import java.util.List;
 
-public abstract class AuthenticatedClientApiHandler extends ClientApiHandler {
+public class BareCanonicalAliasEvent extends BareEvent<BareCanonicalAliasEvent.Content> {
 
-    private final Gridepo g;
+    public static class Content {
 
-    public AuthenticatedClientApiHandler(Gridepo g) {
-        this.g = g;
+        private String alias;
+        private List<String> altAliases;
+
+        public String getAlias() {
+            return alias;
+        }
+
+        public void setAlias(String alias) {
+            this.alias = alias;
+        }
+
+        public List<String> getAltAliases() {
+            return altAliases;
+        }
+
+        public void setAltAliases(List<String> altAliases) {
+            this.altAliases = altAliases;
+        }
+
     }
 
-    @Override
-    protected void handle(Exchange ex) {
-        handle(getSession(g, ex), ex);
+    public BareCanonicalAliasEvent() {
+        setType(RoomEventType.Address);
+        setStateKey("");
+        setContent(new Content());
     }
-
-    protected abstract void handle(UserSession session, Exchange ex);
 
 }

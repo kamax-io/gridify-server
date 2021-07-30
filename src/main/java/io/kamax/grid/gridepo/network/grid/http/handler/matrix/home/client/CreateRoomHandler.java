@@ -24,7 +24,7 @@ import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.core.channel.Channel;
 import io.kamax.grid.gridepo.http.handler.Exchange;
 import io.kamax.grid.gridepo.network.grid.ProtocolEventMapper;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
+import io.kamax.grid.gridepo.network.matrix.http.handler.home.client.ClientApiHandler;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
 public class CreateRoomHandler extends ClientApiHandler {

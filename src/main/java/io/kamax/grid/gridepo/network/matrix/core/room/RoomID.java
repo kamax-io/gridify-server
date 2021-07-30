@@ -28,12 +28,16 @@ public class RoomID extends EntityID {
     public static final String Sigill = "!";
     public static final String Delimiter = ":";
 
+    public static boolean sigillMatch(String raw) {
+        return StringUtils.startsWith(raw, Sigill);
+    }
+
     public static RoomID from(String localpart, String domain) {
         return new RoomID(localpart + Delimiter + domain);
     }
 
     public static RoomID parse(String raw) {
-        if (!StringUtils.startsWith(raw, Sigill)) {
+        if (!sigillMatch(raw)) {
             throw new IllegalArgumentException("Room ID must start with a " + Sigill);
         }
 

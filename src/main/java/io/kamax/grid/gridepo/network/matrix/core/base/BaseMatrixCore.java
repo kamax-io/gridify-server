@@ -22,22 +22,29 @@ package io.kamax.grid.gridepo.network.matrix.core.base;
 
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.core.event.EventStreamer;
-import io.kamax.grid.gridepo.exception.NotImplementedException;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixCore;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixServer;
+import io.kamax.grid.gridepo.network.matrix.core.federation.FederationPusher;
 import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerManager;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomDirectory;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomManager;
+import org.apache.commons.lang3.StringUtils;
 
 // FIXME do we need this?
 public class BaseMatrixCore implements MatrixCore {
 
     private final Gridepo g;
     private final RoomManager rMgr;
+    private final HomeServerManager hsMgr;
+    private final FederationPusher fedPusher;
+    private final RoomDirectory rDir;
 
     public BaseMatrixCore(Gridepo g) {
         this.g = g;
         rMgr = new RoomManager(g);
+        hsMgr = new HomeServerManager(g);
+        fedPusher = new FederationPusher();
+        rDir = new RoomDirectory(g, g.getStore(), g.getBus(), hsMgr);
     }
 
     @Override
@@ -47,17 +54,17 @@ public class BaseMatrixCore implements MatrixCore {
 
     @Override
     public RoomDirectory roomDir() {
-        throw new NotImplementedException();
+        return rDir;
     }
 
     @Override
     public HomeServerManager hsMgr() {
-        throw new NotImplementedException();
+        return hsMgr;
     }
 
     @Override
     public boolean isLocal(String host) {
-        throw new NotImplementedException();
+        return StringUtils.equals(g.getDomain(), host);
     }
 
     @Override
@@ -68,6 +75,11 @@ public class BaseMatrixCore implements MatrixCore {
     @Override
     public EventStreamer getStreamer() {
         return new EventStreamer(g.getStore());
+    }
+
+    @Override
+    public FederationPusher getFedPusher() {
+        return fedPusher;
     }
 
 }

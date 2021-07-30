@@ -29,7 +29,7 @@ import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 import io.kamax.grid.gridepo.http.handler.Exchange;
 import io.kamax.grid.gridepo.network.grid.ProtocolEventMapper;
 import io.kamax.grid.gridepo.network.grid.core.ChannelAlias;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
+import io.kamax.grid.gridepo.network.matrix.http.handler.home.client.ClientApiHandler;
 
 public class RoomAliasLookupHandler extends ClientApiHandler {
 

@@ -53,6 +53,10 @@ public class GridepoConfig {
             return NetworkListener.build("grid", "identity", "server");
         }
 
+        public static NetworkListener forMatrixHomeServer() {
+            return NetworkListener.build("matrix", "data", "server");
+        }
+
     }
 
     public static class NetworkListener {

@@ -29,7 +29,8 @@ import io.kamax.grid.gridepo.network.grid.http.handler.grid.identity.AuthHandler
 import io.kamax.grid.gridepo.network.grid.http.handler.grid.identity.LoginPostHandler;
 import io.kamax.grid.gridepo.network.grid.http.handler.grid.identity.UserLookupHandler;
 import io.kamax.grid.gridepo.network.matrix.http.handler.OptionsHandler;
-import io.kamax.grid.gridepo.network.matrix.http.handler.home.client.MatrixHttpEndpointRegister;
+import io.kamax.grid.gridepo.network.matrix.http.handler.home.MatrixHomeServerEndpointRegister;
+import io.kamax.grid.gridepo.network.matrix.http.handler.home.MatrixhHomeClientEndpointRegister;
 import io.kamax.grid.gridepo.network.matrix.http.handler.identity.HelloHandler;
 import io.kamax.grid.gridepo.util.KxLog;
 import io.kamax.grid.gridepo.util.TlsUtils;
@@ -138,10 +139,11 @@ public class MonolithHttpGridepo {
 
     private void buildMatrixHome(RoutingHandler handler, GridepoConfig.NetworkListener network) {
         if (StringUtils.equals("client", network.getApi())) {
-            MatrixHttpEndpointRegister.apply(g, handler);
+            MatrixhHomeClientEndpointRegister.apply(g, handler);
             log.info("Added Matrix client endpoints");
         } else if (StringUtils.equals("server", network.getApi())) {
-            log.warn("Tried to add Matrix Home server endpoints but not implemented yet");
+            MatrixHomeServerEndpointRegister.apply(g, handler);
+            log.info("Added Matrix server endpoints");
         } else {
             throw new RuntimeException(network.getApi() + " is not a supported Matrix Home API");
         }
@@ -161,7 +163,7 @@ public class MonolithHttpGridepo {
     }
 
     private void buildMatrix(RoutingHandler handler, GridepoConfig.NetworkListener network) {
-        if (StringUtils.equalsAny("home", network.getRole())) {
+        if (StringUtils.equalsAny(network.getRole(), "home", "data")) {
             buildMatrixHome(handler, network);
         } else if (StringUtils.equals("identity", network.getRole())) {
             buildMatrixIdentity(handler, network);

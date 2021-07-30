@@ -20,28 +20,8 @@
 
 package io.kamax.grid.gridepo.network.matrix.core.federation;
 
-import com.google.gson.JsonObject;
-import io.kamax.grid.gridepo.exception.NotImplementedException;
-import io.kamax.grid.gridepo.network.matrix.core.room.RoomLookup;
+public interface HomeServerClient {
 
-import java.util.Optional;
-
-public class HomeServer {
-
-    public String getOrigin() {
-        throw new NotImplementedException();
-    }
-
-    public Optional<RoomLookup> lookup(String asOrigin, String roomAlias) {
-        throw new NotImplementedException();
-    }
-
-    public RoomJoinTemplate getJoinTemplate(String roomId, String userId) {
-        throw new NotImplementedException();
-    }
-
-    public JsonObject sendJoin(JsonObject event) {
-        throw new NotImplementedException();
-    }
+    HomeServerResponse doRequest(HomeServerRequest request);
 
 }

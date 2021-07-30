@@ -26,8 +26,7 @@ import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 import io.kamax.grid.gridepo.http.handler.Exchange;
 import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
-import io.kamax.grid.gridepo.network.matrix.core.room.RoomAliasLookup;
-import io.kamax.grid.gridepo.network.matrix.http.handler.AuthenticatedClientApiHandler;
+import io.kamax.grid.gridepo.network.matrix.core.room.RoomLookup;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
 public class RoomAliasLookupHandler extends AuthenticatedClientApiHandler {
@@ -40,10 +39,10 @@ public class RoomAliasLookupHandler extends AuthenticatedClientApiHandler {
     protected void handle(UserSession session, Exchange ex) {
         String rAlias = ex.getPathVariable("roomAlias");
 
-        RoomAliasLookup lookup = session.lookupRoomAlias(rAlias)
+        RoomLookup lookup = session.lookupRoomAlias(rAlias)
                 .orElseThrow(() -> new ObjectNotFoundException("Room alias", rAlias));
 
-        JsonArray servers = GsonUtil.asArrayObj(lookup.getResidentServers());
+        JsonArray servers = GsonUtil.asArrayObj(lookup.getServers());
         JsonObject response = new JsonObject();
         response.addProperty("room_id", lookup.getId());
         response.add("servers", servers);

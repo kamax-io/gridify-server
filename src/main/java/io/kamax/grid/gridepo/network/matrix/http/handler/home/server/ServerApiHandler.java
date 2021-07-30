@@ -1,6 +1,6 @@
 /*
  * Gridepo - Grid Data Server
- * Copyright (C) 2019 Kamax Sarl
+ * Copyright (C) 2021 Kamax Sarl
  *
  * https://www.kamax.io/
  *
@@ -18,27 +18,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.http.handler;
+package io.kamax.grid.gridepo.network.matrix.http.handler.home.server;
 
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.exception.*;
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.core.MatrixDataClient;
-import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+import io.kamax.grid.gridepo.network.matrix.core.base.ServerSession;
+import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerRequest;
 import io.kamax.grid.gridepo.util.KxLog;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpStatus;
 import org.slf4j.Logger;
 
+import java.lang.invoke.MethodHandles;
 import java.net.InetSocketAddress;
 import java.time.Instant;
 
-public abstract class ClientApiHandler implements HttpHandler {
+public abstract class ServerApiHandler implements HttpHandler {
 
-    private static final Logger log = KxLog.make(ClientApiHandler.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     @Override
     public void handleRequest(HttpServerExchange exchange) {
@@ -49,7 +51,7 @@ public abstract class ClientApiHandler implements HttpHandler {
         } else {
             Exchange ex = new Exchange(exchange);
             try {
-                // CORS headers as per spec
+                // CORS headers
                 exchange.getResponseHeaders().put(HttpString.tryFromString("Access-Control-Allow-Origin"), "*");
                 exchange.getResponseHeaders().put(HttpString.tryFromString("Access-Control-Allow-Methods"), "GET, POST, PUT, DELETE, OPTIONS");
                 exchange.getResponseHeaders().put(HttpString.tryFromString("Access-Control-Allow-Headers"), "Origin, X-Requested-With, Content-Type, Accept, Authorization");
@@ -115,12 +117,19 @@ public abstract class ClientApiHandler implements HttpHandler {
         }
     }
 
-    protected MatrixDataClient getClient(Gridepo g, Exchange ex) {
-        return g.overMatrix().vHost(ex.requireHost()).asClient();
-    }
+    protected ServerSession getSession(Gridepo g, Exchange ex) {
+        HomeServerRequest request = new HomeServerRequest();
+        String authHeader = ex.getHeader(Headers.AUTHORIZATION_STRING);
+        if (!StringUtils.startsWith(authHeader, "X-Matrix ")) {
+            throw new UnauthenticatedException(null); // FIXME
+        }
+        for (String arg : StringUtils.split(authHeader, ",")) {
+            if (StringUtils.startsWith(arg, "origin=")) {
+                request.getDoc().setOrigin(StringUtils.substringAfter(arg, "="));
+            }
+        }
 
-    protected UserSession getSession(Gridepo g, Exchange ex) {
-        return getClient(g, ex).withToken(ex.getAccessToken());
+        return g.overMatrix().vHost(ex.requireHost()).asServer().forRequest(request);
     }
 
     protected abstract void handle(Exchange ex);

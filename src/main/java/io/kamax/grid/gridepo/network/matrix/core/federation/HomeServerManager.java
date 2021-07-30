@@ -20,6 +20,7 @@
 
 package io.kamax.grid.gridepo.network.matrix.core.federation;
 
+import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.exception.NotImplementedException;
 
 import java.util.Collection;
@@ -27,12 +28,24 @@ import java.util.List;
 
 public class HomeServerManager {
 
-    public List<HomeServer> get(Collection<String> domains, boolean all) {
+    private final Gridepo g;
+    private HomeServerClient networkClient;
+
+    public HomeServerManager(Gridepo g) {
+        this.g = g;
+        networkClient = new HomeServerHttpClient();
+    }
+
+    public void setNetworkClient(HomeServerClient networkClient) {
+        this.networkClient = networkClient;
+    }
+
+    public List<HomeServerLink> getLink(String origin, Collection<String> domains, boolean all) {
         throw new NotImplementedException();
     }
 
-    public HomeServer get(String domain) {
-        throw new NotImplementedException();
+    public HomeServerLink getLink(String origin, String domain) {
+        return new HomeServerLink(g.overMatrix().vHost(origin), domain, networkClient);
     }
 
 }

@@ -20,5 +20,14 @@
 
 package io.kamax.grid.gridepo.network.matrix.core;
 
+import io.kamax.grid.gridepo.core.crypto.Cryptopher;
+import io.kamax.grid.gridepo.network.matrix.core.base.ServerSession;
+import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerRequest;
+
 public interface MatrixDataServer {
+
+    Cryptopher getCrypto();
+
+    ServerSession forRequest(HomeServerRequest mxReq);
+
 }

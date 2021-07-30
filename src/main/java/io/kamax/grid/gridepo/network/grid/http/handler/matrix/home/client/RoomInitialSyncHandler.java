@@ -23,7 +23,7 @@ package io.kamax.grid.gridepo.network.grid.http.handler.matrix.home.client;
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
+import io.kamax.grid.gridepo.network.matrix.http.handler.home.client.ClientApiHandler;
 import org.apache.commons.lang3.StringUtils;
 
 public class RoomInitialSyncHandler extends ClientApiHandler {

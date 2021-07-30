@@ -24,12 +24,14 @@ import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.core.GridType;
 import io.kamax.grid.gridepo.core.auth.UIAuthSession;
+import io.kamax.grid.gridepo.core.crypto.Cryptopher;
 import io.kamax.grid.gridepo.core.identity.GenericThreePid;
 import io.kamax.grid.gridepo.core.identity.User;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixDataClient;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixDataServer;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixIdentityServer;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixServer;
+import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerRequest;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
 import java.util.Optional;
@@ -46,6 +48,11 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
         this.domain = domain;
 
         is = new BaseMatrixIdentityServer(g);
+    }
+
+    @Override
+    public String getDomain() {
+        return domain;
     }
 
     @Override
@@ -115,6 +122,16 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
         session.complete(credentials);
         User u = g.login(session, "m.login.password");
         return login(u);
+    }
+
+    @Override
+    public Cryptopher getCrypto() {
+        return g.getCrypto();
+    }
+
+    @Override
+    public ServerSession forRequest(HomeServerRequest mxReq) {
+        return new ServerSession(g.overMatrix(), domain, mxReq.getDoc().getOrigin());
     }
 
 }

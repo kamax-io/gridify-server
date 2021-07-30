@@ -25,7 +25,6 @@ import io.kamax.grid.gridepo.core.channel.TimelineDirection;
 import io.kamax.grid.gridepo.http.handler.Exchange;
 import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomTimelineChunck;
-import io.kamax.grid.gridepo.network.matrix.http.handler.AuthenticatedClientApiHandler;
 import org.apache.commons.lang3.StringUtils;
 
 public class RoomMessagesHandler extends AuthenticatedClientApiHandler {

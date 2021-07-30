@@ -21,7 +21,7 @@
 package io.kamax.grid.gridepo.network.matrix.http.handler.identity;
 
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
+import io.kamax.grid.gridepo.network.matrix.http.handler.home.client.ClientApiHandler;
 
 public class HelloHandler extends ClientApiHandler {
 

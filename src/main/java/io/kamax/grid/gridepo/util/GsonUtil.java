@@ -60,7 +60,7 @@ public class GsonUtil {
         return a;
     }
 
-    public static JsonArray asArrayObj(List<? extends Object> elements) {
+    public static JsonArray asArrayObj(Collection<? extends Object> elements) {
         return asArray(elements.stream().map(e -> get().toJsonTree(e)).collect(Collectors.toList()));
     }
 
@@ -213,6 +213,10 @@ public class GsonUtil {
     }
 
     public static Optional<String> findString(JsonObject o, String key) {
+        if (Objects.isNull(o)) {
+            return Optional.empty();
+        }
+
         return findPrimitive(o, key).map(JsonPrimitive::getAsString);
     }
 
@@ -234,6 +238,10 @@ public class GsonUtil {
     }
 
     public static Optional<JsonElement> findElement(JsonObject o, String key) {
+        if (Objects.isNull(o)) {
+            return Optional.empty();
+        }
+
         return Optional.ofNullable(o.get(key));
     }
 

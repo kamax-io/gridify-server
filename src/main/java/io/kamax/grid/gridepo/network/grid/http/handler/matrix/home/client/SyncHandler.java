@@ -27,7 +27,7 @@ import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.http.handler.Exchange;
 import io.kamax.grid.gridepo.network.grid.ProtocolEventMapper;
 import io.kamax.grid.gridepo.network.grid.http.handler.matrix.SyncResponse;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
+import io.kamax.grid.gridepo.network.matrix.http.handler.home.client.ClientApiHandler;
 import org.apache.commons.lang3.StringUtils;
 
 public class SyncHandler extends ClientApiHandler {
