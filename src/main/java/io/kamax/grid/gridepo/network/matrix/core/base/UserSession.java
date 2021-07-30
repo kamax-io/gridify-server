@@ -285,19 +285,32 @@ public class UserSession {
         throw new NotImplementedException();
     }
 
+    public String send(String roomId, BareGenericEvent event) {
+        ChannelEventAuthorization auth = g.overMatrix().roomMgr().get(roomId).offer(vHost, event);
+        if (!auth.isAuthorized()) {
+            throw new ForbiddenException(auth.getReason());
+        }
+        return auth.getEventId();
+    }
+
     public String send(String roomId, String type, String txnId, JsonObject content) {
-        // TODO support txnId
         BareGenericEvent event = new BareGenericEvent();
         event.setOrigin(vHost);
         event.setSender(userId);
         event.setType(type);
         event.getUnsigned().addProperty("transaction_id", txnId);
         event.setContent(content);
-        ChannelEventAuthorization auth = g.overMatrix().roomMgr().get(roomId).offer(vHost, event);
-        if (!auth.isAuthorized()) {
-            throw new ForbiddenException(auth.getReason());
-        }
-        return auth.getEventId();
+        return send(roomId, event);
+    }
+
+    public String sendState(String roomId, String type, String stateKey, JsonObject content) {
+        BareGenericEvent event = new BareGenericEvent();
+        event.setOrigin(vHost);
+        event.setSender(userId);
+        event.setType(type);
+        event.setStateKey(stateKey);
+        event.setContent(content);
+        return send(roomId, event);
     }
 
     public RoomTimelineChunck paginateTimeline(String roomId, String anchor, TimelineDirection direction, long maxEvents) {

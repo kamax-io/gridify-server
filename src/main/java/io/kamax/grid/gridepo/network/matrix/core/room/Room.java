@@ -26,7 +26,6 @@ import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.core.signal.ChannelMessageProcessed;
 import io.kamax.grid.gridepo.core.signal.SignalTopic;
-import io.kamax.grid.gridepo.exception.NotImplementedException;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareGenericEvent;
@@ -73,9 +72,8 @@ public class Room {
                 .orElse(null);
 
         RoomState state = extremities.stream()
-                .max(Comparator.comparingLong(ev -> ev.getBare().getDepth()))
-                .map(ChannelEvent::getLid)
-                .map(ev -> g.getStore().getStateForEvent(ev))
+                .max(Comparator.comparingLong(ev -> BareGenericEvent.extractDepth(ev.getData())))
+                .map(ev -> g.getStore().getStateForEvent(ev.getLid()))
                 .map(RoomState::new)
                 .orElseGet(RoomState::empty);
 
@@ -310,7 +308,8 @@ public class Room {
     }
 
     public RoomState getState(String eventId) {
-        throw new NotImplementedException();
+        // FIXME could optimise and directly get the data from the storage in a single call
+        return new RoomState(g.getStore().getStateForEvent(g.getStore().getEvent(id, eventId).getLid()));
     }
 
     public RoomTimeline getTimeline() {

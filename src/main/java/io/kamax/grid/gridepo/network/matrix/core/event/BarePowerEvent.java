@@ -123,7 +123,7 @@ public class BarePowerEvent extends BareEvent<BarePowerEvent.Content> {
     public BarePowerEvent() {
         setType(RoomEventType.Power);
         setStateKey("");
-        setContent(new BarePowerEvent.Content());
+        setContent(new Content());
     }
 
 }

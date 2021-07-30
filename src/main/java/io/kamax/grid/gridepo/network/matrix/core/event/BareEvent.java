@@ -24,6 +24,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,6 +52,10 @@ public abstract class BareEvent<T> {
     private JsonObject unsigned = new JsonObject();
     @SerializedName(EventKey.Content)
     private T content;
+
+    public BareEvent() {
+        setTimestamp(Instant.now().toEpochMilli());
+    }
 
     public JsonObject getJson() {
         return GsonUtil.makeObj(this);

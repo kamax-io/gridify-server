@@ -20,24 +20,24 @@
 
 package io.kamax.grid.gridepo.network.matrix.core.event;
 
-public class BareJoinRulesEvent extends BareEvent<BareJoinRulesEvent.Content> {
+public class BareTopicEvent extends BareEvent<BareTopicEvent.Content> {
 
     public static class Content {
 
-        private String rule;
+        private String topic;
 
-        public String getRule() {
-            return rule;
+        public String getTopic() {
+            return topic;
         }
 
-        public void setRule(String rule) {
-            this.rule = rule;
+        public void setTopic(String topic) {
+            this.topic = topic;
         }
 
     }
 
-    public BareJoinRulesEvent() {
-        setType(RoomEventType.JoinRules);
+    public BareTopicEvent() {
+        setType(RoomEventType.Topic);
         setStateKey("");
         setContent(new Content());
     }

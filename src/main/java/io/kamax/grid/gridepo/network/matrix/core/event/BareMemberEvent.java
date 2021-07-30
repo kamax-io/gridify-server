@@ -25,7 +25,6 @@ import com.google.gson.annotations.SerializedName;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomMembership;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
-import java.time.Instant;
 import java.util.Optional;
 
 public class BareMemberEvent extends BareEvent<BareMemberEvent.Content> {
@@ -68,8 +67,7 @@ public class BareMemberEvent extends BareEvent<BareMemberEvent.Content> {
     public BareMemberEvent() {
         setType(RoomEventType.Member);
         setStateKey("");
-        setTimestamp(Instant.now().toEpochMilli());
-        setContent(new BareMemberEvent.Content());
+        setContent(new Content());
     }
 
 }

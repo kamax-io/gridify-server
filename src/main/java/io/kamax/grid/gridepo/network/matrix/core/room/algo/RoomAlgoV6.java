@@ -410,24 +410,39 @@ public class RoomAlgoV6 implements RoomAlgo {
         createEv.setSender(creator);
         createEv.getContent().setCreator(creator);
         createEv.getContent().setVersion(Version);
+        events.add(createEv);
 
         BareMemberEvent cJoinEv = new BareMemberEvent();
         createEv.setTimestamp(Instant.now().toEpochMilli());
         cJoinEv.setOrigin(domain);
         cJoinEv.setSender(creator);
         cJoinEv.setStateKey(creator);
-        cJoinEv.getContent().setMembership(RoomMembership.Join.getId());
+        cJoinEv.getContent().setMembership(RoomMembership.Join);
+        events.add(cJoinEv);
 
         BarePowerEvent cPlEv = getDefaultPowersEvent(creator);
         createEv.setTimestamp(Instant.now().toEpochMilli());
         cPlEv.setOrigin(domain);
         cPlEv.setSender(creator);
-
-        events.add(createEv);
-        events.add(cJoinEv);
         events.add(cPlEv);
 
-        // FIXME apply options
+        GsonUtil.findString(options, "name").ifPresent(name -> {
+            BareNameEvent nameEvent = new BareNameEvent();
+            nameEvent.setOrigin(domain);
+            nameEvent.setSender(creator);
+            nameEvent.getContent().setName(name);
+            events.add(nameEvent);
+        });
+
+        GsonUtil.findString(options, "topic").ifPresent(topic -> {
+            BareTopicEvent topicEvent = new BareTopicEvent();
+            topicEvent.setOrigin(domain);
+            topicEvent.setSender(creator);
+            topicEvent.getContent().setTopic(topic);
+            events.add(topicEvent);
+        });
+
+        // TODO support remaining options
 
         return events;
     }

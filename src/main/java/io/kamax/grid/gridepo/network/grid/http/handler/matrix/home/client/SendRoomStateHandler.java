@@ -22,40 +22,25 @@ package io.kamax.grid.gridepo.network.grid.http.handler.matrix.home.client;
 
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.UserSession;
 import io.kamax.grid.gridepo.http.handler.Exchange;
-import io.kamax.grid.gridepo.network.grid.ProtocolEventMapper;
-import io.kamax.grid.gridepo.network.matrix.http.handler.ClientApiHandler;
-import io.kamax.grid.gridepo.util.GsonUtil;
+import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
+import io.kamax.grid.gridepo.network.matrix.http.handler.AuthenticatedClientApiHandler;
 import org.apache.commons.lang3.StringUtils;
 
-public class SendRoomStateHandler extends ClientApiHandler {
-
-    private final Gridepo g;
+public class SendRoomStateHandler extends AuthenticatedClientApiHandler {
 
     public SendRoomStateHandler(Gridepo g) {
-        this.g = g;
+        super(g);
     }
 
     @Override
-    protected void handle(Exchange exchange) {
-        UserSession session = g.withToken(exchange.getAccessToken());
-
-        String rId = exchange.getPathVariable("roomId");
-        String evType = exchange.getPathVariable("type");
-        String stateKey = StringUtils.defaultIfBlank(exchange.getPathVariable("stateKey"), "");
-
-        JsonObject content = exchange.parseJsonObject();
-        JsonObject mEv = new JsonObject();
-        mEv.addProperty("room_id", rId);
-        mEv.addProperty("type", evType);
-        mEv.addProperty("state_key", stateKey);
-        mEv.add("content", content);
-
-        JsonObject gEv = ProtocolEventMapper.forEventConvertToGrid(mEv);
-        String cId = ProtocolEventMapper.forChannelIdFromMatrixToGrid(rId);
-        String evId = ProtocolEventMapper.forEventIdFromGridToMatrix(session.send(cId, gEv));
-        exchange.respondJson(GsonUtil.makeObj("event_id", evId));
+    protected void handle(UserSession session, Exchange ex) {
+        String roomId = ex.getPathVariable("roomId");
+        String eventType = ex.getPathVariable("type");
+        String stateKey = StringUtils.defaultIfBlank(ex.getPathVariable("stateKey"), "");
+        JsonObject content = ex.parseJsonObject();
+        String eventId = session.sendState(roomId, eventType, stateKey, content);
+        ex.respondJsonObject("event_id", eventId);
     }
 
 }
