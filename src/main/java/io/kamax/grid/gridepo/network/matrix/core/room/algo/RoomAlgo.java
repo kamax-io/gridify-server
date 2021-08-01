@@ -55,6 +55,8 @@ public interface RoomAlgo {
 
     BarePowerEvent.Content getDefaultPowers(String creator);
 
+    List<JsonObject> orderTopologically(List<JsonObject> events);
+
     String validate(JsonObject ev);
 
     ChannelEventAuthorization authorizeCreate(JsonObject doc);

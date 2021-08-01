@@ -22,9 +22,11 @@ package io.kamax.grid.gridepo.network.matrix.core.room;
 
 import io.kamax.grid.gridepo.core.channel.state.ChannelState;
 import io.kamax.grid.gridepo.exception.NotImplementedException;
+import io.kamax.grid.gridepo.network.matrix.core.event.BareGenericEvent;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class RoomView {
 
@@ -48,11 +50,14 @@ public class RoomView {
         return state;
     }
 
-    public List<String> getAllServers() {
-        throw new NotImplementedException();
+    public Set<String> getAllServers() {
+        return getState().getEvents().stream()
+                .map(o -> BareGenericEvent.fromJson(o.getData()).getSender())
+                .map(sender -> StringUtils.substringAfter(sender, ":"))
+                .collect(Collectors.toSet());
     }
 
-    public List<String> getJoinedServers() {
+    public Set<String> getJoinedServers() {
         throw new NotImplementedException();
     }
 

@@ -21,7 +21,6 @@
 package io.kamax.grid.gridepo.network.matrix.core.base;
 
 import com.google.gson.JsonObject;
-import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.exception.ForbiddenException;
 import io.kamax.grid.gridepo.network.matrix.core.IncompatibleRoomVersionException;
@@ -76,12 +75,12 @@ public class ServerSession {
         }
 
         RoomState state = r.getFullState(auth.getEventId());
-        List<ChannelEvent> authChain = r.getAuthChain(state);
+        List<JsonObject> authChain = r.getAuthChain(state);
 
         RoomJoinSeed seed = new RoomJoinSeed();
         seed.setDomain(domain);
         seed.setState(state);
-        seed.makeAuthChain(authChain);
+        seed.setAuthChain(authChain);
 
         return seed;
     }

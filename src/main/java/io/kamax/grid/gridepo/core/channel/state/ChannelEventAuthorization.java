@@ -76,6 +76,10 @@ public class ChannelEventAuthorization {
         // only for builder
     }
 
+    public void setEvent(ChannelEvent event) {
+        this.event = event;
+    }
+
     public String getEventId() {
         return eventId;
     }

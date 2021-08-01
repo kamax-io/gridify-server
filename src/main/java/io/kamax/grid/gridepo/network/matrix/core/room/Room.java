@@ -176,9 +176,10 @@ public class Room {
         return new RoomState(dao);
     }
 
-    public List<ChannelEvent> getAuthChain(RoomState state) {
+    public List<JsonObject> getAuthChain(RoomState state) {
         // FIXME incomplete!
-        return state.getEvents();
+        List<JsonObject> authChain = state.getEvents().stream().map(ChannelEvent::getData).collect(Collectors.toList());
+        return algo.orderTopologically(authChain);
     }
 
     // Add an event to the room without processing it or return the local copy
@@ -201,6 +202,7 @@ public class Room {
     public ChannelEventAuthorization process(ChannelEvent event) {
         RoomState state = getState(event);
         ChannelEventAuthorization auth = algo.authorize(state, event.getId(), event.getData());
+        auth.setEvent(event);
         event.processed(auth);
         g.getStore().saveEvent(event);
         return auth;

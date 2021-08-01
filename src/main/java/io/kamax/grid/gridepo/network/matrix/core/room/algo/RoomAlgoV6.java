@@ -67,6 +67,49 @@ public class RoomAlgoV6 implements RoomAlgo {
         return getDefaultPowersEvent(creator).getContent();
     }
 
+    private Comparator<JsonObject> getComparatorByParents() {
+        return (ev1, ev2) -> {
+            String ev1Id = getEventId(ev1);
+            String ev2Id = getEventId(ev2);
+
+            List<String> ev1PrevEvents = BareGenericEvent.getPrevEvents(ev1);
+            List<String> ev1AuthEvents = BareGenericEvent.getAuthEvents(ev1);
+            List<String> ev2PrevEvents = BareGenericEvent.getPrevEvents(ev2);
+            List<String> ev2AuthEvents = BareGenericEvent.getAuthEvents(ev2);
+
+            if (ev1PrevEvents.contains(ev2Id)) {
+                return 1;
+            }
+
+            if (ev1AuthEvents.contains(ev2Id)) {
+                return 1;
+            }
+
+            if (ev2PrevEvents.contains(ev1Id)) {
+                return -1;
+            }
+
+            if (ev2AuthEvents.contains(ev1Id)) {
+                return -1;
+            }
+
+            return 0;
+        };
+    }
+
+    private Comparator<JsonObject> getTopologyComparator() {
+        return getComparatorByParents()
+                .thenComparingLong(BareGenericEvent::extractDepth)
+                .thenComparingLong(BareGenericEvent::extractTimestampt)
+                .thenComparing(this::getEventId);
+    }
+
+    @Override
+    public List<JsonObject> orderTopologically(List<JsonObject> events) {
+        events.sort(getTopologyComparator());
+        return events;
+    }
+
     private boolean canDoMembership(long senderPl, RoomMembership m, BarePowerEvent.Content pls) {
         Long actionPl = null;
 

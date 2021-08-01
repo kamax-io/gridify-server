@@ -23,6 +23,8 @@ package io.kamax.grid.gridepo.network.matrix.core.event;
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
+import java.util.List;
+
 public class BareGenericEvent extends BareEvent<JsonObject> {
 
     public static BareGenericEvent fromJson(JsonObject doc) {
@@ -31,6 +33,18 @@ public class BareGenericEvent extends BareEvent<JsonObject> {
 
     public static Long extractDepth(JsonObject doc) {
         return GsonUtil.getLong(doc, EventKey.Depth);
+    }
+
+    public static Long extractTimestampt(JsonObject doc) {
+        return GsonUtil.getLong(doc, EventKey.Timestamp);
+    }
+
+    public static List<String> getAuthEvents(JsonObject doc) {
+        return GsonUtil.tryArrayAsList(doc, EventKey.AuthEvents, String.class);
+    }
+
+    public static List<String> getPrevEvents(JsonObject doc) {
+        return GsonUtil.tryArrayAsList(doc, EventKey.PrevEvents, String.class);
     }
 
     public BareGenericEvent() {

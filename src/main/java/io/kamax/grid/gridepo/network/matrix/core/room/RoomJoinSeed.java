@@ -48,10 +48,6 @@ public class RoomJoinSeed {
         this.authChain = authChain;
     }
 
-    public void makeAuthChain(List<ChannelEvent> authChain) {
-        setAuthChain(authChain.stream().map(ChannelEvent::getData).collect(Collectors.toList()));
-    }
-
     public List<JsonObject> getState() {
         return state;
     }
