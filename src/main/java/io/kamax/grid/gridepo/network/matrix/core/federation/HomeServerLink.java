@@ -58,8 +58,7 @@ public class HomeServerLink {
     }
 
     private URI build(URIPath path, List<String[]> params) {
-        URIBuilder builder = new URIBuilder();
-        builder.setPath(path.get());
+        URIBuilder builder = new URIBuilder(URI.create(path.get()));
         for (String[] param : params) {
             builder.addParameter(param[0], param[1]);
         }
@@ -100,7 +99,7 @@ public class HomeServerLink {
     }
 
     public Optional<RoomLookup> lookup(String roomAlias) {
-        URI uri = build(URIPath.federation().v1().add("query").add("directory"),
+        URI uri = build(URIPath.federation().v1().add("query", "directory"),
                 new String[]{"room_alias", roomAlias});
         HomeServerRequest request = build(
                 domain,
@@ -154,7 +153,7 @@ public class HomeServerLink {
     }
 
     public RoomJoinSeed sendJoin(String roomId, String userId, JsonObject event) {
-        URI uri = build(URIPath.federation().v2().add("send_join").add(roomId).add(userId));
+        URI uri = build(URIPath.federation().v2().add("send_join", roomId, userId));
         HomeServerRequest request = build(
                 domain,
                 "PUT",

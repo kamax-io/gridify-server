@@ -60,6 +60,14 @@ public class URIPath {
         return this;
     }
 
+    public URIPath put(String... elements) {
+        for (String element : elements) {
+            path.append(element);
+        }
+
+        return this;
+    }
+
     /**
      * URL encode and add a new path element
      * <p>
@@ -75,15 +83,16 @@ public class URIPath {
             put("/");
         }
         put(encode(element));
+
         return this;
     }
 
     public URIPath add(String... elements) {
-        URIPath v = this;
         for (String element : elements) {
-            v = add(element);
+            add(element);
         }
-        return v;
+
+        return this;
     }
 
     public String get() {
