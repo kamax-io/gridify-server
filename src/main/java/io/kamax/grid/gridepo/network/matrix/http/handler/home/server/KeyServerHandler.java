@@ -18,18 +18,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.core;
+package io.kamax.grid.gridepo.network.matrix.http.handler.home.server;
 
-import io.kamax.grid.gridepo.core.crypto.Cryptopher;
-import io.kamax.grid.gridepo.network.matrix.core.base.ServerSession;
-import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerRequest;
+import com.google.gson.JsonObject;
+import io.kamax.grid.gridepo.Gridepo;
+import io.kamax.grid.gridepo.core.crypto.RegularKeyIdentifier;
+import io.kamax.grid.gridepo.http.handler.Exchange;
+import io.kamax.grid.gridepo.network.matrix.core.MatrixDataServer;
 
-public interface MatrixDataServer {
+public class KeyServerHandler extends VhostServerApiHandler {
 
-    String getDomain();
+    public KeyServerHandler(Gridepo g) {
+        super(g);
+    }
 
-    Cryptopher getCrypto();
-
-    ServerSession forRequest(HomeServerRequest mxReq);
+    @Override
+    protected void handle(MatrixDataServer vHost, Exchange ex) {
+        String keyId = ex.getPathVariable("keyId");
+        JsonObject keyDoc = vHost.getCrypto().getKeyDocument(vHost.getDomain(), RegularKeyIdentifier.parse(keyId));
+        ex.respond(keyDoc);
+    }
 
 }

@@ -51,4 +51,6 @@ public interface Cryptopher {
 
     KeyIdentifier getKeyWithPublic(String pubKeyBase64);
 
+    JsonObject getKeyDocument(String domain, KeyIdentifier keyId);
+
 }

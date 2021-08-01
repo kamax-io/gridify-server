@@ -20,7 +20,14 @@
 
 package io.kamax.grid.gridepo.core.crypto;
 
+import org.apache.commons.lang3.StringUtils;
+
 public class RegularKeyIdentifier extends GenericKeyIdentifier {
+
+    public static RegularKeyIdentifier parse(String keyId) {
+        String[] parts = StringUtils.split(keyId, ":");
+        return new RegularKeyIdentifier(parts[0], parts[1]);
+    }
 
     public RegularKeyIdentifier(String algo, String serial) {
         super(KeyType.Regular, algo, serial);

@@ -18,18 +18,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.core;
+package io.kamax.grid.gridepo.network.matrix.http.handler.home.server;
 
-import io.kamax.grid.gridepo.core.crypto.Cryptopher;
-import io.kamax.grid.gridepo.network.matrix.core.base.ServerSession;
-import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerRequest;
+import io.kamax.grid.gridepo.Gridepo;
+import io.kamax.grid.gridepo.http.handler.Exchange;
+import io.kamax.grid.gridepo.network.matrix.core.MatrixDataServer;
 
-public interface MatrixDataServer {
+public abstract class VhostServerApiHandler extends ServerApiHandler {
 
-    String getDomain();
+    private final Gridepo g;
 
-    Cryptopher getCrypto();
+    public VhostServerApiHandler(Gridepo g) {
+        this.g = g;
+    }
 
-    ServerSession forRequest(HomeServerRequest mxReq);
+    @Override
+    protected void handle(Exchange ex) {
+        handle(getVhostServer(g, ex), ex);
+    }
+
+    protected abstract void handle(MatrixDataServer vHost, Exchange ex);
 
 }

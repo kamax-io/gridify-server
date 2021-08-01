@@ -34,7 +34,7 @@ public abstract class AuthenticatedServerApiHandler extends ServerApiHandler {
 
     @Override
     protected void handle(Exchange ex) {
-        handle(getSession(g, ex), ex);
+        handle(getAuthenticatedSession(g, ex), ex);
     }
 
     protected abstract void handle(ServerSession session, Exchange ex);

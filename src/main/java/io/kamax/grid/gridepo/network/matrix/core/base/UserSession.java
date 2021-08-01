@@ -287,6 +287,8 @@ public class UserSession {
     }
 
     public void inviteToRoom(String roomId, String userId) {
+        BareMemberEvent inviteEvent = BareMemberEvent.makeFor(userId, RoomMembership.Invite);
+        inviteEvent.setSender(userId);
         throw new NotImplementedException();
     }
 

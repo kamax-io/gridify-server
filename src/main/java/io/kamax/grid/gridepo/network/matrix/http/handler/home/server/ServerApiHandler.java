@@ -23,6 +23,7 @@ package io.kamax.grid.gridepo.network.matrix.http.handler.home.server;
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.exception.*;
 import io.kamax.grid.gridepo.http.handler.Exchange;
+import io.kamax.grid.gridepo.network.matrix.core.MatrixDataServer;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixException;
 import io.kamax.grid.gridepo.network.matrix.core.base.ServerSession;
 import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerRequest;
@@ -121,7 +122,11 @@ public abstract class ServerApiHandler implements HttpHandler {
         }
     }
 
-    protected ServerSession getSession(Gridepo g, Exchange ex) {
+    protected MatrixDataServer getVhostServer(Gridepo g, Exchange ex) {
+        return g.overMatrix().vHost(ex.requireHost()).asServer();
+    }
+
+    protected ServerSession getAuthenticatedSession(Gridepo g, Exchange ex) {
         HomeServerRequest request = new HomeServerRequest();
         String authHeader = ex.getHeader(Headers.AUTHORIZATION_STRING);
         if (!StringUtils.startsWith(authHeader, "X-Matrix ")) {
@@ -131,9 +136,10 @@ public abstract class ServerApiHandler implements HttpHandler {
             if (StringUtils.startsWith(arg, "origin=")) {
                 request.getDoc().setOrigin(StringUtils.substringAfter(arg, "="));
             }
+            // TODO complete
         }
 
-        return g.overMatrix().vHost(ex.requireHost()).asServer().forRequest(request);
+        return getVhostServer(g, ex).forRequest(request);
     }
 
     protected abstract void handle(Exchange ex);

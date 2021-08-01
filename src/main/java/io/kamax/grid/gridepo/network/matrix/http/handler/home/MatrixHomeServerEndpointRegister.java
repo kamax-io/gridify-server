@@ -22,9 +22,7 @@ package io.kamax.grid.gridepo.network.matrix.http.handler.home;
 
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.network.matrix.http.handler.UnrecognizedEndpointHandler;
-import io.kamax.grid.gridepo.network.matrix.http.handler.home.server.RoomDirectoryLookupHandler;
-import io.kamax.grid.gridepo.network.matrix.http.handler.home.server.RoomMakeJoinHandler;
-import io.kamax.grid.gridepo.network.matrix.http.handler.home.server.RoomSendJoinHandler;
+import io.kamax.grid.gridepo.network.matrix.http.handler.home.server.*;
 import io.undertow.server.RoutingHandler;
 
 public class MatrixHomeServerEndpointRegister {
@@ -33,6 +31,10 @@ public class MatrixHomeServerEndpointRegister {
         handler
                 .setFallbackHandler(new UnrecognizedEndpointHandler())
                 .setInvalidMethodHandler(new UnrecognizedEndpointHandler())
+
+                .get("/.well-known/matrix/server", new WellKnownHandler(g))
+
+                .get("/_matrix/key/v2/server/{keyId}", new KeyServerHandler(g))
 
                 .get("/_matrix/federation/v1/query/directory", new RoomDirectoryLookupHandler(g))
                 .get("/_matrix/federation/v1/make_join/{roomId}/{userId}", new RoomMakeJoinHandler(g))

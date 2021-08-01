@@ -27,6 +27,7 @@ import io.kamax.grid.gridepo.core.crypto.Signature;
 import io.kamax.grid.gridepo.core.crypto.*;
 import io.kamax.grid.gridepo.core.store.crypto.KeyStore;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
+import io.kamax.grid.gridepo.util.GsonUtil;
 import net.i2p.crypto.eddsa.EdDSAEngine;
 import net.i2p.crypto.eddsa.EdDSAPrivateKey;
 import net.i2p.crypto.eddsa.EdDSAPublicKey;
@@ -193,6 +194,24 @@ public class Ed25519Cryptopher implements Cryptopher {
         }
 
         throw new ObjectNotFoundException("No keypair with matching public key " + pubKeyBase64);
+    }
+
+    @Override
+    public JsonObject getKeyDocument(String domain, KeyIdentifier keyId) {
+        Key key = getKey(keyId);
+        JsonObject keyDoc = new JsonObject();
+        keyDoc.addProperty("key", getPublicKeyBase64(key.getId()));
+        JsonObject doc = new JsonObject();
+        doc.add("old_verify_keys", new JsonObject());
+        doc.addProperty("server_name", domain);
+        doc.addProperty("valid_until_ts", Instant.now().plusSeconds(10).toEpochMilli()); // 5 min
+        doc.add("verify_keys", GsonUtil.makeObj(key.getId().getAlgorithm() + ":" + key.getId().getSerial(), keyDoc));
+
+        Signature sign = sign(doc, key.getId());
+        JsonObject signDomain = GsonUtil.makeObj(sign.getKey().getAlgorithm() + ":" + sign.getKey().getSerial(), sign.getSignature());
+        JsonObject signDomains = GsonUtil.makeObj(domain, signDomain);
+        doc.add("signatures", signDomains);
+        return doc;
     }
 
 }
