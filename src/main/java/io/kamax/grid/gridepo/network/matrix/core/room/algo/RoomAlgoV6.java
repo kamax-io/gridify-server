@@ -591,7 +591,8 @@ public class RoomAlgoV6 implements RoomAlgo {
     @Override
     public JsonObject signOff(JsonObject doc, Cryptopher crypto, String domain) {
         String hash = computeContentHash(doc);
-        doc.addProperty(EventKey.Hashes, hash);
+        JsonObject hashes = GsonUtil.makeObj("sha256", hash);
+        doc.add(EventKey.Hashes, hashes);
         return sign(doc, crypto, domain);
     }
 
