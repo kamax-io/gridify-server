@@ -20,6 +20,7 @@
 
 package io.kamax.grid.gridepo.network.matrix.core;
 
+import io.kamax.grid.gridepo.core.crypto.Cryptopher;
 import io.kamax.grid.gridepo.core.event.EventStreamer;
 import io.kamax.grid.gridepo.network.matrix.core.federation.FederationPusher;
 import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerManager;
@@ -27,6 +28,8 @@ import io.kamax.grid.gridepo.network.matrix.core.room.RoomDirectory;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomManager;
 
 public interface MatrixCore {
+
+    Cryptopher crypto();
 
     RoomManager roomMgr();
 

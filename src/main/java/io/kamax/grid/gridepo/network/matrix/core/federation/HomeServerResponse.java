@@ -24,13 +24,19 @@ import com.google.gson.JsonObject;
 
 public class HomeServerResponse {
 
-    public static HomeServerResponse make(JsonObject body) {
+    public static HomeServerResponse make(int code, JsonObject body) {
         HomeServerResponse o = new HomeServerResponse();
+        o.code = code;
         o.body = body;
         return o;
     }
 
+    private int code;
     private JsonObject body;
+
+    public int getCode() {
+        return code;
+    }
 
     public JsonObject getBody() {
         return body;

@@ -22,6 +22,7 @@ package io.kamax.grid.gridepo.network.matrix.core.event;
 
 public class EventKey {
 
+    public static final String AuthEvents = "auth_events";
     public static final String Id = "event_id";
     public static final String ChannelId = "room_id";
     public static final String Type = "type";

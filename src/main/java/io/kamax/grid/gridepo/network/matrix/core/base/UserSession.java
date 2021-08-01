@@ -151,7 +151,7 @@ public class UserSession {
                             room.inviteState.events.clear();
 
                             room.state.events.clear();
-                            getRoom(rEv.getRoomId()).getState(ev.getId()).getEvents().forEach(stateEv -> {
+                            getRoom(rEv.getRoomId()).getState(ev).getEvents().forEach(stateEv -> {
                                 if (stateEv.getLid() != ev.getLid()) {
                                     room.state.events.add(buildSyncEvent(stateEv));
                                 }
@@ -204,7 +204,7 @@ public class UserSession {
             Instant end = Instant.now().plusMillis(options.getTimeout());
 
             g.getBus().getMain().subscribe(this);
-            g.getBus().forTopic(SignalTopic.Channel).subscribe(this);
+            g.getBus().forTopic(SignalTopic.Room).subscribe(this);
 
             SyncData data = new SyncData();
             data.setPosition(options.getToken());
@@ -237,7 +237,7 @@ public class UserSession {
 
                                 // if we are subscribed to the channel at that point in time
                                 Room r = g.overMatrix().roomMgr().get(ev.getChannelId());
-                                RoomState state = r.getState(ev.getId());
+                                RoomState state = r.getState(ev);
                                 RoomMembership m = state.getMembership(userId);
                                 log.info("Membership for Event LID {}: {}", ev.getLid(), m);
                                 return m.isAny(RoomMembership.Join);
@@ -265,7 +265,7 @@ public class UserSession {
             return buildSync(data);
         } finally {
             g.getBus().getMain().unsubscribe(this);
-            g.getBus().forTopic(SignalTopic.Channel).unsubscribe(this);
+            g.getBus().forTopic(SignalTopic.Room).unsubscribe(this);
         }
     }
 

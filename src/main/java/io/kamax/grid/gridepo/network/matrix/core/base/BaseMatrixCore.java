@@ -21,6 +21,7 @@
 package io.kamax.grid.gridepo.network.matrix.core.base;
 
 import io.kamax.grid.gridepo.Gridepo;
+import io.kamax.grid.gridepo.core.crypto.Cryptopher;
 import io.kamax.grid.gridepo.core.event.EventStreamer;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixCore;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixServer;
@@ -45,6 +46,11 @@ public class BaseMatrixCore implements MatrixCore {
         hsMgr = new HomeServerManager(g);
         fedPusher = new FederationPusher();
         rDir = new RoomDirectory(g, g.getStore(), g.getBus(), hsMgr);
+    }
+
+    @Override
+    public Cryptopher crypto() {
+        return g.getCrypto();
     }
 
     @Override

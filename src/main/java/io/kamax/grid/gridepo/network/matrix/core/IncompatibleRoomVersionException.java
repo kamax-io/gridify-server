@@ -18,31 +18,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.core.room.algo;
+package io.kamax.grid.gridepo.network.matrix.core;
 
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
+public class IncompatibleRoomVersionException extends BadRequestException {
 
-public class BuiltinRoomAlgoLoader implements RoomAlgoLoader {
-
-    @Override
-    public Optional<RoomAlgo> apply(String s) {
-        // FIXME all rooms will use this algo, must filter
-        return Optional.of(new RoomAlgoV6());
-    }
-
-    @Override
-    public Set<String> getVersions() {
-        Set<String> versions = new HashSet<>();
-        versions.add("1");
-        versions.add("2");
-        versions.add("3");
-        versions.add("4");
-        versions.add("5");
-        versions.add("6");
-        versions.add("7");
-        return versions;
+    public IncompatibleRoomVersionException() {
+        super("M_INCOMPATIBLE_ROOM_VERSION", "Room version is not supported");
     }
 
 }

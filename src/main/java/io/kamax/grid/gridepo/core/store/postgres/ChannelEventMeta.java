@@ -89,8 +89,10 @@ public class ChannelEventMeta {
         return processedOn;
     }
 
+    @Deprecated // TODO remove when replaced with processed on ChannelEvent object
     public void setProcessedOn(Instant processedOn) {
         this.processedOn = processedOn;
+        setProcessed(true);
     }
 
     public boolean isPresent() {

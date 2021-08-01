@@ -25,6 +25,10 @@ import io.kamax.grid.gridepo.util.GsonUtil;
 
 public class BareGenericEvent extends BareEvent<JsonObject> {
 
+    public static BareGenericEvent fromJson(JsonObject doc) {
+        return GsonUtil.fromJson(doc, BareGenericEvent.class);
+    }
+
     public static Long extractDepth(JsonObject doc) {
         return GsonUtil.getLong(doc, EventKey.Depth);
     }

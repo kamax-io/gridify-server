@@ -21,8 +21,11 @@
 package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 
 public interface RoomAlgoLoader extends Function<String, Optional<RoomAlgo>> {
+
+    public Set<String> getVersions();
 
 }

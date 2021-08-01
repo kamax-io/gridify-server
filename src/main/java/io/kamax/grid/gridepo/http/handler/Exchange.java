@@ -85,6 +85,10 @@ public class Exchange {
         return getQueryParameter(exchange.getQueryParameters(), name);
     }
 
+    public Deque<String> getQueryParameters(String name) {
+        return exchange.getQueryParameters().getOrDefault(name, new LinkedList<>());
+    }
+
     public String getQueryParameter(Map<String, Deque<String>> parms, String name) {
         try {
             String raw = parms.getOrDefault(name, new LinkedList<>()).peekFirst();

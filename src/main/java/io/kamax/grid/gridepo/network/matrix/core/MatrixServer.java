@@ -20,9 +20,13 @@
 
 package io.kamax.grid.gridepo.network.matrix.core;
 
+import java.util.Set;
+
 public interface MatrixServer {
 
     String getDomain();
+
+    Set<String> getRoomVersions();
 
     MatrixIdentityServer forIdentity();
 

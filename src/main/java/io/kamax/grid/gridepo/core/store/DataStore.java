@@ -132,13 +132,22 @@ public interface DataStore {
 
     void deleteUserAccessToken(String token);
 
-    Optional<ChannelID> lookupChannelAlias(String chAlias);
+    Optional<String> lookupChannelAlias(String network, String alias);
 
-    Set<String> findChannelAlias(ServerID origin, String cId);
+    Set<String> findChannelAlias(String network, String networkId, String origin);
 
-    void setAliases(ServerID origin, ChannelID cId, Set<String> chAliases);
+    default Set<String> findChannelAlias(ServerID origin, String cId) {
+        return findChannelAlias("grid", cId, origin.full());
+    }
 
-    void unmap(String cAlias);
+    void setAliases(String network, String networkId, String origin, Set<String> aliases);
+
+    @Deprecated
+    default void setAliases(ServerID origin, ChannelID cId, Set<String> chAliases) {
+        setAliases("grid", cId.full(), origin.full(), chAliases);
+    }
+
+    void unmap(String network, String cAlias);
 
     void linkUserToStore(long userLid, ThreePid storeId);
 

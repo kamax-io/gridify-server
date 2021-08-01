@@ -21,14 +21,13 @@
 package io.kamax.grid.gridepo.network.matrix.core.room;
 
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.channel.event.BareAliasEvent;
-import io.kamax.grid.gridepo.core.channel.event.BareGenericEvent;
-import io.kamax.grid.gridepo.core.channel.event.ChannelEventType;
 import io.kamax.grid.gridepo.core.signal.ChannelMessageProcessed;
 import io.kamax.grid.gridepo.core.signal.SignalBus;
 import io.kamax.grid.gridepo.core.signal.SignalTopic;
 import io.kamax.grid.gridepo.core.store.DataStore;
-import io.kamax.grid.gridepo.network.grid.core.ChannelID;
+import io.kamax.grid.gridepo.network.matrix.core.event.BareCanonicalAliasEvent;
+import io.kamax.grid.gridepo.network.matrix.core.event.BareGenericEvent;
+import io.kamax.grid.gridepo.network.matrix.core.event.RoomEventType;
 import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerManager;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import io.kamax.grid.gridepo.util.KxLog;
@@ -36,9 +35,8 @@ import net.engio.mbassy.listener.Handler;
 import org.slf4j.Logger;
 
 import java.lang.invoke.MethodHandles;
-import java.util.Collections;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class RoomDirectory {
 
@@ -53,33 +51,56 @@ public class RoomDirectory {
         this.store = store;
         this.srvMgr = srvMgr;
 
-        bus.forTopic(SignalTopic.Channel).subscribe(this);
+        bus.forTopic(SignalTopic.Room).subscribe(this);
     }
 
     @Handler
     public void handler(ChannelMessageProcessed evP) {
-        if (!evP.getAuth().isAuthorized()) {
-            return;
-        }
+        try {
+            if (!evP.getAuth().isAuthorized()) {
+                return;
+            }
 
-        BareGenericEvent bEv = evP.getEvent().getBare();
-        String type = bEv.getType();
-        if (!ChannelEventType.Alias.match(type)) {
-            return;
-        }
+            BareGenericEvent bEv = GsonUtil.fromJson(evP.getEvent().getData(), BareGenericEvent.class);
+            if (!RoomEventType.Address.match(bEv.getType())) {
+                return;
+            }
 
-        if (!g.overMatrix().isLocal((bEv.getOrigin()))) {
-            return;
-        }
+            if (!g.overMatrix().isLocal((bEv.getOrigin()))) {
+                return;
+            }
 
-        BareAliasEvent ev = GsonUtil.fromJson(evP.getEvent().getData(), BareAliasEvent.class);
-        setAliases(ChannelID.parse(ev.getChannelId()), ev.getContent().getAliases());
+            Set<String> newAliases = new HashSet<>();
+            BareCanonicalAliasEvent ev = GsonUtil.fromJson(evP.getEvent().getData(), BareCanonicalAliasEvent.class);
+            Optional<RoomAlias> tryCanonical = RoomAlias.tryParse(ev.getContent().getAlias());
+            if (!tryCanonical.isPresent()) {
+                log.debug("Event {} contains an invalid canonical room alias, ignoring", ev.getId());
+            } else {
+                newAliases.add(tryCanonical.get().full());
+            }
+
+            List<String> altAliases = ev.getContent().getAltAliases();
+            if (!Objects.isNull(altAliases)) {
+                newAliases.addAll(altAliases.stream()
+                        .map(RoomAlias::tryParse)
+                        .filter(Optional::isPresent)
+                        .map(Optional::get)
+                        .map(RoomAlias::full)
+                        .collect(Collectors.toSet())
+                );
+            }
+
+            setAliases(ev.getOrigin(), bEv.getRoomId(), newAliases);
+        } catch (RuntimeException | Error e) {
+            log.error("Couldn't deal with message publication", e);
+        }
     }
 
     public Optional<RoomLookup> lookup(String origin, RoomAlias alias, boolean recursive) {
         if (g.overMatrix().isLocal((alias.network()))) {
             log.info("Looking for our own alias {}", alias);
-            return store.lookupChannelAlias(alias.full()).map(id -> new RoomLookup(alias.full(), id.full(), Collections.singleton(alias.network())));
+            return store.lookupChannelAlias("matrix", alias.full())
+                    .map(id -> new RoomLookup(alias.full(), id, Collections.singleton(alias.network())));
         }
 
         if (!recursive) {
@@ -88,15 +109,15 @@ public class RoomDirectory {
         }
 
         log.info("Looking recursively on {} for {}", alias.network(), alias);
-        return srvMgr.getLink(origin, alias.network()).lookup(origin, alias.full());
+        return srvMgr.getLink(origin, alias.network()).lookup(alias.full());
     }
 
     public Set<String> getAliases(String rId) {
         return store.findChannelAlias(null, rId);
     }
 
-    public void setAliases(ChannelID id, Set<String> aliases) {
-        store.setAliases(null, id, aliases);
+    public void setAliases(String origin, String roomid, Set<String> aliases) {
+        store.setAliases("matrix", roomid, origin, aliases);
     }
 
 }

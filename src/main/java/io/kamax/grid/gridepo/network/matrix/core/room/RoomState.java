@@ -65,7 +65,7 @@ public class RoomState {
     private RoomState() {
     }
 
-    private RoomState(List<ChannelEvent> events) {
+    public RoomState(List<ChannelEvent> events) {
         this(null, events);
     }
 
@@ -104,6 +104,10 @@ public class RoomState {
 
     public Optional<ChannelEvent> find(RoomEventType type) {
         return find(type.getId(), "");
+    }
+
+    public Optional<ChannelEvent> find(RoomEventType type, String scope) {
+        return find(type.getId(), scope);
     }
 
     public <T> Optional<T> find(String type, Class<T> c) {

@@ -35,6 +35,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 
 public interface RoomAlgo {
 
@@ -56,11 +57,19 @@ public interface RoomAlgo {
 
     String validate(JsonObject ev);
 
+    ChannelEventAuthorization authorizeCreate(JsonObject doc);
+
+    default ChannelEventAuthorization authorize(RoomState state, JsonObject ev) {
+        return authorize(state, getEventId(ev), ev);
+    }
+
     ChannelEventAuthorization authorize(RoomState state, String evId, JsonObject ev);
 
     List<BareEvent<?>> getCreationEvents(String domain, String creator, JsonObject options);
 
-    JsonObject buildJoinEvent(String origin, JsonObject template);
+    JsonObject buildJoinEvent(String origin, String userId, JsonObject template);
+
+    Set<String> getAuthEvents(JsonObject eventDoc, RoomState state);
 
     String getEventId(JsonObject event);
 

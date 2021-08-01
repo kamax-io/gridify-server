@@ -87,6 +87,7 @@ CREATE TABLE channel_extremities_forward
 
 CREATE TABLE channel_aliases
 (
+    network text NOT NULL,
     channel_alias text NOT NULL,
     channel_id text NOT NULL,
     server_id text NOT NULL,

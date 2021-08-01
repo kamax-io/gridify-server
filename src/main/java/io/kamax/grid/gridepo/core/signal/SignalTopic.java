@@ -24,6 +24,7 @@ public enum SignalTopic {
 
     Main,
     Channel,
+    Room,
     Store
 
 }

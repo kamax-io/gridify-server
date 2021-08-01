@@ -29,8 +29,6 @@ import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
 import io.kamax.grid.gridepo.core.identity.*;
 import io.kamax.grid.gridepo.core.identity.store.local.LocalAuthIdentityStore;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
-import io.kamax.grid.gridepo.network.grid.core.ChannelID;
-import io.kamax.grid.gridepo.network.grid.core.ServerID;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import io.kamax.grid.gridepo.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
@@ -91,8 +89,8 @@ public class MemoryStore implements DataStore, IdentityStore {
     private final Map<Long, ChannelStateDao> chStates = new ConcurrentHashMap<>();
     private final Map<Long, List<Long>> chFrontExtremities = new ConcurrentHashMap<>();
     private final Map<Long, List<Long>> chBackExtremities = new ConcurrentHashMap<>();
-    private final Map<String, ChannelID> chAliasToId = new ConcurrentHashMap<>();
-    private final Map<ChannelID, Map<ServerID, Set<String>>> chIdToAlias = new ConcurrentHashMap<>();
+    private final Map<String, String> chAliasToNetId = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, Set<String>>> chNetIdToAlias = new ConcurrentHashMap<>();
 
     private final Map<Long, Long> evStates = new ConcurrentHashMap<>();
     private final Map<String, Long> evRefToLid = new ConcurrentHashMap<>();
@@ -478,36 +476,32 @@ public class MemoryStore implements DataStore, IdentityStore {
         uTokens.values().forEach(tokens -> tokens.remove(token));
     }
 
-    private Map<ServerID, Set<String>> getChIdToAlias(ChannelID id) {
-        return chIdToAlias.computeIfAbsent(id, k -> new ConcurrentHashMap<>());
+    @Override
+    public Optional<String> lookupChannelAlias(String network, String alias) {
+        return Optional.ofNullable(chAliasToNetId.get(network + ":" + alias));
     }
 
     @Override
-    public synchronized Optional<ChannelID> lookupChannelAlias(String chAlias) {
-        return Optional.ofNullable(chAliasToId.get(chAlias));
+    public Set<String> findChannelAlias(String network, String networkId, String origin) {
+        return chNetIdToAlias.getOrDefault(network + ":" + networkId, new HashMap<>())
+                .getOrDefault(origin, new HashSet<>());
     }
 
     @Override
-    public synchronized Set<String> findChannelAlias(ServerID srvId, String id) {
-        return getChIdToAlias(ChannelID.fromRaw(id)).getOrDefault(srvId, new HashSet<>());
+    public synchronized void setAliases(String network, String networkId, String origin, Set<String> aliases) {
+        Map<String, Set<String>> dbAliases = chNetIdToAlias.computeIfAbsent(network + ":" + networkId, k -> new HashMap<>());
+        dbAliases.put(origin, aliases);
+        aliases.forEach(alias -> chAliasToNetId.put(network + ":" + alias, networkId));
     }
 
     @Override
-    public synchronized void setAliases(ServerID origin, ChannelID cId, Set<String> chAliases) {
-        Map<ServerID, Set<String>> data = getChIdToAlias(cId);
-        data.remove(origin);
-        data.put(origin, new HashSet<>(chAliases));
-        chAliases.forEach(cAlias -> chAliasToId.put(cAlias, cId));
-        log.info("Added aliases {} to {} on server {}", chAliases, cId, origin);
-    }
-
-    @Override
-    public synchronized void unmap(String chAd) {
-        if (!chAliasToId.containsKey(chAd)) {
+    public synchronized void unmap(String network, String chAd) {
+        String gAlias = network + ":" + chAd;
+        if (!chAliasToNetId.containsKey(gAlias)) {
             throw new ObjectNotFoundException("Channel Address", chAd);
         }
-
-        chIdToAlias.remove(chAliasToId.remove(chAd));
+        String gId = network + ":" + chAliasToNetId.remove(gAlias);
+        chNetIdToAlias.remove(gId);
     }
 
     @Override

@@ -24,6 +24,15 @@ import com.google.gson.JsonObject;
 
 public class RoomJoinTemplate {
 
+    public RoomJoinTemplate() {
+        // noop
+    }
+
+    public RoomJoinTemplate(String roomVersion, JsonObject event) {
+        setRoomVersion(roomVersion);
+        setEvent(event);
+    }
+
     private String roomVersion;
     private JsonObject event;
 

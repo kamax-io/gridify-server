@@ -32,7 +32,6 @@ import io.kamax.grid.gridepo.core.store.DataStore;
 import io.kamax.grid.gridepo.core.store.UserDao;
 import io.kamax.grid.gridepo.network.grid.core.ChannelID;
 import io.kamax.grid.gridepo.network.grid.core.EventID;
-import io.kamax.grid.gridepo.network.grid.core.ServerID;
 import io.kamax.grid.gridepo.network.grid.core.UserID;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -234,15 +233,17 @@ public abstract class DataStoreTest {
 
     @Test
     public void channelAddressing() {
+        String network = "test";
+        String origin = "example.org";
         String localpart = UUID.randomUUID().toString().replace("-", "");
-        ChannelID cId = ChannelID.from(localpart, "example.org");
-        String cAlias = "#" + localpart + "@example.org";
+        String cId = ChannelID.from(localpart, origin).full();
+        String cAlias = "#" + localpart + "@" + origin;
 
-        Optional<ChannelID> addrBefore = store.lookupChannelAlias(cAlias);
+        Optional<String> addrBefore = store.lookupChannelAlias(network, cAlias);
         assertFalse(addrBefore.isPresent());
 
-        store.setAliases(ServerID.fromDns("example.org"), cId, Collections.singleton(cAlias));
-        Optional<ChannelID> addrAfter = store.lookupChannelAlias(cAlias);
+        store.setAliases("test", cId, origin, Collections.singleton(cAlias));
+        Optional<String> addrAfter = store.lookupChannelAlias(network, cAlias);
         assertTrue(addrAfter.isPresent());
         assertEquals(cId, addrAfter.get());
     }

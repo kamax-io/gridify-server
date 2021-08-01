@@ -99,4 +99,8 @@ public class URIPath {
         return add("v1");
     }
 
+    public URIPath v2() {
+        return add("v2");
+    }
+
 }

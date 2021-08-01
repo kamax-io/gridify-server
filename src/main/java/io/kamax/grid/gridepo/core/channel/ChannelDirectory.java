@@ -80,7 +80,8 @@ public class ChannelDirectory {
         ServerID aSrvID = ServerID.fromDns(alias.network());
         if (origin.equals(aSrvID)) {
             log.info("Looking for our own alias {}", alias);
-            return store.lookupChannelAlias(alias.full()).map(id -> new ChannelLookup(alias, id, Collections.singleton(origin)));
+            return store.lookupChannelAlias("grid", alias.full())
+                    .map(id -> new ChannelLookup(alias, ChannelID.parse(id), Collections.singleton(origin)));
         }
 
         if (!recursive) {

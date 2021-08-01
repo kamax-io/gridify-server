@@ -21,10 +21,11 @@
 package io.kamax.grid.gridepo.network.matrix.core.federation;
 
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.exception.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class HomeServerManager {
 
@@ -41,7 +42,10 @@ public class HomeServerManager {
     }
 
     public List<HomeServerLink> getLink(String origin, Collection<String> domains, boolean all) {
-        throw new NotImplementedException();
+        return domains.stream()
+                .filter(domain -> all || StringUtils.equals(origin, domain))
+                .map(domain -> getLink(origin, domain))
+                .collect(Collectors.toList());
     }
 
     public HomeServerLink getLink(String origin, String domain) {

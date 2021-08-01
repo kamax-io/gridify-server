@@ -22,13 +22,17 @@ package io.kamax.grid.gridepo.network.matrix.core.room;
 
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
+import io.kamax.grid.gridepo.core.channel.ChannelDao;
 import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.core.signal.ChannelMessageProcessed;
 import io.kamax.grid.gridepo.core.signal.SignalTopic;
+import io.kamax.grid.gridepo.core.store.ChannelStateDao;
+import io.kamax.grid.gridepo.exception.ForbiddenException;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareGenericEvent;
+import io.kamax.grid.gridepo.network.matrix.core.event.BareMemberEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.EventKey;
 import io.kamax.grid.gridepo.network.matrix.core.room.algo.RoomAlgo;
 import io.kamax.grid.gridepo.util.GsonUtil;
@@ -60,6 +64,10 @@ public class Room {
         init();
     }
 
+    public Room(Gridepo g, ChannelDao dao, RoomAlgo algo) {
+        this(g, dao.getSid(), dao.getId(), algo);
+    }
+
     private void init() {
         // FIXME we need to resolve the extremities as a timeline, get the HEAD and its state
         List<ChannelEvent> extremities = g.getStore().getForwardExtremities(sid).stream()
@@ -81,16 +89,12 @@ public class Room {
         log.info("Channel {}: Loaded saved state SID {}", sid, view.getState().getSid());
     }
 
-    private long extractDepth(JsonObject doc) {
-        return GsonUtil.findLong(doc, EventKey.Depth).orElse(0L);
-    }
-
-    private long extractDepth(ChannelEvent event) {
-        return extractDepth(event.getData());
-    }
-
     public String getId() {
         return id;
+    }
+
+    public String getVersion() {
+        return algo.getVersion();
     }
 
     public List<ChannelEvent> getExtremities() {
@@ -108,15 +112,14 @@ public class Room {
         return findEvent(eventId).orElseThrow(() -> new ObjectNotFoundException("Event ID", eventId));
     }
 
-    public List<String> getExtremityIds() {
-        return getExtremities().stream().map(ChannelEvent::getId).collect(Collectors.toList());
+    public List<String> getExtremityIds(List<ChannelEvent> exts) {
+        return exts.stream().map(ChannelEvent::getId).collect(Collectors.toList());
     }
 
     public JsonObject populate(JsonObject event) {
+        Set<String> authEvents = algo.getAuthEvents(event, getView().getState());
         List<ChannelEvent> exts = getExtremities();
-        List<String> extIds = exts.stream()
-                .map(ChannelEvent::getId)
-                .collect(Collectors.toList());
+        List<String> extIds = getExtremityIds(exts);
         long depth = exts.stream()
                 .map(ChannelEvent::getData)
                 .mapToLong(data -> GsonUtil.getLong(data, EventKey.Depth))
@@ -124,6 +127,7 @@ public class Room {
                 .orElse(algo.getBaseDepth()) + 1;
 
         event.addProperty(EventKey.ChannelId, id);
+        event.add(EventKey.AuthEvents, GsonUtil.asArray(authEvents));
         event.add(EventKey.PrevEvents, GsonUtil.asArray(extIds));
         event.addProperty(EventKey.Depth, depth);
         log.debug("Build event at depth {}", depth);
@@ -132,188 +136,197 @@ public class Room {
 
     public JsonObject finalize(String origin, JsonObject event) {
         JsonObject signedOff = algo.signOff(event, g.getCrypto(), origin);
-        log.debug("Signed off event: {}", GsonUtil.getPrettyForLog(signedOff));
+        String eventId = algo.getEventId(signedOff);
+        log.debug("Signed off Event {}: {}", eventId, GsonUtil.getPrettyForLog(signedOff));
         return signedOff;
     }
 
-    public ChannelEventAuthorization offer(JsonObject event) {
-        ChannelEvent cEv = ChannelEvent.from(sid, algo.getEventId(event), event);
-        cEv.getMeta().setReceivedAt(Instant.now());
-
-        return offer(Collections.singletonList(cEv), false).get(0);
-    }
-
-    public ChannelEventAuthorization offer(String domain, BareEvent<?> event) {
-        event.setOrigin(domain);
-        event.setTimestamp(Instant.now().toEpochMilli());
-        return offer(finalize(domain, populate(event.getJson())));
-    }
-
-    public synchronized List<ChannelEventAuthorization> offer(List<ChannelEvent> events, boolean isSeed) {
-        RoomState state = getView().getState();
-
-        List<ChannelEventAuthorization> auths = new ArrayList<>();
-        events.stream().sorted(Comparator.comparingLong(this::extractDepth)).forEach(event -> {
-            log.info("Room {} - Processing injection of Event {}", getId(), event.getId());
-            Optional<ChannelEvent> evStore = g.getStore().findEvent(getId(), event.getId());
-
-            if (evStore.isPresent() && evStore.get().getMeta().isPresent()) {
-                log.info("Event {} is known, skipping", event.getId());
-                // We already have the event, we skip
-                return;
-            }
-
-            event.getMeta().setPresent(Objects.nonNull(event.getData()));
-
-            // We check if the event is valid and allowed for the current state before considering processing it
-            ChannelEventAuthorization auth = algo.authorize(state, event.getId(), event.getData());
-            event.getMeta().setValid(auth.isValid());
-            event.getMeta().setAllowed(auth.isAuthorized());
-
-            if (!auth.isAuthorized()) {
-                // TODO switch to debug later
-                log.info("Event {} not authorized: {}", auth.getEventId(), auth.getReason());
-            }
-
-            // Still need to process
-            event.getMeta().setProcessed(false);
-            if (!isSeed) {
-                long minDepth = getExtremities().stream()
-                        .min(Comparator.comparingLong(this::extractDepth))
-                        .map(this::extractDepth)
-                        .orElse(0L);
-
-                backfill(event, getExtremityIds(), minDepth);
-            } else {
-                log.info("Skipping backfill on seed event {}", event.getId());
-            }
-
-            auth = process(event, true, isSeed);
-
-            auths.add(auth);
-        });
-
-        return auths;
-
-    }
-
-    public void backfill(ChannelEvent event, List<String> extremities, long minDepth) {
-        // FIXME needed for federation
-    }
-
-    public boolean isUsable(ChannelEvent ev) {
-        return ev.getMeta().isPresent() && ev.getMeta().isProcessed();
-    }
-
-    private synchronized ChannelEvent processIfNotAlready(String evId) {
-        process(evId, true, false);
-        return g.getStore().getEvent(getId(), evId);
-    }
-
-    private synchronized ChannelEventAuthorization process(String evId, boolean recursive, boolean force) {
-        ChannelEvent ev = g.getStore().getEvent(getId(), evId);
-        if (!ev.getMeta().isPresent() || (ev.getMeta().isProcessed() && !force)) {
-            return new ChannelEventAuthorization.Builder(evId)
-                    .authorize(ev.getMeta().isPresent() && ev.getMeta().isValid() && ev.getMeta().isAllowed(), "From previous computation");
-        }
-
-        return process(ev, recursive);
-    }
-
-    public synchronized ChannelEventAuthorization process(ChannelEvent ev, boolean recursive) {
-        return process(ev, recursive, false);
-    }
-
-    public ChannelEventAuthorization process(ChannelEvent event, boolean recursive, boolean isSeed) {
-        log.info("Processing event {} in channel {}", event.getId(), event.getChannelId());
-        ChannelEventAuthorization.Builder b = new ChannelEventAuthorization.Builder(event.getId());
-        BareGenericEvent bEv = GsonUtil.fromJson(event.getData(), BareGenericEvent.class);
-        event.getMeta().setPresent(true);
-
-        RoomState state = getView().getState();
-        long maxParentDepth = bEv.getDepth() - 1;
-        if (!isSeed) {
-            maxParentDepth = bEv.getPreviousEvents().stream()
-                    .map(pEvId -> {
-                        if (recursive) {
-                            return processIfNotAlready(pEvId);
-                        } else {
-                            return g.getStore().findEvent(getId(), pEvId).orElseGet(() -> ChannelEvent.forNotFound(sid, pEvId));
-                        }
-                    })
-                    .filter(this::isUsable)
-                    .max(Comparator.comparingLong(pEv -> pEv.getBare().getDepth()))
-                    .map(pEv -> pEv.getBare().getDepth())
-                    .orElse(Long.MIN_VALUE);
-            if (bEv.getPreviousEvents().isEmpty()) {
-                maxParentDepth = algo.getBaseDepth();
+    public RoomState getState(ChannelEvent event) {
+        Optional<Long> evLid = g.getStore().findEventLid(id, event.getId());
+        if (evLid.isPresent()) {
+            // We already know this event, we fetch its local state
+            try {
+                ChannelStateDao stateDao = g.getStore().getStateForEvent(evLid.get());
+                return new RoomState(stateDao);
+            } catch (ObjectNotFoundException e) {
+                // We don't have a local state for this
             }
         }
 
-        if (maxParentDepth == Long.MIN_VALUE) {
-            b.deny("No parent event is found or valid, marking event as unauthorized");
-        } else {
-            long expectedDepth = maxParentDepth + 1;
-            if (expectedDepth > bEv.getDepth()) {
-                b.invalid("Depth is " + bEv.getDepth() + " but was expected to be at least " + expectedDepth);
-            } else {
-                ChannelEventAuthorization auth = algo.authorize(state, event.getId(), event.getData()); // FIXME do it on the parents
-                b.authorize(auth.isAuthorized(), auth.getReason());
-                if (auth.isAuthorized()) {
-                    state = state.apply(event);
-                }
+        // FIXME try to build from previous events
+
+        BareGenericEvent bEv = BareGenericEvent.fromJson(event.getData());
+        List<ChannelEvent> authEvents = bEv.getAuthEvents().stream()
+                .map(evId -> g.getStore().findEvent(id, evId))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toList());
+        if (authEvents.size() == bEv.getAuthEvents().size()) {
+            return new RoomState(authEvents);
+        }
+
+        throw new IllegalStateException("Cannot build room event state");
+    }
+
+    public RoomState getFullState(String eventId) {
+        // FIXME could optimise and directly get the data from the storage in a single call
+        long eventLid = g.getStore().findEventLid(id, eventId)
+                .orElseThrow(() -> new ObjectNotFoundException("Event state", eventId));
+        ChannelStateDao dao = g.getStore().getStateForEvent(eventLid);
+        return new RoomState(dao);
+    }
+
+    public List<ChannelEvent> getAuthChain(RoomState state) {
+        // FIXME incomplete!
+        return state.getEvents();
+    }
+
+    // Add an event to the room without processing it or return the local copy
+    public ChannelEvent inject(JsonObject eventDoc) {
+        String eventId = algo.getEventId(eventDoc);
+        Optional<ChannelEvent> eventOpt = findEvent(eventId);
+        if (eventOpt.isPresent()) {
+            ChannelEvent event = eventOpt.get();
+            if (!event.getMeta().isPresent()) {
+                event.setData(eventDoc);
+                event = g.getStore().saveEvent(event);
             }
+            return event;
         }
 
-        ChannelEventAuthorization auth = b.get();
-        event.getMeta().setSeed(isSeed);
-        event.getMeta().setValid(auth.isValid());
-        event.getMeta().setAllowed(isSeed || auth.isAuthorized());
-        event.getMeta().setProcessed(true);
+        ChannelEvent event = ChannelEvent.from(sid, eventId, eventDoc);
+        return g.getStore().saveEvent(event);
+    }
 
-        log.info("Event {} is allowed? {}", event.getId(), event.getMeta().isAllowed());
-        if (!event.getMeta().isAllowed()) {
-            log.info("Because: {}", auth.getReason());
+    public ChannelEventAuthorization process(ChannelEvent event) {
+        RoomState state = getState(event);
+        ChannelEventAuthorization auth = algo.authorize(state, event.getId(), event.getData());
+        event.processed(auth);
+        g.getStore().saveEvent(event);
+        return auth;
+    }
+
+    public ChannelEventAuthorization add(JsonObject eventDoc) {
+        return process(inject(eventDoc));
+    }
+
+    public ChannelEventAuthorization add(List<JsonObject> eventDocs) {
+        ChannelEventAuthorization auth = null;
+        for (JsonObject eventDoc : eventDocs) {
+            auth = add(eventDoc);
+        }
+        return auth;
+    }
+
+    public ChannelEventAuthorization addSeed(JsonObject seedDoc, List<JsonObject> desiredState) {
+        List<ChannelEventAuthorization> auths = desiredState.stream()
+                .map(this::add)
+                .collect(Collectors.toList());
+
+        if (auths.stream().anyMatch(auth -> !auth.isAuthorized())) {
+            throw new ForbiddenException("Seed add: unauthorized state");
         }
 
-        event = g.getStore().saveEvent(event);
+        RoomState state = new RoomState(auths.stream()
+                .map(ChannelEventAuthorization::getEvent)
+                .collect(Collectors.toList()));
+
+        ChannelEventAuthorization auth = algo.authorize(state, seedDoc);
+        if (!auth.isAuthorized()) {
+            throw new ForbiddenException("Seed add: unauthorized event");
+        }
+
+        // Save the seed and its meta info
+        ChannelEvent seed = inject(seedDoc);
+        seed.getMeta().setValid(auth.isValid());
+        seed.getMeta().setAllowed(auth.isAuthorized());
+        seed.getMeta().setSeed(true);
+        g.getStore().saveEvent(seed);
+
+        // Save the state and map to seed
         long stateStoreId = g.getStore().insertIfNew(sid, state);
         state = new RoomState(stateStoreId, state);
-        g.getStore().map(event.getLid(), state.getSid());
-        g.getStore().addToStream(event.getLid());
+        g.getStore().map(seed.getLid(), state.getSid());
 
-        if (event.getMeta().isAllowed()) {
-            List<Long> toRemove = event.getPreviousEvents().stream()
-                    .map(id -> g.getStore().findEventLid(getId(), id))
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .collect(Collectors.toList());
-            List<Long> toAdd = Collections.singletonList(event.getLid());
-            g.getStore().updateForwardExtremities(sid, toRemove, toAdd);
-            view = new RoomView(event.getId(), state);
-        }
+        // Update forward extremities
+        // Remove any possible old ones and replace with the seed event reference
+        List<Long> toRemove = g.getStore().getForwardExtremities(sid);
+        List<Long> toAdd = Collections.singletonList(seed.getLid());
+        g.getStore().updateForwardExtremities(sid, toRemove, toAdd);
 
-        ChannelMessageProcessed busEvent = new ChannelMessageProcessed(g.getStore().getEvent(event.getLid()), auth);
-        g.getBus().forTopic(SignalTopic.Channel).publish(busEvent);
+        // Update the cached view
+        view = new RoomView(seed.getId(), state);
+
+        // Insert the seed event into the stream
+        g.getStore().addToStream(seed.getLid());
+        ChannelMessageProcessed busEvent = new ChannelMessageProcessed(seed, auth);
+        g.getBus().forTopic(SignalTopic.Room).publish(busEvent);
 
         return auth;
     }
 
-    public ChannelEventAuthorization inject(String sender, JsonObject seedDoc, List<JsonObject> stateDocs) {
-        return new ChannelEventAuthorization.Builder("unknown").deny("Not implemented");
+    // Add an event to the room
+    public synchronized ChannelEventAuthorization offer(ChannelEvent event) {
+        RoomState eventState = getState(event);
+        ChannelEventAuthorization eventStateAuth = algo.authorize(eventState, event.getId(), event.getData());
+        if (!eventStateAuth.isAuthorized()) {
+            throw new ForbiddenException("Event is not authorized: " + eventStateAuth.getReason());
+        }
+
+        RoomState state = getView().getState();
+        ChannelEventAuthorization currentStateAuth = algo.authorize(state, event.getId(), event.getData());
+
+        event.processed(currentStateAuth);
+        g.getStore().saveEvent(event);
+        if (!currentStateAuth.isAuthorized()) {
+            throw new ForbiddenException("Event is not authorized");
+        }
+
+        List<Long> toRemove = event.getPreviousEvents().stream()
+                .map(id -> g.getStore().findEventLid(getId(), id))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toList());
+        List<Long> toAdd = Collections.singletonList(event.getLid());
+        g.getStore().updateForwardExtremities(sid, toRemove, toAdd);
+
+        state = state.apply(event);
+        long stateSid = g.getStore().insertIfNew(sid, state);
+        state = new RoomState(stateSid, state);
+        g.getStore().map(event.getLid(), state.getSid());
+        view = new RoomView(event.getId(), state);
+
+        // Insert the seed event into the stream
+        g.getStore().addToStream(event.getLid());
+        ChannelMessageProcessed busEvent = new ChannelMessageProcessed(event, currentStateAuth);
+        g.getBus().forTopic(SignalTopic.Room).publish(busEvent);
+
+        return currentStateAuth;
+    }
+
+    public ChannelEventAuthorization offer(String origin, JsonObject eventDoc) {
+        ChannelEvent event = ChannelEvent.from(sid, algo.getEventId(eventDoc), eventDoc);
+        event.getMeta().setReceivedFrom(origin);
+        event.getMeta().setReceivedAt(Instant.now());
+        return offer(event);
+    }
+
+    public ChannelEventAuthorization offer(String origin, BareEvent<?> event) {
+        event.setOrigin(origin);
+        event.setTimestamp(Instant.now().toEpochMilli());
+        return offer(origin, finalize(origin, populate(event.getJson())));
     }
 
     public RoomView getView() {
         return view;
     }
 
-    public RoomState getState(String eventId) {
-        // FIXME could optimise and directly get the data from the storage in a single call
-        return new RoomState(g.getStore().getStateForEvent(g.getStore().getEvent(id, eventId).getLid()));
-    }
-
     public RoomTimeline getTimeline() {
         return new RoomTimeline(sid, g.getStore());
+    }
+
+    public JsonObject makeJoinTemplate(String userId) {
+        return populate(BareMemberEvent.join(userId).getJson());
     }
 
 }

@@ -32,8 +32,6 @@ import io.kamax.grid.gridepo.core.store.DataStore;
 import io.kamax.grid.gridepo.core.store.SqlConnectionPool;
 import io.kamax.grid.gridepo.core.store.UserDao;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
-import io.kamax.grid.gridepo.network.grid.core.ChannelID;
-import io.kamax.grid.gridepo.network.grid.core.ServerID;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import io.kamax.grid.gridepo.util.KxLog;
 import org.apache.commons.io.IOUtils;
@@ -830,44 +828,49 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public Optional<ChannelID> lookupChannelAlias(String chAlias) {
-        return withStmtFunction("SELECT * FROM channel_aliases WHERE channel_alias = ?", stmt -> {
-            stmt.setString(1, chAlias);
+    public Optional<String> lookupChannelAlias(String network, String alias) {
+        return withStmtFunction("SELECT * FROM channel_aliases WHERE network = ? AND channel_alias = ?", stmt -> {
+            stmt.setString(1, network);
+            stmt.setString(2, alias);
             ResultSet rSet = stmt.executeQuery();
             if (!rSet.next()) {
                 return Optional.empty();
             }
 
-            return Optional.of(ChannelID.fromRaw(rSet.getString("channel_id")));
+            return Optional.of(rSet.getString("channel_id"));
         });
     }
 
     @Override
-    public Set<String> findChannelAlias(ServerID origin, String cId) {
-        return withStmtFunction("SELECT * FROM channel_aliases WHERE server_id = ? AND channel_id = ?", stmt -> {
-            Set<String> list = new HashSet<>();
-            stmt.setString(1, origin.full());
-            stmt.setString(2, cId);
+    public Set<String> findChannelAlias(String network, String networkId, String origin) {
+        return withStmtFunction("SELECT * FROM channel_aliases WHERE network = ? AND channel_id = ? AND server_id = ?", stmt -> {
+            stmt.setString(1, network);
+            stmt.setString(2, networkId);
+            stmt.setString(3, origin);
             ResultSet rSet = stmt.executeQuery();
+
+            Set<String> aliases = new HashSet<>();
             while (rSet.next()) {
-                list.add(rSet.getString("channel_alias"));
+                aliases.add(rSet.getString("channel_alias"));
             }
-            return list;
+            return aliases;
         });
     }
 
     @Override
-    public void setAliases(ServerID origin, ChannelID cId, Set<String> chAliases) {
+    public void setAliases(String network, String networkId, String origin, Set<String> aliases) {
         withTransaction(conn -> {
-            withStmtConsumer("DELETE FROM channel_aliases WHERE server_id = ?", stmt -> {
-                stmt.setString(1, origin.full());
+            withStmtConsumer("DELETE FROM channel_aliases WHERE network = ? AND server_id = ?", stmt -> {
+                stmt.setString(1, network);
+                stmt.setString(2, origin);
                 stmt.executeUpdate();
             });
-            withStmtConsumer("INSERT INTO channel_aliases (channel_id,channel_alias,server_id,auto) VALUES (?,?,?, true)", stmt -> {
-                for (String cAlias : chAliases) {
-                    stmt.setString(1, cId.full());
-                    stmt.setString(2, cAlias);
-                    stmt.setString(3, origin.full());
+            withStmtConsumer("INSERT INTO channel_aliases (network, channel_id, server_id, channel_alias,auto) VALUES (?,?,?,?, true)", stmt -> {
+                for (String alias : aliases) {
+                    stmt.setString(1, network);
+                    stmt.setString(2, networkId);
+                    stmt.setString(3, origin);
+                    stmt.setString(4, alias);
                     stmt.addBatch();
                 }
                 stmt.executeBatch();
@@ -876,9 +879,10 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public void unmap(String chAd) {
-        withStmtConsumer("DELETE FROM channel_aliases WHERE channel_alias = ?", stmt -> {
-            stmt.setString(1, chAd);
+    public void unmap(String network, String networkId) {
+        withStmtConsumer("DELETE FROM channel_aliases WHERE network = ? AND channel_alias = ?", stmt -> {
+            stmt.setString(1, network);
+            stmt.setString(2, networkId);
             int rc = stmt.executeUpdate();
             if (rc < 1) {
                 throw new IllegalStateException("Channel Alias to ID mapping: DB deleted " + rc + " rows. >= 1 expected");

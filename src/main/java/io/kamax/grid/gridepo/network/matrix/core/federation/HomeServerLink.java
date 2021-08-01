@@ -25,16 +25,17 @@ import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.codec.GridJson;
 import io.kamax.grid.gridepo.core.crypto.Key;
 import io.kamax.grid.gridepo.core.crypto.Signature;
-import io.kamax.grid.gridepo.exception.NotImplementedException;
+import io.kamax.grid.gridepo.exception.ForbiddenException;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixServer;
+import io.kamax.grid.gridepo.network.matrix.core.RemoteServerException;
+import io.kamax.grid.gridepo.network.matrix.core.room.RoomJoinSeed;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomLookup;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import org.apache.http.client.utils.URIBuilder;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 public class HomeServerLink {
 
@@ -56,7 +57,7 @@ public class HomeServerLink {
         return domain;
     }
 
-    private URI build(URIPath path, String[]... params) {
+    private URI build(URIPath path, List<String[]> params) {
         URIBuilder builder = new URIBuilder();
         builder.setPath(path.get());
         for (String[] param : params) {
@@ -67,6 +68,10 @@ public class HomeServerLink {
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private URI build(URIPath path, String[]... params) {
+        return build(path, Arrays.asList(params));
     }
 
     public HomeServerRequest sign(HomeServerRequest request) {
@@ -94,7 +99,7 @@ public class HomeServerLink {
         return build(destination, method, uri, null);
     }
 
-    public Optional<RoomLookup> lookup(String source, String roomAlias) {
+    public Optional<RoomLookup> lookup(String roomAlias) {
         URI uri = build(URIPath.federation().v1().add("query").add("directory"),
                 new String[]{"room_alias", roomAlias});
         HomeServerRequest request = build(
@@ -104,15 +109,65 @@ public class HomeServerLink {
         );
 
         HomeServerResponse res = client.doRequest(request);
-        return Optional.empty();
+
+        if (res.getCode() == 200) {
+            String roomId = GsonUtil.getStringOrNull(res.getBody(), "room_id");
+            List<String> servers = GsonUtil.tryArrayAsList(res.getBody(), "servers", String.class);
+            return Optional.of(new RoomLookup(roomAlias, roomId, new HashSet<>(servers)));
+        }
+
+        if (res.getCode() == 404) {
+            return Optional.empty();
+        }
+
+        String errCode = GsonUtil.getStringOrNull(res.getBody(), "errcode");
+        String error = GsonUtil.getStringOrNull(res.getBody(), "error");
+        throw new RemoteServerException(domain, errCode, error);
     }
 
     public RoomJoinTemplate getJoinTemplate(String roomId, String userId) {
-        throw new NotImplementedException();
+        Set<String> versions = g.getRoomVersions();
+        List<String[]> versionsQueryParam = new ArrayList<>();
+        for (String version : versions) {
+            versionsQueryParam.add(new String[]{"ver", version});
+        }
+
+        URI uri = build(URIPath.federation().v1().add("make_join", roomId, userId), versionsQueryParam);
+        HomeServerRequest request = build(
+                domain,
+                "GET",
+                uri
+        );
+
+        HomeServerResponse res = client.doRequest(request);
+        if (res.getCode() == 200) {
+            return GsonUtil.fromJson(res.getBody(), RoomJoinTemplate.class);
+        }
+
+        String errCode = GsonUtil.getStringOrNull(res.getBody(), "errcode");
+        String error = GsonUtil.getStringOrNull(res.getBody(), "error");
+        if (res.getCode() == 403) {
+            throw new ForbiddenException(errCode + " - " + error);
+        } else {
+            throw new RemoteServerException(domain, errCode, error);
+        }
     }
 
-    public JsonObject sendJoin(JsonObject event) {
-        throw new NotImplementedException();
+    public RoomJoinSeed sendJoin(String roomId, String userId, JsonObject event) {
+        URI uri = build(URIPath.federation().v2().add("send_join").add(roomId).add(userId));
+        HomeServerRequest request = build(
+                domain,
+                "PUT",
+                uri,
+                event
+        );
+
+        HomeServerResponse response = client.doRequest(request);
+        if (response.getCode() != 200) {
+            throw new RemoteServerException(domain, response.getBody());
+        }
+
+        return GsonUtil.fromJson(response.getBody(), RoomJoinSeed.class);
     }
 
 }

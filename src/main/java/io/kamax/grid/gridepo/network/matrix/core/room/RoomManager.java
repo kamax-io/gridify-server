@@ -26,7 +26,6 @@ import io.kamax.grid.gridepo.core.channel.ChannelDao;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.exception.EntityUnreachableException;
 import io.kamax.grid.gridepo.exception.ForbiddenException;
-import io.kamax.grid.gridepo.exception.NotImplementedException;
 import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 import io.kamax.grid.gridepo.network.matrix.core.UserID;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareCreateEvent;
@@ -42,14 +41,15 @@ import io.kamax.grid.gridepo.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class RoomManager {
 
     private static final Logger log = KxLog.make(RoomManager.class);
-
-    private final String blankRoomVersion = "1";
 
     private final Gridepo g;
     private final Map<String, Room> rooms = new ConcurrentHashMap<>();
@@ -60,6 +60,10 @@ public class RoomManager {
 
     private Room fromDao(ChannelDao dao) {
         return new Room(g, dao.getSid(), dao.getId(), RoomAlgos.get(dao.getVersion()));
+    }
+
+    public Set<String> getVersions() {
+        return RoomAlgos.getVersions();
     }
 
     public Room createRoom(String domain, String creator, JsonObject options) {
@@ -80,30 +84,33 @@ public class RoomManager {
                 .map(ev -> r.offer(domain, ev))
                 .filter(auth -> !auth.isAuthorized())
                 .findAny().ifPresent(auth -> {
-            throw new RuntimeException("Room creation failed because of initial event(s) being rejected: " + auth.getReason());
-        });
+                    throw new RuntimeException("Room creation failed because of initial event(s) being rejected: " + auth.getReason());
+                });
         return r;
     }
 
-    public Room create(List<JsonObject> stateJson) {
-        throw new NotImplementedException();
-    }
+    private Room create(JsonObject createDoc) {
+        BareCreateEvent createEv = GsonUtil.fromJson(createDoc, BareCreateEvent.class);
 
-    public Room create(String from, JsonObject seedJson, List<JsonObject> stateJson) {
-        // We expect the list of state event to be in the correct order to pass validation
-        // This means the create event must be the first
-        BareCreateEvent createEv = GsonUtil.fromJson(stateJson.get(0), BareCreateEvent.class);
+        // We retrieve the room version and its corresponding algo
+        String roomVersion = StringUtils.defaultIfBlank(createEv.getContent().getVersion(), "1");
+        RoomAlgo algo = RoomAlgos.get(roomVersion);
 
-        // SPEC-UNCLEAR If the version key is defined but is an empty string, assuming default spec version
-        String roomVersion = StringUtils.defaultIfBlank(createEv.getContent().getVersion(), blankRoomVersion);
+        // We ensure the create event is valid for the given algo
+        ChannelEventAuthorization createAuth = algo.authorizeCreate(createDoc);
+        if (!createAuth.isAuthorized()) {
+            throw new ForbiddenException("Room Creation denied with Event " + createAuth.getEventId() + ": " + createAuth.getReason());
+        }
 
+        // We create the room internally
         ChannelDao dao = new ChannelDao("matrix", createEv.getRoomId(), roomVersion);
         dao = g.getStore().saveChannel(dao);
-        Room r = new Room(g, dao.getSid(), dao.getId(), RoomAlgos.get(dao.getVersion()));
+        Room r = new Room(g, dao, algo);
 
-        ChannelEventAuthorization auth = r.inject(from, seedJson, stateJson);
+        // We inject the auth chain
+        ChannelEventAuthorization auth = r.add(createDoc);
         if (!auth.isAuthorized()) {
-            throw new ForbiddenException("Seed is not allowed as per state: " + auth.getReason());
+            throw new ForbiddenException("Room Creation denied with Event " + createAuth.getEventId() + ": " + createAuth.getReason());
         }
 
         rooms.put(r.getId(), r);
@@ -130,59 +137,112 @@ public class RoomManager {
         return find(rId).orElseThrow(() -> new ObjectNotFoundException("Room", rId));
     }
 
-    public Room join(String userIdRaw, String roomIdOrAlias) {
-        UserID uId = UserID.parse(userIdRaw);
-        RoomLookup data;
-        if (RoomAlias.sigillMatch(roomIdOrAlias)) {
-            RoomAlias rAlias = RoomAlias.parse(roomIdOrAlias);
-            data = g.overMatrix().roomDir().lookup(uId.network(), rAlias, true)
-                    .orElseThrow(() -> new ObjectNotFoundException("Room alias", rAlias.full()));
-        } else {
-            data = new RoomLookup("", roomIdOrAlias, Collections.emptySet());
-        }
-
-        Optional<Room> cOpt = find(data.getId());
-        if (cOpt.isPresent()) {
-            Room r = cOpt.get();
-            if (r.getView().getAllServers().stream().anyMatch(s -> StringUtils.equals(s, uId.network()))) {
-                // We are joined, so we can make our own event
-                BareMemberEvent bEv = new BareMemberEvent();
-                bEv.setOrigin(uId.network());
-                bEv.setRoomId(data.getId());
-                bEv.setSender(userIdRaw);
-                bEv.setStateKey(userIdRaw);
-                bEv.getContent().setMembership(RoomMembership.Join);
-                ChannelEventAuthorization auth = r.offer(uId.network(), bEv);
-                if (!auth.isAuthorized()) {
-                    throw new ForbiddenException(auth.getReason());
-                }
-
-                return r;
-            }
-        }
-
+    public Room joinRemote(UserID user, RoomLookup lookup) {
         // Couldn't join locally, let's try remotely
-        if (data.getServers().isEmpty()) {
+        if (lookup.getServers().isEmpty()) {
+            log.debug("No resident server found, cannot perform join");
             // We have no peer we can use to join
             throw new EntityUnreachableException();
         }
 
-        for (HomeServerLink srv : g.overMatrix().hsMgr().getLink(uId.network(), data.getServers(), true)) {
-            String origin = srv.getDomain();
+        for (HomeServerLink srv : g.overMatrix().hsMgr().getLink(user.network(), lookup.getServers(), true)) {
+            String resident = srv.getDomain();
+            log.debug("Attempting remote join of user {} in room {} using resident server {}", user.full(), lookup.getId(), resident);
             try {
-                RoomJoinTemplate joinTemplate = srv.getJoinTemplate(data.getId(), userIdRaw);
+                // We fetch a join template from the resident server
+                RoomJoinTemplate joinTemplate = srv.getJoinTemplate(lookup.getId(), user.full());
+
+                // We use the correct algo to build a complete join event
                 RoomAlgo algo = RoomAlgos.get(joinTemplate.getRoomVersion());
-                JsonObject joinEvent = algo.buildJoinEvent(uId.network(), joinTemplate.getEvent());
-                JsonObject response = srv.sendJoin(joinEvent);
-                Room r = cOpt.orElseGet(() -> create(new ArrayList<>()));
-                r.offer(joinEvent);
+                JsonObject joinEvent = algo.buildJoinEvent(user.network(), user.full(), joinTemplate.getEvent());
+                JsonObject joinEventSignedOff = algo.signOff(joinEvent, g.overMatrix().crypto(), user.network());
+
+                // We offer the signed off event to the resident server
+                RoomJoinSeed response = srv.sendJoin(lookup.getId(), user.full(), joinEventSignedOff);
+                if (response.getAuthChain().isEmpty()) {
+                    log.info("Remote server {} did not provide a valid auth chain, skipping", resident);
+                    continue;
+                }
+
+                // Get the room, create it if needed
+                Room r = find(lookup.getId()).orElseGet(() -> {
+                    // We expect the list of state event to be in the correct order to pass validation
+                    // This means the create event must be the first
+                    return create(response.getAuthChain().get(0));
+                });
+
+                // Add the auth chain
+                ChannelEventAuthorization auth = r.add(response.getAuthChain());
+                if (!auth.isAuthorized()) {
+                    log.info("{} did not sent valid state events to perform join: Event ID {} - {}", resident, auth.getEventId(), auth.getReason());
+                    continue;
+                }
+
+                // Add the join event as seed
+                auth = r.addSeed(joinEventSignedOff, response.getState());
+                if (!auth.isAuthorized()) {
+                    log.info("{} did not sent valid state events to perform join: Event ID {} - {}", resident, auth.getEventId(), auth.getReason());
+                    continue;
+                }
+
+                // Join successful, return room object
                 return r;
             } catch (ForbiddenException e) {
-                log.warn("{} refused to sign our join request to {} because: {}", origin, data.getId(), e.getReason());
+                log.warn("{} refused to sign our join request to {} because: {}", resident, lookup.getId(), e.getReason());
             }
         }
 
-        throw new ForbiddenException("No resident server approved the join request");
+        throw new ForbiddenException("Could not find a resident server to perform join with");
+    }
+
+    public Room joinLocal(Room r, String userIdRaw) {
+        UserID uId = UserID.parse(userIdRaw);
+        BareMemberEvent bEv = new BareMemberEvent();
+        bEv.setOrigin(uId.network());
+        bEv.setRoomId(r.getId());
+        bEv.setSender(userIdRaw);
+        bEv.setStateKey(userIdRaw);
+        bEv.getContent().setMembership(RoomMembership.Join);
+        ChannelEventAuthorization auth = r.offer(uId.network(), bEv);
+        if (!auth.isAuthorized()) {
+            throw new ForbiddenException(auth.getReason());
+        }
+
+        return r;
+    }
+
+    public Room joinLocal(String userIdRaw, String roomId) {
+        return joinLocal(get(roomId), userIdRaw);
+    }
+
+    public Room join(String userIdRaw, String roomIdOrAlias) {
+        log.debug("Performing join of user {} in room address {}", userIdRaw, roomIdOrAlias);
+
+        UserID uId = UserID.parse(userIdRaw);
+        if (!RoomAlias.sigillMatch(roomIdOrAlias)) {
+            log.debug("Room address is an ID, no resolution needed");
+            return joinLocal(userIdRaw, roomIdOrAlias);
+        }
+
+        log.debug("Room address is an alias, resolving");
+        RoomAlias rAlias = RoomAlias.parse(roomIdOrAlias);
+        RoomLookup data = g.overMatrix().roomDir().lookup(uId.network(), rAlias, true)
+                .orElseThrow(() -> new ObjectNotFoundException("Room alias", rAlias.full()));
+        log.debug("Room alias {} resolved to {}", data.getAlias(), data.getId());
+
+
+        Optional<Room> cOpt = find(data.getId());
+        if (cOpt.isPresent()) {
+            Room r = cOpt.get();
+            if (r.getView().isServerJoined(uId.network())) {
+                log.debug("Server is already in the room, performing self-join");
+                return joinLocal(r, userIdRaw);
+            } else {
+                return joinRemote(uId, data);
+            }
+        } else {
+            return joinRemote(uId, data);
+        }
     }
 
 }

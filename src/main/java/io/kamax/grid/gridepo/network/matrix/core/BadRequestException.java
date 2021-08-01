@@ -18,30 +18,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.core.room.algo;
+package io.kamax.grid.gridepo.network.matrix.core;
 
-import org.apache.commons.lang3.StringUtils;
+public class BadRequestException extends MatrixException {
 
-import java.util.Objects;
-import java.util.Optional;
-
-public class Loader implements RoomAlgoLoader {
-
-    private RoomAlgoV6 obj;
-
-    @Override
-    public Optional<RoomAlgo> apply(String version) {
-        if (!StringUtils.equals(RoomAlgoV6.Version, version)) {
-            return Optional.empty();
-        }
-
-        synchronized (this) {
-            if (Objects.isNull(obj)) {
-                obj = new RoomAlgoV6();
-            }
-        }
-
-        return Optional.of(obj);
+    public BadRequestException(String errCode, String error) {
+        super(400, errCode, error);
     }
 
 }

@@ -21,9 +21,11 @@
 package io.kamax.grid.gridepo.core.channel.event;
 
 import com.google.gson.JsonObject;
+import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.core.store.postgres.ChannelEventMeta;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
@@ -95,7 +97,7 @@ public class ChannelEvent {
         return Objects.nonNull(lid);
     }
 
-    public long getLid() {
+    public Long getLid() {
         if (!hasLid()) {
             throw new IllegalStateException();
         }
@@ -156,6 +158,7 @@ public class ChannelEvent {
         return prevEvents;
     }
 
+    @Deprecated
     public BareGenericEvent getBare() {
         if (Objects.isNull(bare)) {
             bare = GsonUtil.fromJson(getData(), BareGenericEvent.class);
@@ -166,6 +169,12 @@ public class ChannelEvent {
 
     public ChannelEventMeta getMeta() {
         return meta;
+    }
+
+    public void processed(ChannelEventAuthorization auth) {
+        getMeta().setValid(auth.isValid());
+        getMeta().setAllowed(auth.isAuthorized());
+        getMeta().setProcessedOn(Instant.now());
     }
 
 }

@@ -31,6 +31,7 @@ import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.EntityBuilder;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
@@ -61,12 +62,12 @@ import java.util.stream.Stream;
 
 public class HomeServerHttpClient implements HomeServerClient {
 
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
+
     // FIXME pure hack, switch to config - maybe only for testing?
     public static boolean useHttps = true;
 
-    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
-
-    private CloseableHttpClient client;
+    private final CloseableHttpClient client;
 
     public HomeServerHttpClient() {
         try {
@@ -165,341 +166,6 @@ public class HomeServerHttpClient implements HomeServerClient {
         return URI.create(uriPrefix);
     }
 
-    /*
-    public boolean ping(String origin, String target) {
-        HttpGet req = new HttpGet();
-        req.setHeader("X-Grid-Remote-ID", origin);
-
-        for (URL url : lookupSrv(target)) {
-            String srvUriRaw = url + URIPath.dataSrv().add("version").get();
-            try {
-                URI srvUri = new URI(srvUriRaw);
-                req.setURI(srvUri);
-                try (CloseableHttpResponse res = client.execute(req)) {
-                    return res.getStatusLine().getStatusCode() == 200;
-                } catch (IOException e) {
-                    log.warn("", e);
-                }
-            } catch (URISyntaxException e) {
-                log.warn("Unable to create URI for server: Invalid URI for {}: {}", srvUriRaw, e.getMessage());
-            }
-        }
-
-        throw new RemoteServerException(target, "G_FEDERATION_ERROR", "Could not find a working server for " + target);
-    }
-
-    public JsonObject push(String as, String target, List<ChannelEvent> chEvents) {
-        JsonArray events = new JsonArray();
-        chEvents.forEach(chEv -> events.add(chEv.getData()));
-
-        HttpPost req = new HttpPost();
-        req.setHeader("X-Grid-Remote-ID", as);
-        req.setEntity(getJsonEntity(GsonUtil.makeObj("events", events)));
-
-        for (URL url : lookupSrv(target)) {
-            String srvUriRaw = url + URIPath.dataSrv().add("v0", "do", "push").get();
-            try {
-                URI srvUri = new URI(srvUriRaw);
-                try {
-                    req.setURI(srvUri);
-                    try (CloseableHttpResponse res = client.execute(req)) {
-                        int sc = res.getStatusLine().getStatusCode();
-                        if (sc != 200) {
-                            JsonObject b;
-                            try {
-                                b = GsonUtil.parseObj(EntityUtils.toString(res.getEntity(), StandardCharsets.UTF_8));
-                            } catch (IllegalArgumentException e) {
-                                b = new JsonObject();
-                            }
-
-                            if (sc == 403) {
-                                throw new ForbiddenException(GsonUtil.findString(b, "error").orElse("Server did not give a reason"));
-                            }
-
-                            throw new RemoteServerException(target, b);
-                        }
-
-                        try {
-                            // FIXME check if the server signed the event before returning it
-                            return GsonUtil.parseObj(EntityUtils.toByteArray(res.getEntity()));
-                        } catch (IllegalArgumentException e) {
-                            throw new RemoteServerException(target, "G_REMOTE_ERROR", "Server did not send us back JSON");
-                        }
-                    }
-                } catch (IOException e) {
-                    log.warn("", e);
-                }
-            } catch (URISyntaxException e) {
-                log.warn("Unable to create URI for server: Invalid URI for {}: {}", srvUriRaw, e.getMessage());
-            }
-        }
-
-        throw new RemoteServerException(target, "G_FEDERATION_ERROR", "Could not find a working server for " + target);
-    }
-
-    public JsonObject approveInvite(String as, String target, InviteApprovalRequest data) {
-        HttpPost req = new HttpPost();
-        req.setHeader("X-Grid-Remote-ID", as);
-        req.setEntity(getJsonEntity(data));
-
-        for (URL url : lookupSrv(target)) {
-            String srvUriRaw = url + URIPath.dataSrv().add("v0", "do", "approve", "invite").get();
-            try {
-                URI srvUri = new URI(srvUriRaw);
-                try {
-                    req.setURI(srvUri);
-                    try (CloseableHttpResponse res = client.execute(req)) {
-                        int sc = res.getStatusLine().getStatusCode();
-                        if (sc != 200) {
-                            JsonObject b;
-                            try {
-                                b = GsonUtil.parseObj(EntityUtils.toString(res.getEntity(), StandardCharsets.UTF_8));
-                            } catch (IllegalArgumentException e) {
-                                b = new JsonObject();
-                            }
-
-                            if (sc == 403) {
-                                log.warn("Remote server refused to sign our invite");
-                                throw new ForbiddenException(GsonUtil.findString(b, "error").orElse("Server did not give a reason"));
-                            }
-
-                            throw new RemoteServerException(target, b);
-                        }
-
-                        try {
-                            // FIXME check if the server signed the event before returning it
-                            return GsonUtil.parseObj(EntityUtils.toByteArray(res.getEntity()));
-                        } catch (IllegalArgumentException e) {
-                            throw new RemoteServerException(target, "G_REMOTE_ERROR", "Server did not send us back JSON");
-                        }
-                    }
-                } catch (IOException e) {
-                    log.warn("", e);
-                }
-            } catch (URISyntaxException e) {
-                log.warn("Unable to create URI for server: Invalid URI for {}: {}", srvUriRaw, e.getMessage());
-            }
-        }
-
-        throw new RemoteServerException(target, "G_FEDERATION_ERROR", "Could not find a working server for " + target);
-    }
-
-    public JsonObject approveJoin(String as, String target, BareMemberEvent ev) {
-        HttpPost req = new HttpPost();
-        req.setHeader("X-Grid-Remote-ID", as);
-        req.setEntity(getJsonEntity(ev.getJson()));
-
-        for (URL url : lookupSrv(target)) {
-            String srvUriRaw = url + URIPath.dataSrv().add("v0", "do", "approve", "join").get();
-            try {
-                URI srvUri = new URI(srvUriRaw);
-                try {
-                    req.setURI(srvUri);
-                    try (CloseableHttpResponse res = client.execute(req)) {
-                        int sc = res.getStatusLine().getStatusCode();
-                        if (sc != 200) {
-                            JsonObject b;
-                            try {
-                                b = GsonUtil.parseObj(EntityUtils.toString(res.getEntity(), StandardCharsets.UTF_8));
-                            } catch (IllegalArgumentException e) {
-                                b = new JsonObject();
-                            }
-
-                            if (sc == 403) {
-                                log.warn("Remote server refused to sign our join");
-                                throw new ForbiddenException(GsonUtil.findString(b, "error").orElse("Server did not give a reason"));
-                            }
-
-                            throw new RemoteServerException(target, b);
-                        }
-
-                        try {
-                            // FIXME check if the server signed the event before returning it
-                            return GsonUtil.parseObj(EntityUtils.toByteArray(res.getEntity()));
-                        } catch (IllegalArgumentException e) {
-                            throw new RemoteServerException(target, "G_REMOTE_ERROR", "Server did not send us back JSON");
-                        }
-                    }
-                } catch (IOException e) {
-                    log.warn("", e);
-                }
-            } catch (URISyntaxException e) {
-                log.warn("Unable to create URI for server: Invalid URI for {}: {}", srvUriRaw, e.getMessage());
-            }
-        }
-
-        throw new RemoteServerException(target, "G_FEDERATION_ERROR", "Could not find a working server for " + target);
-    }
-
-    public Optional<ChannelLookup> lookup(String as, String target, ChannelAlias alias) {
-        HttpPost req = new HttpPost();
-        req.setHeader("X-Grid-Remote-ID", as);
-        req.setEntity(getJsonEntity(GsonUtil.makeObj("alias", alias.full())));
-
-        for (URL url : lookupSrv(target)) {
-            String srvUriRaw = url + URIPath.dataSrv().add("v0", "do", "lookup", "channel", "alias").get();
-            try {
-                URI srvUri = new URI(srvUriRaw);
-                try {
-                    req.setURI(srvUri);
-                    try (CloseableHttpResponse res = client.execute(req)) {
-                        int sc = res.getStatusLine().getStatusCode();
-                        if (sc != 200) {
-                            JsonObject b;
-                            try {
-                                b = GsonUtil.parseObj(EntityUtils.toString(res.getEntity(), StandardCharsets.UTF_8));
-                            } catch (IllegalArgumentException e) {
-                                b = new JsonObject();
-                            }
-
-                            if (sc == 404 && StringUtils.equals("G_NOT_FOUND", GsonUtil.getStringOrNull(b, "errcode"))) {
-                                return Optional.empty();
-                            }
-
-                            if (sc == 403) {
-                                throw new ForbiddenException(GsonUtil.findString(b, "error").orElse("Server did not give a reason"));
-                            }
-
-                            throw new RemoteServerException(target, b);
-                        }
-
-                        try {
-                            ChannelLookupResponse data = parse(res, ChannelLookupResponse.class);
-                            if (Objects.isNull(data.getId())) {
-                                log.warn("Server located at {} does not follow the specification, ignoring response", target);
-                                return Optional.empty();
-                            }
-
-                            if (Objects.isNull(data.getServers())) {
-                                log.warn("Server located at {} does not follow the specification, ignoring response", target);
-                                return Optional.empty();
-                            }
-
-                            ChannelID cId = ChannelID.parse(data.getId());
-                            Set<ServerID> srvIds = data.getServers().stream().map(ServerID::parse).collect(Collectors.toSet());
-                            return Optional.of(new ChannelLookup(alias, cId, srvIds));
-                        } catch (IllegalArgumentException e) {
-                            throw new RemoteServerException(target, "G_REMOTE_ERROR", "Server did not send us back JSON");
-                        }
-                    }
-                } catch (IOException e) {
-                    log.warn("", e);
-                }
-            } catch (URISyntaxException e) {
-                log.warn("Unable to create URI for server: Invalid URI for {}: {}", srvUriRaw, e.getMessage());
-            }
-        }
-
-        throw new RemoteServerException(target, "G_FEDERATION_ERROR", "Could not find a working server for " + target);
-    }
-
-    public Optional<JsonObject> getEvent(String as, String target, ChannelID cId, EventID eId) {
-        HttpGet req = new HttpGet();
-        req.setHeader("X-Grid-Remote-ID", as);
-
-        for (URL url : lookupSrv(target)) {
-            String srvUriRaw = url + URIPath.dataSrv().add("v0", "channels", cId.full(), "events", eId.full()).get();
-            URI srvUri;
-            try {
-                srvUri = new URI(srvUriRaw);
-            } catch (URISyntaxException e) {
-                log.warn("Unable to create URI for server: Invalid URI for {}: {}", srvUriRaw, e.getMessage());
-                continue;
-            }
-
-            req.setURI(srvUri);
-            try (CloseableHttpResponse res = client.execute(req)) {
-                int sc = res.getStatusLine().getStatusCode();
-                if (sc != 200) {
-                    JsonObject b;
-                    try {
-                        b = GsonUtil.parseObj(EntityUtils.toString(res.getEntity(), StandardCharsets.UTF_8));
-                    } catch (IllegalArgumentException e) {
-                        b = new JsonObject();
-                    }
-
-                    if (sc == 404 && StringUtils.equals("G_NOT_FOUND", GsonUtil.getStringOrNull(b, "errcode"))) {
-                        return Optional.empty();
-                    }
-
-                    if (sc == 403) {
-                        throw new ForbiddenException(GsonUtil.findString(b, "error").orElse("Server did not give a reason"));
-                    }
-
-                    throw new RemoteServerException(target, b);
-                }
-
-                try {
-                    JsonObject body = parse(res, JsonObject.class);
-                    return GsonUtil.findObj(body, "event");
-                } catch (IllegalArgumentException e) {
-                    throw new RemoteServerException(target, "G_REMOTE_ERROR", "Server did not send us back JSON");
-                }
-            } catch (IOException e) {
-                log.warn("", e);
-            }
-        }
-
-        return Optional.empty();
-    }
-
-    public Optional<UserID> lookupUser(String as, String target, ThreePid tpid) {
-        JsonObject identifier = new JsonObject();
-        identifier.addProperty("type", tpid.getMedium());
-        identifier.addProperty("value", tpid.getAddress());
-
-        HttpPost req = new HttpPost();
-        req.setHeader("X-Grid-Remote-ID", as);
-        req.setEntity(getJsonEntity(GsonUtil.makeObj("identifier", identifier)));
-
-        for (URL url : lookupSrv(target)) {
-            String srvUriRaw = url + URIPath.idSrv().add("v0", "do", "lookup", "user", "threepid").get();
-            URI srvUri;
-            try {
-                srvUri = new URI(srvUriRaw);
-            } catch (URISyntaxException e) {
-                log.warn("Unable to create URI for server: Invalid URI for {}: {}", srvUriRaw, e.getMessage());
-                continue;
-            }
-
-            req.setURI(srvUri);
-            try (CloseableHttpResponse res = client.execute(req)) {
-                int sc = res.getStatusLine().getStatusCode();
-                if (sc != 200) {
-                    JsonObject b;
-                    try {
-                        b = GsonUtil.parseObj(EntityUtils.toString(res.getEntity(), StandardCharsets.UTF_8));
-                    } catch (IllegalArgumentException e) {
-                        b = new JsonObject();
-                    }
-
-                    if (sc == 404 && StringUtils.equals("G_NOT_FOUND", GsonUtil.getStringOrNull(b, "errcode"))) {
-                        return Optional.empty();
-                    }
-
-                    if (sc == 403) {
-                        throw new ForbiddenException(GsonUtil.findString(b, "error").orElse("Server did not give a reason"));
-                    }
-
-                    throw new RemoteServerException(target, b);
-                }
-
-                try {
-                    JsonObject body = parse(res, JsonObject.class);
-                    return GsonUtil.findString(body, "id").map(UserID::parse);
-                } catch (IllegalArgumentException e) {
-                    throw new RemoteServerException(target, "G_REMOTE_ERROR", "Server did not send us back JSON");
-                }
-            } catch (IOException e) {
-                log.warn("", e);
-            }
-        }
-
-        return Optional.empty();
-    }
-
-    */
-
     private HomeServerResponse sendGet(URI target, HomeServerRequest request) {
         HttpGet req = new HttpGet(target);
         applyAuthHeaders(req, request);
@@ -510,7 +176,28 @@ public class HomeServerHttpClient implements HomeServerClient {
             JsonObject body = parse(res, JsonObject.class);
             if (resStatus == 200) {
                 log.debug("Got answer");
-                return HomeServerResponse.make(body);
+                return HomeServerResponse.make(resStatus, body);
+            } else {
+                log.debug("Unexpected response - SC: {} - Body: {}", resStatus, body);
+                throw new RemoteServerException(request.getDoc().getDestination(), body);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private HomeServerResponse sendPut(URI target, HomeServerRequest request) {
+        HttpPut req = new HttpPut(target);
+        applyAuthHeaders(req, request);
+        req.setEntity(getJsonEntity(request.getDoc().getContent()));
+
+        log.info("Calling [{}] {}", request.getDoc().getDestination(), req);
+        try (CloseableHttpResponse res = client.execute(req)) {
+            int resStatus = res.getStatusLine().getStatusCode();
+            JsonObject body = parse(res, JsonObject.class);
+            if (resStatus == 200) {
+                log.debug("Got answer");
+                return HomeServerResponse.make(resStatus, body);
             } else {
                 log.debug("Unexpected response - SC: {} - Body: {}", resStatus, body);
                 throw new RemoteServerException(request.getDoc().getDestination(), body);
@@ -527,9 +214,13 @@ public class HomeServerHttpClient implements HomeServerClient {
                 .resolve(request.getDoc().getUri());
         if ("GET".equals(request.getDoc().getMethod())) {
             return sendGet(target, request);
-        } else {
-            throw new IllegalArgumentException("Method " + request.getDoc().getMethod() + " is not supported");
         }
+
+        if ("PUT".equals(request.getDoc().getMethod())) {
+            return sendPut(target, request);
+        }
+
+        throw new IllegalArgumentException("Method " + request.getDoc().getMethod() + " is not supported");
     }
 
 }

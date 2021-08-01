@@ -23,10 +23,10 @@ package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.codec.GridHash;
 import io.kamax.grid.gridepo.codec.GridJson;
+import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.core.crypto.Cryptopher;
 import io.kamax.grid.gridepo.core.crypto.Signature;
-import io.kamax.grid.gridepo.exception.NotImplementedException;
 import io.kamax.grid.gridepo.network.matrix.core.event.*;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomJoinRule;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomMembership;
@@ -219,6 +219,13 @@ public class RoomAlgoV6 implements RoomAlgo {
     }
 
     @Override
+    public ChannelEventAuthorization authorizeCreate(JsonObject doc) {
+        RoomState state = RoomState.empty();
+        String evId = computeEventHash(doc);
+        return authorize(state, evId, doc);
+    }
+
+    @Override
     public ChannelEventAuthorization authorize(RoomState state, String evId, JsonObject evRaw) {
         BareGenericEvent ev = toProto(evRaw);
 
@@ -392,8 +399,50 @@ public class RoomAlgoV6 implements RoomAlgo {
     }
 
     @Override
-    public JsonObject buildJoinEvent(String origin, JsonObject template) {
-        throw new NotImplementedException();
+    public JsonObject buildJoinEvent(String origin, String userId, JsonObject template) {
+        // We build a fresh event that we trust (no hidden keys or whatever)
+        BareMemberEvent eventBare = BareMemberEvent.join(userId);
+        eventBare.setOrigin(origin);
+        eventBare.setSender(userId);
+        eventBare.setTimestamp(Instant.now().toEpochMilli());
+
+        // We only take the info we need from the template
+        BareMemberEvent templateBare = GsonUtil.fromJson(template, BareMemberEvent.class);
+        eventBare.setAuthEvents(templateBare.getAuthEvents());
+        eventBare.setPreviousEvents(templateBare.getPreviousEvents());
+        eventBare.setDepth(templateBare.getDepth());
+
+        return eventBare.getJson();
+    }
+
+    @Override
+    public Set<String> getAuthEvents(JsonObject eventDoc, RoomState state) {
+        // https://matrix.org/docs/spec/server_server/r0.1.4#get-matrix-federation-v1-make-join-roomid-userid
+
+        if (state.getEvents().isEmpty()) {
+            return Collections.emptySet();
+        }
+
+        Set<ChannelEvent> authEvents = new HashSet<>();
+        BareGenericEvent genericEvent = BareGenericEvent.fromJson(eventDoc);
+        authEvents.add(state.getCreation());
+        state.find(RoomEventType.Member, genericEvent.getSender()).ifPresent(authEvents::add);
+        state.find(RoomEventType.Power, "").ifPresent(authEvents::add);
+
+        if (RoomEventType.Member.match(genericEvent.getType())) {
+            BareMemberEvent memberEvent = GsonUtil.fromJson(eventDoc, BareMemberEvent.class);
+            state.find(RoomEventType.Member, memberEvent.getStateKey())
+                    .ifPresent(authEvents::add);
+
+            String membership = memberEvent.getContent().getMembership();
+            if (RoomMembership.Invite.match(membership) || RoomMembership.Join.match(membership)) {
+                state.find(RoomEventType.JoinRules).ifPresent(authEvents::add);
+            }
+
+            // TODO third party invites
+        }
+
+        return authEvents.stream().map(ChannelEvent::getId).collect(Collectors.toSet());
     }
 
     @Override

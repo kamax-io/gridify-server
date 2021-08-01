@@ -30,6 +30,8 @@ import java.util.List;
 
 public abstract class BareEvent<T> {
 
+    @SerializedName(EventKey.AuthEvents)
+    private List<String> authEvents = new ArrayList<>();
     @SerializedName(EventKey.Type)
     private String type;
     @SerializedName(EventKey.Id)
@@ -45,7 +47,7 @@ public abstract class BareEvent<T> {
     @SerializedName(EventKey.Scope)
     private String stateKey;
     @SerializedName(EventKey.PrevEvents)
-    private List<String> previousEvents;
+    private List<String> previousEvents = new ArrayList<>();
     @SerializedName(EventKey.Depth)
     private Long depth;
     @SerializedName(EventKey.Unsigned)
@@ -59,6 +61,14 @@ public abstract class BareEvent<T> {
 
     public JsonObject getJson() {
         return GsonUtil.makeObj(this);
+    }
+
+    public List<String> getAuthEvents() {
+        return authEvents;
+    }
+
+    public void setAuthEvents(List<String> authEvents) {
+        this.authEvents = authEvents;
     }
 
     public String getType() {

@@ -23,6 +23,8 @@ package io.kamax.grid.gridepo.network.matrix.core.room;
 import io.kamax.grid.gridepo.core.EntityAlias;
 import org.apache.commons.lang.StringUtils;
 
+import java.util.Optional;
+
 public class RoomAlias extends EntityAlias {
 
     public static final String Sigill = "#";
@@ -30,6 +32,14 @@ public class RoomAlias extends EntityAlias {
 
     public static boolean sigillMatch(String raw) {
         return StringUtils.startsWith(raw, Sigill);
+    }
+
+    public static Optional<RoomAlias> tryParse(String raw) {
+        try {
+            return Optional.of(parse(raw));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
     }
 
     public static RoomAlias parse(String raw) {
@@ -60,6 +70,11 @@ public class RoomAlias extends EntityAlias {
 
     RoomAlias(String local, String network) {
         super(Sigill, Delimiter, local, network);
+    }
+
+    @Override
+    public String toString() {
+        return full();
     }
 
 }

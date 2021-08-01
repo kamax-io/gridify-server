@@ -35,6 +35,7 @@ import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerRequest;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
 import java.util.Optional;
+import java.util.Set;
 
 public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixDataServer {
 
@@ -53,6 +54,11 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
     @Override
     public String getDomain() {
         return domain;
+    }
+
+    @Override
+    public Set<String> getRoomVersions() {
+        return g.overMatrix().roomMgr().getVersions();
     }
 
     @Override

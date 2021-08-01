@@ -22,6 +22,7 @@ package io.kamax.grid.gridepo.network.matrix.core.room;
 
 import io.kamax.grid.gridepo.core.channel.state.ChannelState;
 import io.kamax.grid.gridepo.exception.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
 
@@ -49,6 +50,14 @@ public class RoomView {
 
     public List<String> getAllServers() {
         throw new NotImplementedException();
+    }
+
+    public List<String> getJoinedServers() {
+        throw new NotImplementedException();
+    }
+
+    public boolean isServerJoined(String domain) {
+        return getJoinedServers().stream().anyMatch(v -> StringUtils.equals(v, domain));
     }
 
 }

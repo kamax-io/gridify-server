@@ -22,14 +22,22 @@ package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.ServiceLoader;
+import java.util.*;
 
 public class RoomAlgos {
 
+    private static final ServiceLoader<RoomAlgoLoader> svcLoader = ServiceLoader.load(RoomAlgoLoader.class);
+
     public static String defaultVersion() {
         return RoomAlgoV6.Version;
+    }
+
+    public static Set<String> getVersions() {
+        Set<String> versions = new HashSet<>();
+        for (RoomAlgoLoader roomAlgoLoader : svcLoader) {
+            versions.addAll(roomAlgoLoader.getVersions());
+        }
+        return versions;
     }
 
     public static RoomAlgo get(String version) throws NoSuchElementException {
@@ -37,9 +45,8 @@ public class RoomAlgos {
             version = defaultVersion();
         }
 
-        ServiceLoader<RoomAlgoLoader> svcLoader = ServiceLoader.load(RoomAlgoLoader.class);
-        while (svcLoader.iterator().hasNext()) {
-            Optional<RoomAlgo> algo = svcLoader.iterator().next().apply(version);
+        for (RoomAlgoLoader roomAlgoLoader : svcLoader) {
+            Optional<RoomAlgo> algo = roomAlgoLoader.apply(version);
             if (algo.isPresent()) {
                 return algo.get();
             }

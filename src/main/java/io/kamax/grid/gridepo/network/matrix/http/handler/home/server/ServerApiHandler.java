@@ -23,6 +23,7 @@ package io.kamax.grid.gridepo.network.matrix.http.handler.home.server;
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.exception.*;
 import io.kamax.grid.gridepo.http.handler.Exchange;
+import io.kamax.grid.gridepo.network.matrix.core.MatrixException;
 import io.kamax.grid.gridepo.network.matrix.core.base.ServerSession;
 import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerRequest;
 import io.kamax.grid.gridepo.util.KxLog;
@@ -57,6 +58,9 @@ public abstract class ServerApiHandler implements HttpHandler {
                 exchange.getResponseHeaders().put(HttpString.tryFromString("Access-Control-Allow-Headers"), "Origin, X-Requested-With, Content-Type, Accept, Authorization");
 
                 handle(ex);
+            } catch (MatrixException e) {
+                ex.respond(e.getCode(), e.getErrCode(), e.getError());
+                log.debug("Trigger:", e);
             } catch (IllegalArgumentException e) {
                 ex.respond(HttpStatus.SC_BAD_REQUEST, "M_INVALID_PARAM", e.getMessage());
                 log.debug("Trigger:", e);

@@ -35,12 +35,19 @@ public class BareMemberEvent extends BareEvent<BareMemberEvent.Content> {
                 .flatMap(c -> GsonUtil.findString(c, BareMemberEvent.Content.MembershipKey));
     }
 
-    public static BareMemberEvent leave(String userId) {
+    public static BareMemberEvent makeFor(String userId, RoomMembership membership) {
         BareMemberEvent ev = new BareMemberEvent();
-        ev.setSender(userId);
         ev.setStateKey(userId);
-        ev.getContent().setMembership(RoomMembership.Leave);
+        ev.getContent().setMembership(membership);
         return ev;
+    }
+
+    public static BareMemberEvent join(String userId) {
+        return makeFor(userId, RoomMembership.Join);
+    }
+
+    public static BareMemberEvent leave(String userId) {
+        return makeFor(userId, RoomMembership.Leave);
     }
 
     public static class Content {
