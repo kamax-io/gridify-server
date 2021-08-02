@@ -161,6 +161,10 @@ public class Room {
         // FIXME try to build from previous events
 
         BareGenericEvent bEv = BareGenericEvent.fromJson(event.getData());
+        if (bEv.getAuthEvents().isEmpty()) {
+            return RoomState.empty();
+        }
+
         List<ChannelEvent> authEvents = bEv.getAuthEvents().stream()
                 .map(evId -> g.getStore().findEvent(id, evId))
                 .filter(Optional::isPresent)
@@ -205,6 +209,7 @@ public class Room {
     }
 
     public ChannelEventAuthorization process(ChannelEvent event) {
+        log.debug("Processing Event {} || {}", event.getChannelId(), event.getId());
         RoomState state = getState(event);
         ChannelEventAuthorization auth = algo.authorize(state, event.getId(), event.getData());
         auth.setEvent(event);

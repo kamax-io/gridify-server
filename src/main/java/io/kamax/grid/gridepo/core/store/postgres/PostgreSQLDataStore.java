@@ -659,7 +659,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
             stmt.setLong(1, eLid);
             ResultSet rSet = stmt.executeQuery();
             if (!rSet.next()) {
-                throw new IllegalArgumentException("No state for Channel event " + eLid);
+                throw new ObjectNotFoundException("State for Event", eLid);
             }
 
             return rSet.getLong("state_lid");

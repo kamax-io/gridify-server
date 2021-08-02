@@ -33,8 +33,35 @@ public class RoomJoinTemplate {
         setEvent(event);
     }
 
+    private transient String origin;
+    private transient String roomId;
+    private transient String userId;
     private String roomVersion;
     private JsonObject event;
+
+    public String getOrigin() {
+        return origin;
+    }
+
+    public void setOrigin(String origin) {
+        this.origin = origin;
+    }
+
+    public String getRoomId() {
+        return roomId;
+    }
+
+    public void setRoomId(String roomId) {
+        this.roomId = roomId;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
 
     public String getRoomVersion() {
         return roomVersion;

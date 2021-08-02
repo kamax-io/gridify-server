@@ -204,7 +204,7 @@ public class Ed25519Cryptopher implements Cryptopher {
         JsonObject doc = new JsonObject();
         doc.add("old_verify_keys", new JsonObject());
         doc.addProperty("server_name", domain);
-        doc.addProperty("valid_until_ts", Instant.now().plusSeconds(10).toEpochMilli()); // 5 min
+        doc.addProperty("valid_until_ts", Instant.now().plusSeconds(60 * 60 * 24).toEpochMilli()); // 24h
         doc.add("verify_keys", GsonUtil.makeObj(key.getId().getAlgorithm() + ":" + key.getId().getSerial(), keyDoc));
 
         Signature sign = sign(doc, key.getId());

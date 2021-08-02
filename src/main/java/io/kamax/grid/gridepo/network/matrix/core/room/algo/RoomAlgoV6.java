@@ -28,6 +28,7 @@ import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.core.crypto.Cryptopher;
 import io.kamax.grid.gridepo.network.matrix.core.crypto.CryptoJson;
 import io.kamax.grid.gridepo.network.matrix.core.event.*;
+import io.kamax.grid.gridepo.network.matrix.core.federation.RoomJoinTemplate;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomJoinRule;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomMembership;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomState;
@@ -133,7 +134,7 @@ public class RoomAlgoV6 implements RoomAlgo {
         };
     }
 
-    private Comparator<JsonObject> getTopologyComparator() {
+    public Comparator<JsonObject> getTopologyComparator() {
         return getComparatorByParents()
                 .thenComparingLong(BareGenericEvent::extractDepth)
                 .thenComparingLong(BareGenericEvent::extractTimestampt)
@@ -478,15 +479,16 @@ public class RoomAlgoV6 implements RoomAlgo {
     }
 
     @Override
-    public JsonObject buildJoinEvent(String origin, String userId, JsonObject template) {
+    public JsonObject buildJoinEvent(RoomJoinTemplate template) {
         // We build a fresh event that we trust (no hidden keys or whatever)
-        BareMemberEvent eventBare = BareMemberEvent.join(userId);
-        eventBare.setOrigin(origin);
-        eventBare.setSender(userId);
+        BareMemberEvent eventBare = BareMemberEvent.join(template.getUserId());
+        eventBare.setRoomId(template.getRoomId());
+        eventBare.setOrigin(template.getOrigin());
+        eventBare.setSender(template.getUserId());
         eventBare.setTimestamp(Instant.now().toEpochMilli());
 
         // We only take the info we need from the template
-        BareMemberEvent templateBare = GsonUtil.fromJson(template, BareMemberEvent.class);
+        BareMemberEvent templateBare = GsonUtil.fromJson(template.getEvent(), BareMemberEvent.class);
         eventBare.setAuthEvents(templateBare.getAuthEvents());
         eventBare.setPreviousEvents(templateBare.getPreviousEvents());
         eventBare.setDepth(templateBare.getDepth());
@@ -575,17 +577,13 @@ public class RoomAlgoV6 implements RoomAlgo {
         return events;
     }
 
-    public String computeHash(JsonObject event) {
-        String canonical = CanonicalJson.encode(event);
-        return GridHash.get().hashFromUtf8(canonical);
-    }
-
     public String computeEventHashUnsafe(JsonObject doc) {
         doc = redact(doc);
         doc.remove(EventKey.Age); // Never seen it into a doc?
         doc.remove(EventKey.Signatures);
         doc.remove(EventKey.Unsigned);
-        return computeHash(doc);
+        String canonical = CanonicalJson.encode(doc);
+        return GridHash.get().hashFromUtf8(canonical);
     }
 
     @Override

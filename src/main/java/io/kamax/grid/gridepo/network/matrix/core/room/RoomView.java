@@ -21,8 +21,10 @@
 package io.kamax.grid.gridepo.network.matrix.core.room;
 
 import io.kamax.grid.gridepo.core.channel.state.ChannelState;
-import io.kamax.grid.gridepo.exception.NotImplementedException;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareGenericEvent;
+import io.kamax.grid.gridepo.network.matrix.core.event.BareMemberEvent;
+import io.kamax.grid.gridepo.network.matrix.core.event.RoomEventType;
+import io.kamax.grid.gridepo.util.GsonUtil;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Set;
@@ -58,7 +60,12 @@ public class RoomView {
     }
 
     public Set<String> getJoinedServers() {
-        throw new NotImplementedException();
+        return getState().getEvents().stream()
+                .filter(o -> RoomEventType.Member.match(o.getData()))
+                .map(o -> GsonUtil.fromJson(o.getData(), BareMemberEvent.class))
+                .filter(o -> RoomMembership.Join.match(o.getContent().getMembership()))
+                .map(o -> StringUtils.substringAfter(o.getStateKey(), ":"))
+                .collect(Collectors.toSet());
     }
 
     public boolean isServerJoined(String domain) {

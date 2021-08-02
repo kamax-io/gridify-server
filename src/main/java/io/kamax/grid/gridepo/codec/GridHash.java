@@ -55,7 +55,7 @@ public class GridHash {
     }
 
     public String hash(byte[] data) {
-        return Base64.getUrlEncoder().encodeToString(md.digest(data));
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(md.digest(data));
     }
 
     public String hashRaw(byte[] data) {

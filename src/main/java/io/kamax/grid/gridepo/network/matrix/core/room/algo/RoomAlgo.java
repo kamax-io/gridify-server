@@ -25,6 +25,7 @@ import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.core.crypto.Cryptopher;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.BarePowerEvent;
+import io.kamax.grid.gridepo.network.matrix.core.federation.RoomJoinTemplate;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomID;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomState;
 import io.kamax.grid.gridepo.util.Base64Codec;
@@ -68,13 +69,11 @@ public interface RoomAlgo {
 
     List<BareEvent<?>> getCreationEvents(String domain, String creator, JsonObject options);
 
-    JsonObject buildJoinEvent(String origin, String userId, JsonObject template);
+    JsonObject buildJoinEvent(RoomJoinTemplate template);
 
     Set<String> getAuthEvents(JsonObject eventDoc, RoomState state);
 
     String getEventId(JsonObject event);
-
-    String computeHash(JsonObject event);
 
     String computeEventHash(JsonObject event);
 

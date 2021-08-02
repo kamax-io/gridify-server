@@ -151,10 +151,13 @@ public class RoomManager {
             try {
                 // We fetch a join template from the resident server
                 RoomJoinTemplate joinTemplate = srv.getJoinTemplate(lookup.getId(), user.full());
+                joinTemplate.setOrigin(user.network());
+                joinTemplate.setRoomId(lookup.getId());
+                joinTemplate.setUserId(user.full());
 
                 // We use the correct algo to build a complete join event
                 RoomAlgo algo = RoomAlgos.get(joinTemplate.getRoomVersion());
-                JsonObject joinEvent = algo.buildJoinEvent(user.network(), user.full(), joinTemplate.getEvent());
+                JsonObject joinEvent = algo.buildJoinEvent(joinTemplate);
                 JsonObject joinEventSignedOff = algo.signEvent(joinEvent, g.overMatrix().crypto(), user.network());
 
                 // We offer the signed off event to the resident server
@@ -163,11 +166,11 @@ public class RoomManager {
                     log.info("Remote server {} did not provide a valid auth chain, skipping", resident);
                     continue;
                 }
+                algo.orderTopologically(response.getAuthChain());
 
                 // Get the room, create it if needed
                 Room r = find(lookup.getId()).orElseGet(() -> {
-                    // We expect the list of state event to be in the correct order to pass validation
-                    // This means the create event must be the first
+                    // List was ordered topologically, so create event must be first
                     return create(response.getAuthChain().get(0));
                 });
 

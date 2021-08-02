@@ -81,24 +81,28 @@ public class HomeServerLink {
         return request;
     }
 
-    private HomeServerRequest build(String destination, String method, URI uri, JsonElement content) {
-        String decodedUri = uri.getRawPath();
-        if (StringUtils.isNotBlank(uri.getRawQuery())) {
-            decodedUri += "?" + uri.getRawQuery();
+    private HomeServerRequest build(String destination, String method, URIBuilder uri, JsonElement content) {
+        try {
+            URI path = uri.build();
+            String decodedUri = path.getRawPath();
+            if (StringUtils.isNotBlank(path.getRawQuery())) {
+                decodedUri += "?" + path.getRawQuery();
+            }
+            HomeServerRequest request = new HomeServerRequest();
+            request.getDoc().setOrigin(origin);
+            request.getDoc().setDestination(destination);
+            request.getDoc().setMethod(method);
+            request.getDoc().setUri(decodedUri);
+            if (!Objects.isNull(content)) {
+                request.getDoc().setContent(content);
+            }
+            return sign(request);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
         }
-        HomeServerRequest request = new HomeServerRequest();
-        request.getDoc().setOrigin(origin);
-        request.getDoc().setDestination(destination);
-        request.getDoc().setMethod(method);
-        request.getDoc().setUri(decodedUri);
-        request.getDoc().setUriEncoded(uri.toString());
-        if (!Objects.isNull(content)) {
-            request.getDoc().setContent(content);
-        }
-        return sign(request);
     }
 
-    private HomeServerRequest build(String destination, String method, URI uri) {
+    private HomeServerRequest build(String destination, String method, URIBuilder uri) {
         return build(destination, method, uri, null);
     }
 
@@ -108,7 +112,7 @@ public class HomeServerLink {
         HomeServerRequest request = build(
                 domain,
                 "GET",
-                uri
+                new URIBuilder(uri)
         );
 
         HomeServerResponse res = client.doRequest(request);
@@ -129,18 +133,15 @@ public class HomeServerLink {
     }
 
     public RoomJoinTemplate getJoinTemplate(String roomId, String userId) {
+        URI path = URI.create("/_matrix/federation/v1/make_join/" + roomId + "/" + userId);
+        URIBuilder builder = new URIBuilder(path);
+
         Set<String> versions = g.getRoomVersions();
-        List<String[]> versionsQueryParam = new ArrayList<>();
         for (String version : versions) {
-            versionsQueryParam.add(new String[]{"ver", version});
+            builder.addParameter("ver", version);
         }
 
-        URI uri = build(URIPath.federation().v1().add("make_join", roomId, userId), versionsQueryParam);
-        HomeServerRequest request = build(
-                domain,
-                "GET",
-                uri
-        );
+        HomeServerRequest request = build(domain, "GET", builder);
 
         HomeServerResponse res = client.doRequest(request);
         if (res.getCode() == 200) {
@@ -157,13 +158,9 @@ public class HomeServerLink {
     }
 
     public RoomJoinSeed sendJoin(String roomId, String userId, JsonObject event) {
-        URI uri = build(URIPath.federation().v2().add("send_join", roomId, userId));
-        HomeServerRequest request = build(
-                domain,
-                "PUT",
-                uri,
-                event
-        );
+        URI path = URI.create("/_matrix/federation/v2/send_join/" + roomId + "/" + userId);
+        URIBuilder builder = new URIBuilder(path);
+        HomeServerRequest request = build(domain, "PUT", builder, event);
 
         HomeServerResponse response = client.doRequest(request);
         if (response.getCode() != 200) {
