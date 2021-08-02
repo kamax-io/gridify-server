@@ -29,9 +29,10 @@ public enum RoomEventType {
     Address("m.room.canonical_alias"),
     Alias("m.room.aliases"),
     Create("m.room.create"),
+    HistoryVisibility("m.room.history_visibility"),
     JoinRules("m.room.join_rules"),
     Member("m.room.member"),
-    Message("g.c.e.message"),
+    Message("m.room.message"),
     Name("m.room.name"),
     Power("m.room.power_levels"),
     Topic("m.room.topic");

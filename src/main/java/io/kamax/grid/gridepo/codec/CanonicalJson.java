@@ -31,10 +31,9 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.util.Comparator;
 import java.util.Map;
 
-public class GridJson {
+public class CanonicalJson {
 
     // Needed to avoid silly try/catch block in various places
     // We only use ByteArray streams, so IOException will not happen (unless irrecoverable situation like OOM)
@@ -54,9 +53,9 @@ public class GridJson {
         }
     }
 
-    private static void encodeCanonical(JsonObject el, JsonWriterUnchecked writer) throws IOException {
+    private static void encode(JsonObject el, JsonWriterUnchecked writer) throws IOException {
         writer.beginObject();
-        el.entrySet().stream().sorted(Comparator.comparing(Map.Entry::getKey)).forEachOrdered(entry -> {
+        el.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEachOrdered(entry -> {
             writer.name(entry.getKey());
             encodeCanonicalElement(entry.getValue(), writer);
         });
@@ -71,7 +70,7 @@ public class GridJson {
 
     private static void encodeCanonicalElement(JsonElement el, JsonWriterUnchecked writer) {
         try {
-            if (el.isJsonObject()) encodeCanonical(el.getAsJsonObject(), writer);
+            if (el.isJsonObject()) encode(el.getAsJsonObject(), writer);
             else if (el.isJsonPrimitive()) writer.jsonValue(el.toString());
             else if (el.isJsonArray()) encodeCanonicalArray(el.getAsJsonArray(), writer);
             else if (el.isJsonNull()) writer.nullValue();
@@ -82,7 +81,7 @@ public class GridJson {
         }
     }
 
-    public static String encodeCanonical(JsonObject obj) {
+    public static String encode(JsonObject obj) {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             JsonWriterUnchecked writer = new JsonWriterUnchecked(new OutputStreamWriter(out, StandardCharsets.UTF_8));
@@ -90,7 +89,7 @@ public class GridJson {
             writer.setHtmlSafe(false);
             writer.setLenient(false);
 
-            encodeCanonical(obj, writer);
+            encode(obj, writer);
             writer.close();
             return out.toString(StandardCharsets.UTF_8.name());
         } catch (IOException e) {

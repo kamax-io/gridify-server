@@ -126,16 +126,21 @@ public class Room {
                 .max()
                 .orElse(algo.getBaseDepth()) + 1;
 
-        event.addProperty(EventKey.ChannelId, id);
+
+        event.addProperty(EventKey.RoomId, id);
         event.add(EventKey.AuthEvents, GsonUtil.asArray(authEvents));
         event.add(EventKey.PrevEvents, GsonUtil.asArray(extIds));
+        // SYNAPSE - seems mandatory?
+        if (!event.has(EventKey.PrevState)) {
+            event.add(EventKey.PrevState, new JsonObject());
+        }
         event.addProperty(EventKey.Depth, depth);
         log.debug("Build event at depth {}", depth);
         return event;
     }
 
     public JsonObject finalize(String origin, JsonObject event) {
-        JsonObject signedOff = algo.signOff(event, g.getCrypto(), origin);
+        JsonObject signedOff = algo.signEvent(event, g.getCrypto(), origin);
         String eventId = algo.getEventId(signedOff);
         log.debug("Signed off Event {}: {}", eventId, GsonUtil.getPrettyForLog(signedOff));
         return signedOff;

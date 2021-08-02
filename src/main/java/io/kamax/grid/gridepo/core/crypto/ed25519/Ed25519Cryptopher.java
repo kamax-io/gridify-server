@@ -21,7 +21,7 @@
 package io.kamax.grid.gridepo.core.crypto.ed25519;
 
 import com.google.gson.JsonObject;
-import io.kamax.grid.gridepo.codec.GridJson;
+import io.kamax.grid.gridepo.codec.CanonicalJson;
 import io.kamax.grid.gridepo.core.crypto.Key;
 import io.kamax.grid.gridepo.core.crypto.Signature;
 import io.kamax.grid.gridepo.core.crypto.*;
@@ -153,7 +153,7 @@ public class Ed25519Cryptopher implements Cryptopher {
 
     @Override
     public Signature sign(JsonObject obj, KeyIdentifier keyId) {
-        return sign(GridJson.encodeCanonical(obj), keyId);
+        return sign(CanonicalJson.encode(obj), keyId);
     }
 
     @Override
@@ -163,7 +163,7 @@ public class Ed25519Cryptopher implements Cryptopher {
             EdDSAEngine signEngine = new EdDSAEngine(MessageDigest.getInstance(getKeySpecs().getHashAlgorithm()));
             signEngine.initSign(getPrivateKey(signingKeyId));
             byte[] signRaw = signEngine.signOneShot(data);
-            String sign = Base64.encodeBase64URLSafeString(signRaw);
+            String sign = StringUtils.remove(Base64.encodeBase64String(signRaw), "=");
 
             return new Signature() {
                 @Override

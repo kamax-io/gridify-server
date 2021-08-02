@@ -23,7 +23,6 @@ package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.core.crypto.Cryptopher;
-import io.kamax.grid.gridepo.core.crypto.Signature;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.BarePowerEvent;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomID;
@@ -79,13 +78,16 @@ public interface RoomAlgo {
 
     String computeEventHash(JsonObject event);
 
-    String computeContentHash(JsonObject event);
-
-    Signature computeSignature(JsonObject doc, Cryptopher crypto);
-
-    JsonObject sign(JsonObject doc, Cryptopher crypto, String domain);
-
-    JsonObject signOff(JsonObject doc, Cryptopher crypto, String domain);
+    /**
+     * Complete the doc structure then hash and sign it, making it final and signed off by the domain.
+     * This may not be equivalent to calling hash() then sign() on the doc.
+     *
+     * @param doc    The doc to sign off
+     * @param crypto The cryptopher to use to sign
+     * @param domain The domain unser which the signature should be added
+     * @return A copy of the doc with the added hash and signature
+     */
+    JsonObject signEvent(JsonObject doc, Cryptopher crypto, String domain);
 
     JsonObject redact(JsonObject doc);
 

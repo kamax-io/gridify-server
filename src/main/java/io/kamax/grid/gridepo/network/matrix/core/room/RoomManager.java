@@ -155,7 +155,7 @@ public class RoomManager {
                 // We use the correct algo to build a complete join event
                 RoomAlgo algo = RoomAlgos.get(joinTemplate.getRoomVersion());
                 JsonObject joinEvent = algo.buildJoinEvent(user.network(), user.full(), joinTemplate.getEvent());
-                JsonObject joinEventSignedOff = algo.signOff(joinEvent, g.overMatrix().crypto(), user.network());
+                JsonObject joinEventSignedOff = algo.signEvent(joinEvent, g.overMatrix().crypto(), user.network());
 
                 // We offer the signed off event to the resident server
                 RoomJoinSeed response = srv.sendJoin(lookup.getId(), user.full(), joinEventSignedOff);

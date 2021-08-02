@@ -22,15 +22,15 @@ package io.kamax.grid.gridepo.network.matrix.core.federation;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import io.kamax.grid.gridepo.codec.GridJson;
-import io.kamax.grid.gridepo.core.crypto.Key;
 import io.kamax.grid.gridepo.core.crypto.Signature;
 import io.kamax.grid.gridepo.exception.ForbiddenException;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixServer;
 import io.kamax.grid.gridepo.network.matrix.core.RemoteServerException;
+import io.kamax.grid.gridepo.network.matrix.core.crypto.CryptoJson;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomJoinSeed;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomLookup;
 import io.kamax.grid.gridepo.util.GsonUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
 
 import java.net.URI;
@@ -74,20 +74,24 @@ public class HomeServerLink {
     }
 
     public HomeServerRequest sign(HomeServerRequest request) {
-        Key signingKey = g.asServer().getCrypto().getServerSigningKey();
-        String toSign = GridJson.encodeCanonical(GsonUtil.makeObj(request.getDoc()));
-        Signature signDoc = g.asServer().getCrypto().sign(toSign, signingKey.getId());
+        JsonObject requestDoc = GsonUtil.makeObj(request.getDoc());
+        Signature signDoc = CryptoJson.computeSignature(requestDoc, g.asServer().getCrypto());
         request.getSign().setKeyId(signDoc.getKey().getId());
         request.getSign().setValue(signDoc.getSignature());
         return request;
     }
 
     private HomeServerRequest build(String destination, String method, URI uri, JsonElement content) {
+        String decodedUri = uri.getRawPath();
+        if (StringUtils.isNotBlank(uri.getRawQuery())) {
+            decodedUri += "?" + uri.getRawQuery();
+        }
         HomeServerRequest request = new HomeServerRequest();
         request.getDoc().setOrigin(origin);
         request.getDoc().setDestination(destination);
         request.getDoc().setMethod(method);
-        request.getDoc().setUri(uri.toString());
+        request.getDoc().setUri(decodedUri);
+        request.getDoc().setUriEncoded(uri.toString());
         if (!Objects.isNull(content)) {
             request.getDoc().setContent(content);
         }

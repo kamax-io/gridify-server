@@ -89,7 +89,7 @@ public class RoomState {
 
     private void addEvent(ChannelEvent ev) {
         String type = GsonUtil.getStringOrThrow(ev.getData(), EventKey.Type);
-        String scope = GsonUtil.getStringOrThrow(ev.getData(), EventKey.Scope);
+        String scope = GsonUtil.getStringOrThrow(ev.getData(), EventKey.StateKey);
         String key = type + scope;
         data.put(key, ev);
     }
@@ -160,7 +160,7 @@ public class RoomState {
     }
 
     public RoomState apply(ChannelEvent ev) {
-        String scope = GsonUtil.getStringOrNull(ev.getData(), EventKey.Scope);
+        String scope = GsonUtil.getStringOrNull(ev.getData(), EventKey.StateKey);
         if (Objects.isNull(scope)) {
             return this;
         }

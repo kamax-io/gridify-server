@@ -26,7 +26,9 @@ import io.kamax.grid.gridepo.util.GsonUtil;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public abstract class BareEvent<T> {
 
@@ -34,7 +36,7 @@ public abstract class BareEvent<T> {
     private List<String> authEvents = new ArrayList<>();
     @SerializedName(EventKey.Type)
     private String type;
-    @SerializedName(EventKey.Id)
+    @SerializedName(EventKey.EventId)
     private String id;
     @SerializedName(EventKey.Timestamp)
     private Long timestamp;
@@ -42,16 +44,20 @@ public abstract class BareEvent<T> {
     private String origin;
     @SerializedName(EventKey.Sender)
     private String sender;
-    @SerializedName(EventKey.ChannelId)
+    @SerializedName(EventKey.RoomId)
     private String roomId;
-    @SerializedName(EventKey.Scope)
+    @SerializedName(EventKey.StateKey)
     private String stateKey;
     @SerializedName(EventKey.PrevEvents)
     private List<String> previousEvents = new ArrayList<>();
+    @SerializedName(EventKey.PrevState)
+    private List<String> previousState = new ArrayList<>();
     @SerializedName(EventKey.Depth)
     private Long depth;
+    @SerializedName(EventKey.Hashes)
+    private Map<String, String> hashes = new HashMap<>();
     @SerializedName(EventKey.Unsigned)
-    private JsonObject unsigned = new JsonObject();
+    private transient JsonObject unsigned = new JsonObject();
     @SerializedName(EventKey.Content)
     private T content;
 
@@ -137,6 +143,22 @@ public abstract class BareEvent<T> {
 
     public void setPreviousEvents(List<String> previousEvents) {
         this.previousEvents = new ArrayList<>(previousEvents);
+    }
+
+    public List<String> getPreviousState() {
+        return previousState;
+    }
+
+    public void setPreviousState(List<String> previousState) {
+        this.previousState = previousState;
+    }
+
+    public Map<String, String> getHashes() {
+        return hashes;
+    }
+
+    public void setHashes(Map<String, String> hashes) {
+        this.hashes = hashes;
     }
 
     public Long getDepth() {

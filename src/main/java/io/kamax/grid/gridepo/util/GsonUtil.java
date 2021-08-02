@@ -273,6 +273,18 @@ public class GsonUtil {
         return Optional.ofNullable(o.getAsJsonObject(key));
     }
 
+    public static Optional<JsonObject> popObj(JsonObject o, String key) {
+        if (o.has(key)) {
+            return Optional.of(o.remove(key).getAsJsonObject());
+        }
+
+        return Optional.empty();
+    }
+
+    public static JsonObject popOrCreateObj(JsonObject o, String key) {
+        return popObj(o, key).orElseGet(JsonObject::new);
+    }
+
     public static Optional<JsonArray> findArray(JsonObject o, String key) {
         return findElement(o, key).filter(JsonElement::isJsonArray).map(JsonElement::getAsJsonArray);
     }

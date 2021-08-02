@@ -30,6 +30,7 @@ public class HomeServerRequest {
         private String destination;
         private String method;
         private String uri;
+        private transient String uriEncoded;
         private JsonElement content;
 
         public String getOrigin() {
@@ -62,6 +63,14 @@ public class HomeServerRequest {
 
         public void setUri(String uri) {
             this.uri = uri;
+        }
+
+        public String getUriEncoded() {
+            return uriEncoded;
+        }
+
+        public void setUriEncoded(String uriEncoded) {
+            this.uriEncoded = uriEncoded;
         }
 
         public JsonElement getContent() {

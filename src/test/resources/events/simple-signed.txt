@@ -1,0 +1,9 @@
+{
+    "one": 1,
+    "signatures": {
+        "example.org": {
+            "ed25519:1": "KqmLSbO39/Bzb0QIYE82zqLwsA+PDzYIpIRA2sRQ4sL53+sN6/fpNSoqE7BP7vBZhG6kYdD13EIMJpvhJI+6Bw"
+        }
+    },
+    "two": "Two"
+}

@@ -21,12 +21,12 @@
 package io.kamax.grid.gridepo.network.matrix.core.room.algo;
 
 import com.google.gson.JsonObject;
+import io.kamax.grid.gridepo.codec.CanonicalJson;
 import io.kamax.grid.gridepo.codec.GridHash;
-import io.kamax.grid.gridepo.codec.GridJson;
 import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.core.crypto.Cryptopher;
-import io.kamax.grid.gridepo.core.crypto.Signature;
+import io.kamax.grid.gridepo.network.matrix.core.crypto.CryptoJson;
 import io.kamax.grid.gridepo.network.matrix.core.event.*;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomJoinRule;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomMembership;
@@ -44,6 +44,9 @@ public class RoomAlgoV6 implements RoomAlgo {
     public static final String Version = "6";
     static final long minDepth = 0;
 
+    private static final List<String> essentialTopKeys;
+    private static final Map<String, List<String>> essentialContentKeys = new HashMap<>();
+
     private static final Map<String, Class<? extends BareEvent<?>>> bares = new HashMap<>();
 
     static {
@@ -51,6 +54,39 @@ public class RoomAlgoV6 implements RoomAlgo {
         bares.put(RoomEventType.Member.getId(), BareMemberEvent.class);
         bares.put(RoomEventType.Power.getId(), BarePowerEvent.class);
         bares.put(RoomEventType.JoinRules.getId(), BareJoinRulesEvent.class);
+
+        essentialTopKeys = Arrays.asList(
+                EventKey.AuthEvents,
+                EventKey.Content,
+                EventKey.Depth,
+                EventKey.EventId,
+                EventKey.Hashes,
+                EventKey.Origin,
+                EventKey.Timestamp,
+                EventKey.PrevEvents,
+                EventKey.PrevState,
+                EventKey.RoomId,
+                EventKey.Sender,
+                EventKey.Signatures,
+                EventKey.StateKey,
+                EventKey.Type
+        );
+
+        essentialContentKeys.put(RoomEventType.Alias.getId(), Collections.singletonList("aliases"));
+        essentialContentKeys.put(RoomEventType.Create.getId(), Collections.singletonList("creator"));
+        essentialContentKeys.put(RoomEventType.HistoryVisibility.getId(), Collections.singletonList("history_visiblity"));
+        essentialContentKeys.put(RoomEventType.JoinRules.getId(), Collections.singletonList("join_rule"));
+        essentialContentKeys.put(RoomEventType.Member.getId(), Collections.singletonList("membership"));
+        essentialContentKeys.put(RoomEventType.Power.getId(), Arrays.asList(
+                "ban",
+                "events",
+                "events_default",
+                "kick",
+                "redact",
+                "state_default",
+                "users",
+                "users_default"
+        ));
     }
 
     private BareGenericEvent toProto(JsonObject ev) {
@@ -540,68 +576,72 @@ public class RoomAlgoV6 implements RoomAlgo {
     }
 
     public String computeHash(JsonObject event) {
-        String canonical = GridJson.encodeCanonical(event);
+        String canonical = CanonicalJson.encode(event);
         return GridHash.get().hashFromUtf8(canonical);
     }
 
-    @Override
-    public String computeEventHash(JsonObject event) {
-        event = redact(event);
-        event.remove(EventKey.Age);
-        event.remove(EventKey.Signatures);
-        event.remove(EventKey.Unsigned);
-        return computeHash(event);
+    public String computeEventHashUnsafe(JsonObject doc) {
+        doc = redact(doc);
+        doc.remove(EventKey.Age); // Never seen it into a doc?
+        doc.remove(EventKey.Signatures);
+        doc.remove(EventKey.Unsigned);
+        return computeHash(doc);
     }
 
     @Override
-    public String computeContentHash(JsonObject event) {
-        event = event.deepCopy();
-        event.remove(EventKey.Hashes);
-        event.remove(EventKey.Signatures);
-        event.remove(EventKey.Unsigned);
-        return computeHash(event);
+    public String computeEventHash(JsonObject doc) {
+        return computeEventHashUnsafe(doc.deepCopy());
+    }
+
+    public String computeContentHashUnsafe(JsonObject doc) {
+        doc.remove(EventKey.Hashes);
+        doc.remove(EventKey.Signatures);
+        doc.remove(EventKey.Unsigned);
+        String canonical = CanonicalJson.encode(doc);
+        return GridHash.get().hashRawFromUtf8(canonical);
+    }
+
+    private JsonObject computeContentHashObject(JsonObject doc) {
+        doc = doc.deepCopy();
+        String hash = computeContentHashUnsafe(doc);
+        return GsonUtil.makeObj("sha256", hash);
     }
 
     @Override
-    public Signature computeSignature(JsonObject event, Cryptopher crypto) {
+    public JsonObject signEvent(JsonObject event, Cryptopher crypto, String domain) {
+        // We compute the content hash
+        JsonObject hashesDoc = computeContentHashObject(event);
         // We redact the event to its minimal state
-        JsonObject eventRedacted = redact(event);
-        // We get the canonical version
-        String eventCanonical = GridJson.encodeCanonical(eventRedacted);
-        // We generate the signature for the event
-        return crypto.sign(eventCanonical, crypto.getServerSigningKey().getId());
-    }
+        JsonObject docMinimal = redact(event);
+        // We add the content hash
+        docMinimal.add(EventKey.Hashes, hashesDoc);
+        JsonObject docMinimalSigned = CryptoJson.signUnsafe(docMinimal, crypto, domain);
 
-    @Override
-    public JsonObject sign(JsonObject event, Cryptopher crypto, String domain) {
-        // We generate the signature for the event
-        Signature sign = computeSignature(event, crypto);
-        JsonObject signLocal = GsonUtil.makeObj(sign.getKey().getId(), sign.getSignature());
-
-        // We retrieve the signatures dictionary or generate an empty one if none exists
-        JsonObject signatures = GsonUtil.findObj(event, EventKey.Signatures).orElseGet(JsonObject::new);
-        // We add the signature to the signatures dictionary
-        signatures.add(domain, signLocal);
-        // We replace the event signatures original dictionary with the new one
-        event.add(EventKey.Signatures, signatures);
+        // We copy the signatures from the minimal signed event onto the full event
+        event.add(EventKey.Hashes, hashesDoc);
+        event.add(EventKey.Signatures, docMinimalSigned.remove(EventKey.Signatures));
 
         return event;
     }
 
     @Override
-    public JsonObject signOff(JsonObject doc, Cryptopher crypto, String domain) {
-        String hash = computeContentHash(doc);
-        JsonObject hashes = GsonUtil.makeObj("sha256", hash);
-        doc.add(EventKey.Hashes, hashes);
-        return sign(doc, crypto, domain);
-    }
-
-    @Override
     public JsonObject redact(JsonObject doc) {
-        String type = GsonUtil.getStringOrThrow(doc, EventKey.Type);
-        Class<? extends BareEvent<?>> evClass = bares.getOrDefault(type, BareGenericEvent.class);
-        BareEvent<?> minEv = GsonUtil.get().fromJson(doc, evClass);
-        return minEv.getJson();
+        JsonObject toRedact = doc.deepCopy();
+
+        // OLD-CODE TODO Why use a new HashSet? Concurrent error?
+        new HashSet<>(toRedact.keySet()).forEach(key -> {
+            if (!essentialTopKeys.contains(key)) toRedact.remove(key);
+        });
+
+        JsonObject content = GsonUtil.popOrCreateObj(toRedact, EventKey.Content);
+        String type = GsonUtil.getStringOrNull(toRedact, EventKey.Type);
+        List<String> essentials = essentialContentKeys.getOrDefault(type, Collections.emptyList());
+        new HashSet<>(content.keySet()).forEach(key -> {
+            if (!essentials.contains(key)) content.remove(key);
+        });
+        toRedact.add(EventKey.Content, content);
+
+        return toRedact;
     }
 
 }

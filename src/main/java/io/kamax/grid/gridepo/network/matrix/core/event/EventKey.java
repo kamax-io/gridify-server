@@ -23,13 +23,14 @@ package io.kamax.grid.gridepo.network.matrix.core.event;
 public class EventKey {
 
     public static final String AuthEvents = "auth_events";
-    public static final String Id = "event_id";
-    public static final String ChannelId = "room_id";
+    public static final String EventId = "event_id";
+    public static final String RoomId = "room_id";
     public static final String Type = "type";
-    public static final String Scope = "state_key";
+    public static final String StateKey = "state_key";
     public static final String Origin = "origin";
     public static final String Sender = "sender";
     public static final String PrevEvents = "prev_events";
+    public static final String PrevState = "prev_state";
     public static final String Depth = "depth";
     public static final String Timestamp = "origin_server_ts";
     public static final String Content = "content";

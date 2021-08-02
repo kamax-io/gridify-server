@@ -20,11 +20,10 @@
 
 package io.kamax.grid.gridepo.codec;
 
-import org.apache.commons.codec.binary.Base64;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.Objects;
 
 public class GridHash {
@@ -56,11 +55,19 @@ public class GridHash {
     }
 
     public String hash(byte[] data) {
-        return Base64.encodeBase64URLSafeString(md.digest(data));
+        return Base64.getUrlEncoder().encodeToString(md.digest(data));
+    }
+
+    public String hashRaw(byte[] data) {
+        return Base64.getEncoder().withoutPadding().encodeToString(md.digest(data));
     }
 
     public String hashFromUtf8(String data) {
         return hash(data.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public String hashRawFromUtf8(String data) {
+        return hashRaw(data.getBytes(StandardCharsets.UTF_8));
     }
 
 }

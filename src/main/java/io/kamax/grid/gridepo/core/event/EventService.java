@@ -21,8 +21,8 @@
 package io.kamax.grid.gridepo.core.event;
 
 import com.google.gson.JsonObject;
+import io.kamax.grid.gridepo.codec.CanonicalJson;
 import io.kamax.grid.gridepo.codec.GridHash;
-import io.kamax.grid.gridepo.codec.GridJson;
 import io.kamax.grid.gridepo.core.channel.event.*;
 import io.kamax.grid.gridepo.core.crypto.Cryptopher;
 import io.kamax.grid.gridepo.core.crypto.Signature;
@@ -50,7 +50,7 @@ public class EventService {
     }
 
     public JsonObject hash(JsonObject ev) {
-        String fullCanonical = GridJson.encodeCanonical(ev);
+        String fullCanonical = CanonicalJson.encode(ev);
         String hash = GridHash.get().hashFromUtf8(fullCanonical);
         ev.add(EventKey.Hashes, GsonUtil.makeObj("sha256", hash));
         return ev;
@@ -62,7 +62,7 @@ public class EventService {
         Class<? extends BareEvent> evClass = bares.getOrDefault(type, BareGenericEvent.class);
         BareEvent minEv = GsonUtil.get().fromJson(ev, evClass);
         JsonObject minEvJson = minEv.getJson();
-        String minCanonical = GridJson.encodeCanonical(minEvJson);
+        String minCanonical = CanonicalJson.encode(minEvJson);
 
         Signature sign = crypto.sign(minCanonical, crypto.getServerSigningKey().getId());
         JsonObject signLocal = GsonUtil.makeObj(sign.getKey().getId(), sign.getSignature());
