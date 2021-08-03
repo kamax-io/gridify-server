@@ -253,6 +253,7 @@ public class Room {
         seed.getMeta().setValid(auth.isValid());
         seed.getMeta().setAllowed(auth.isAuthorized());
         seed.getMeta().setSeed(true);
+        seed.getMeta().setProcessed(true);
         g.getStore().saveEvent(seed);
 
         // Save the state and map to seed

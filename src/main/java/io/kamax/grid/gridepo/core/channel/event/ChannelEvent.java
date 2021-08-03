@@ -54,7 +54,8 @@ public class ChannelEvent {
     private JsonObject data;
     private ChannelEventMeta meta;
 
-    private transient BareGenericEvent bare;
+    private transient io.kamax.grid.gridepo.network.matrix.core.event.BareGenericEvent asMatrix;
+    private transient io.kamax.grid.gridepo.core.channel.event.BareGenericEvent bare;
     private transient List<String> prevEvents;
 
     public ChannelEvent() {
@@ -159,12 +160,20 @@ public class ChannelEvent {
     }
 
     @Deprecated
-    public BareGenericEvent getBare() {
+    public io.kamax.grid.gridepo.core.channel.event.BareGenericEvent getBare() {
         if (Objects.isNull(bare)) {
-            bare = GsonUtil.fromJson(getData(), BareGenericEvent.class);
+            bare = GsonUtil.fromJson(getData(), io.kamax.grid.gridepo.core.channel.event.BareGenericEvent.class);
         }
 
         return bare;
+    }
+
+    public io.kamax.grid.gridepo.network.matrix.core.event.BareGenericEvent asMatrix() {
+        if (Objects.isNull(asMatrix)) {
+            asMatrix = GsonUtil.fromJson(getData(), io.kamax.grid.gridepo.network.matrix.core.event.BareGenericEvent.class);
+        }
+
+        return asMatrix;
     }
 
     public ChannelEventMeta getMeta() {

@@ -51,6 +51,7 @@ import org.slf4j.Logger;
 import java.lang.invoke.MethodHandles;
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class UserSession {
@@ -216,35 +217,36 @@ public class UserSession {
                 }
 
                 List<ChannelEvent> events = g.overMatrix().getStreamer().next(sid);
-                if (!events.isEmpty()) {
-                    long position = events.stream()
-                            .filter(ev -> ev.getMeta().isProcessed())
-                            .max(Comparator.comparingLong(ChannelEvent::getSid))
-                            .map(ChannelEvent::getSid)
-                            .orElse(0L);
-                    log.debug("Position after sync loop: {}", position);
-                    data.setPosition(Long.toString(position));
+                for (ChannelEvent event : events) {
+                    if (!event.getMeta().isProcessed()) {
+                        break;
+                    }
+                    if (event.getSid() <= 0L) {
+                        break;
+                    }
 
-                    events = events.stream()
-                            .filter(ev -> ev.getMeta().isValid() && ev.getMeta().isAllowed())
-                            .filter(ev -> {
-                                // FIXME move this into channel/state algo to check if a user can see an event in the stream
+                    if (((Predicate<ChannelEvent>) ev -> {
+                        // FIXME move this into channel/state algo to check if a user can see an event in the stream
 
-                                // If we are the author
-                                if (StringUtils.equalsAny(userId, ev.getBare().getSender(), ev.getBare().getScope())) {
-                                    return true;
-                                }
+                        // If we are the author
+                        if (StringUtils.equalsAny(userId, ev.asMatrix().getSender(), ev.asMatrix().getStateKey())) {
+                            return true;
+                        }
 
-                                // if we are subscribed to the channel at that point in time
-                                Room r = g.overMatrix().roomMgr().get(ev.getChannelId());
-                                RoomState state = r.getState(ev);
-                                RoomMembership m = state.getMembership(userId);
-                                log.info("Membership for Event LID {}: {}", ev.getLid(), m);
-                                return m.isAny(RoomMembership.Join);
-                            })
-                            .collect(Collectors.toList());
+                        // if we are subscribed to the channel at that point in time
+                        Room r = g.overMatrix().roomMgr().get(ev.asMatrix().getRoomId());
+                        RoomState state = r.getState(ev);
+                        RoomMembership m = state.getMembership(userId);
+                        log.info("Membership for Event LID {}: {}", ev.getLid(), m);
+                        return m.isAny(RoomMembership.Join);
+                    }).test(event)) {
+                        data.getEvents().add(event);
+                    }
 
-                    data.getEvents().addAll(events);
+                    data.setPosition(Long.toString(event.getSid()));
+                }
+
+                if (!data.getEvents().isEmpty()) {
                     break;
                 }
 
@@ -262,6 +264,7 @@ public class UserSession {
                 }
             } while (end.isAfter(Instant.now()));
 
+            log.debug("Position after sync loop: {}", data.getPosition());
             return buildSync(data);
         } finally {
             g.getBus().getMain().unsubscribe(this);

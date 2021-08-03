@@ -248,4 +248,8 @@ public class RoomManager {
         }
     }
 
+    public void queueForDiscovery(JsonObject event) {
+        // TODO add room discovery
+    }
+
 }

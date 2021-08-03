@@ -26,12 +26,19 @@ import io.kamax.grid.gridepo.core.crypto.Cryptopher;
 import io.kamax.grid.gridepo.core.crypto.Signature;
 import io.kamax.grid.gridepo.network.matrix.core.event.EventKey;
 import io.kamax.grid.gridepo.util.GsonUtil;
+import io.kamax.grid.gridepo.util.KxLog;
+import org.slf4j.Logger;
+
+import java.lang.invoke.MethodHandles;
 
 public class CryptoJson {
+
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     public static Signature computeSignature(JsonObject event, Cryptopher crypto) {
         // We get the canonical version
         String eventCanonical = CanonicalJson.encode(event);
+        log.debug("Signing HS request: {}", eventCanonical);
         // We generate the signature for the event
         return crypto.sign(eventCanonical, crypto.getServerSigningKey().getId());
     }

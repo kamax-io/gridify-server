@@ -36,9 +36,11 @@ public class MatrixHomeServerEndpointRegister {
 
                 .get("/_matrix/key/v2/server/{keyId}", new KeyServerHandler(g))
 
-                .get("/_matrix/federation/v1/query/directory", new RoomDirectoryLookupHandler(g))
+                .put("/_matrix/federation/v1/send/{txnId}", new TransactionSendHandler(g))
                 .get("/_matrix/federation/v1/make_join/{roomId}/{userId}", new RoomMakeJoinHandler(g))
                 .put("/_matrix/federation/v2/send_join/{roomId}/{userId}", new RoomSendJoinHandler(g))
+
+                .get("/_matrix/federation/v1/query/directory", new RoomDirectoryLookupHandler(g))
         ;
     }
 

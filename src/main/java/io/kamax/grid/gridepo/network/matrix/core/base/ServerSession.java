@@ -25,8 +25,10 @@ import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.exception.ForbiddenException;
 import io.kamax.grid.gridepo.network.matrix.core.IncompatibleRoomVersionException;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixCore;
+import io.kamax.grid.gridepo.network.matrix.core.event.BareGenericEvent;
 import io.kamax.grid.gridepo.network.matrix.core.federation.RoomJoinTemplate;
 import io.kamax.grid.gridepo.network.matrix.core.room.*;
+import io.kamax.grid.gridepo.network.matrix.http.json.ServerTransaction;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import io.kamax.grid.gridepo.util.KxLog;
 import org.slf4j.Logger;
@@ -42,13 +44,21 @@ public class ServerSession {
 
     private final MatrixCore core;
 
-    private final String domain;
+    private final String vHost;
     private final String remote;
 
-    public ServerSession(MatrixCore core, String domain, String remote) {
+    public ServerSession(MatrixCore core, String vHost, String remote) {
         this.core = core;
-        this.domain = domain;
+        this.vHost = vHost;
         this.remote = remote;
+    }
+
+    public String getVhost() {
+        return vHost;
+    }
+
+    public String getDomain() {
+        return remote;
     }
 
     public Optional<RoomLookup> lookupRoomAlias(String roomAlias) {
@@ -78,11 +88,28 @@ public class ServerSession {
         List<JsonObject> authChain = r.getAuthChain(state);
 
         RoomJoinSeed seed = new RoomJoinSeed();
-        seed.setDomain(domain);
+        seed.setDomain(vHost);
         seed.setState(state);
         seed.setAuthChain(authChain);
 
         return seed;
+    }
+
+    public JsonObject push(ServerTransaction txn) {
+        for (JsonObject pdu : txn.getPdus()) {
+            BareGenericEvent bEv = BareGenericEvent.fromJson(pdu);
+            Optional<Room> roomOpt = core.roomMgr().find(bEv.getRoomId());
+            if (!roomOpt.isPresent()) {
+                core.roomMgr().queueForDiscovery(pdu);
+                continue;
+            }
+
+            Room r = roomOpt.get();
+            ChannelEventAuthorization auth = r.offer(remote, pdu);
+            log.debug("Event {} in Room {}: {}", auth.getEventId(), r.getId(), (auth.isAuthorized() ? "authorized" : "denied: " + auth.getReason()));
+        }
+
+        return new JsonObject();
     }
 
 }

@@ -524,7 +524,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
     @Override
     public Optional<ChannelEvent> findEvent(long eLid) {
-        return withStmtFunction("SELECT * FROM channel_events WHERE lid = ?", stmt -> {
+        return withStmtFunction("SELECT * FROM channel_events ce LEFT JOIN channel_event_stream ces ON ces.lid = ce.lid WHERE ce.lid = ?", stmt -> {
             stmt.setLong(1, eLid);
             ResultSet rSet = stmt.executeQuery();
             if (!rSet.next()) {
