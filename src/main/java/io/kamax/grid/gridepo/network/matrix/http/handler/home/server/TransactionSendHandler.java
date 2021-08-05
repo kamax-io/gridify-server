@@ -22,6 +22,7 @@ package io.kamax.grid.gridepo.network.matrix.http.handler.home.server;
 
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
+import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.http.handler.Exchange;
 import io.kamax.grid.gridepo.network.matrix.core.base.ServerSession;
 import io.kamax.grid.gridepo.network.matrix.http.json.ServerTransaction;
@@ -29,6 +30,7 @@ import io.kamax.grid.gridepo.util.KxLog;
 import org.slf4j.Logger;
 
 import java.lang.invoke.MethodHandles;
+import java.util.List;
 
 public class TransactionSendHandler extends AuthenticatedServerApiHandler {
 
@@ -42,10 +44,10 @@ public class TransactionSendHandler extends AuthenticatedServerApiHandler {
     protected void handle(ServerSession session, Exchange ex) {
         String txnId = ex.getQueryParameter("txnId");
         ServerTransaction txn = ex.parseJsonTo(ServerTransaction.class);
-        JsonObject response = session.push(txn);
+        List<ChannelEventAuthorization> auths = session.push(txn);
         log.debug("Processed Server {} Transaction {}", session.getDomain(), txnId);
 
-        ex.respond(response);
+        ex.respond(new JsonObject());
     }
 
 }

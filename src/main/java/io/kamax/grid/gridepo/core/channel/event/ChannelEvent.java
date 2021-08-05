@@ -149,6 +149,9 @@ public class ChannelEvent {
     public void setData(JsonObject data) {
         this.data = data;
         bare = null;
+        asMatrix = null;
+
+        getMeta().setPresent(!Objects.isNull(data));
     }
 
     public List<String> getPreviousEvents() {

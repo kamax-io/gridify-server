@@ -170,4 +170,35 @@ public class HomeServerLink {
         return GsonUtil.fromJson(response.getBody(), RoomJoinSeed.class);
     }
 
+    public List<JsonObject> getAuthChain(String roomId, String eventId) {
+        URI path = URI.create("/_matrix/federation/v1/event_auth/" + roomId + "/" + eventId);
+        HomeServerRequest request = build(domain, "GET", new URIBuilder(path));
+        HomeServerResponse response = client.doRequest(request);
+        if (response.getCode() != 200) {
+            throw new RemoteServerException(domain, response.getBody());
+        }
+
+        return GsonUtil.asList(response.getBody(), "auth_chain", JsonObject.class);
+    }
+
+    public List<JsonObject> getPreviousEvents(String roomId, Collection<String> latestEvents, Collection<String> earliestEvents, long minDeph, long amount) {
+        URI path = URI.create("/_matrix/federation/v1/get_missing_events/" + roomId);
+        JsonObject body = new JsonObject();
+        body.add("latest_events", GsonUtil.asArray(latestEvents));
+        body.add("earliest_events", GsonUtil.asArray(earliestEvents));
+        body.addProperty("min_depth", minDeph);
+        body.addProperty("limit", amount);
+        HomeServerRequest request = build(domain, "POST", new URIBuilder(path), body);
+        HomeServerResponse response = client.doRequest(request);
+        if (response.getCode() != 200) {
+            throw new RemoteServerException(domain, response.getBody());
+        }
+
+        return GsonUtil.asList(response.getBody(), "events", JsonObject.class);
+    }
+
+    public List<JsonObject> getPreviousEvents(String roomId, Collection<String> latestEvents, Collection<String> earliestEvents, long minDeph) {
+        return getPreviousEvents(roomId, latestEvents, earliestEvents, minDeph, 10);
+    }
+
 }

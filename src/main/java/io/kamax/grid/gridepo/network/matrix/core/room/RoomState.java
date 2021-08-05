@@ -160,6 +160,14 @@ public class RoomState {
     }
 
     public RoomState apply(ChannelEvent ev) {
+        if (!ev.getMeta().isPresent()) {
+            return this;
+        }
+
+        if (!ev.getMeta().isAllowed()) {
+            return this;
+        }
+
         String scope = GsonUtil.getStringOrNull(ev.getData(), EventKey.StateKey);
         if (Objects.isNull(scope)) {
             return this;

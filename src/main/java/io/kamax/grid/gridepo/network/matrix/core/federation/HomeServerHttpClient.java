@@ -124,7 +124,7 @@ public class HomeServerHttpClient implements HomeServerClient {
         int j = domain.lastIndexOf("]");
 
         // We want to be sure there is a port separator AFTER the end of an IPv6 ending with ]
-        if (i > -1 && j <= i) {
+        if (i > -1 && i > j) {
             // This is a domain with a port already declared in it
             addrs.add(new Address(domain.substring(0, i), Integer.parseInt(domain.substring(i + 1))));
         } else {

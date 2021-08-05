@@ -499,6 +499,7 @@ public class RoomAlgoV6 implements RoomAlgo {
     @Override
     public Set<String> getAuthEvents(JsonObject eventDoc, RoomState state) {
         // https://matrix.org/docs/spec/server_server/r0.1.4#get-matrix-federation-v1-make-join-roomid-userid
+        // https://matrix.org/docs/spec/server_server/r0.1.4#auth-events-selection
 
         if (state.getEvents().isEmpty()) {
             return Collections.emptySet();

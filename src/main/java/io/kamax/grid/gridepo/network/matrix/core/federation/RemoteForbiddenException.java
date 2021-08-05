@@ -18,31 +18,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.grid.gridepo.network.matrix.core.event;
+package io.kamax.grid.gridepo.network.matrix.core.federation;
 
-import com.google.gson.annotations.SerializedName;
+import com.google.gson.JsonObject;
+import io.kamax.grid.gridepo.network.matrix.core.RemoteServerException;
 
-public class BareJoinRulesEvent extends BareEvent<BareJoinRulesEvent.Content> {
+public class RemoteForbiddenException extends RemoteServerException {
 
-    public static class Content {
-
-        @SerializedName("join_rule")
-        private String rule;
-
-        public String getRule() {
-            return rule;
-        }
-
-        public void setRule(String rule) {
-            this.rule = rule;
-        }
-
-    }
-
-    public BareJoinRulesEvent() {
-        setType(RoomEventType.JoinRules);
-        setStateKey("");
-        setContent(new Content());
+    public RemoteForbiddenException(String domain, JsonObject response) {
+        super(domain, response);
     }
 
 }

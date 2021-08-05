@@ -34,9 +34,7 @@ import io.kamax.grid.gridepo.util.KxLog;
 import org.slf4j.Logger;
 
 import java.lang.invoke.MethodHandles;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 public class ServerSession {
 
@@ -77,9 +75,9 @@ public class ServerSession {
         return new RoomJoinTemplate(roomVersion, template);
     }
 
-    public RoomJoinSeed sendJoin(String roomId, String userId, JsonObject eventDoc) {
+    public RoomJoinSeed sendJoin(String roomId, String remoteUserId, JsonObject eventDoc) {
         Room r = core.roomMgr().get(roomId);
-        ChannelEventAuthorization auth = r.offer(remote, eventDoc);
+        ChannelEventAuthorization auth = r.offer(remote, vHost, eventDoc);
         if (!auth.isAuthorized()) {
             throw new ForbiddenException(auth.getReason());
         }
@@ -95,21 +93,27 @@ public class ServerSession {
         return seed;
     }
 
-    public JsonObject push(ServerTransaction txn) {
+    public List<ChannelEventAuthorization> push(ServerTransaction txn) {
+        List<ChannelEventAuthorization> auths = new ArrayList<>();
+        Map<String, List<JsonObject>> pdusPerRoom = new HashMap<>();
         for (JsonObject pdu : txn.getPdus()) {
-            BareGenericEvent bEv = BareGenericEvent.fromJson(pdu);
-            Optional<Room> roomOpt = core.roomMgr().find(bEv.getRoomId());
+            String roomId = BareGenericEvent.extractRoomId(pdu);
+            pdusPerRoom.computeIfAbsent(roomId, v -> new ArrayList<>()).add(pdu);
+        }
+
+        for (Map.Entry<String, List<JsonObject>> roomPdus : pdusPerRoom.entrySet()) {
+            Optional<Room> roomOpt = core.roomMgr().find(roomPdus.getKey());
             if (!roomOpt.isPresent()) {
-                core.roomMgr().queueForDiscovery(pdu);
+                core.roomMgr().queueForDiscovery(roomPdus.getValue());
                 continue;
             }
 
             Room r = roomOpt.get();
-            ChannelEventAuthorization auth = r.offer(remote, pdu);
-            log.debug("Event {} in Room {}: {}", auth.getEventId(), r.getId(), (auth.isAuthorized() ? "authorized" : "denied: " + auth.getReason()));
+            List<ChannelEventAuthorization> auth = r.offer(remote, vHost, roomPdus.getValue());
+            auths.addAll(auth);
         }
 
-        return new JsonObject();
+        return auths;
     }
 
 }

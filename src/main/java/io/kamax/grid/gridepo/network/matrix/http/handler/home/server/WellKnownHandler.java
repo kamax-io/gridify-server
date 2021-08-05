@@ -18,8 +18,19 @@ public class WellKnownHandler extends ServerApiHandler {
 
     @Override
     protected void handle(Exchange ex) {
+        String host = ex.requireHost();
+
+        // Check if we have a port in it
+        int i = host.lastIndexOf(":");
+        // Check if this is an IPv6 address
+        int j = host.lastIndexOf("]");
+        if (j > i || i == -1) {
+            // No port, add it
+            host += ":443";
+        }
+
         JsonObject body = new JsonObject();
-        body.addProperty("m.server", ex.getHeader("Host") + ":443");
+        body.addProperty("m.server", host);
         ex.respond(body);
     }
 

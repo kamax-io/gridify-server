@@ -41,10 +41,7 @@ import io.kamax.grid.gridepo.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class RoomManager {
@@ -84,7 +81,7 @@ public class RoomManager {
                 .map(ev -> r.offer(domain, ev))
                 .filter(auth -> !auth.isAuthorized())
                 .findAny().ifPresent(auth -> {
-                    throw new RuntimeException("Room creation failed because of initial event(s) being rejected: " + auth.getReason());
+                    throw new RuntimeException("Room creation failed because of initial event " + auth.getEventId() + " being rejected: " + auth.getReason());
                 });
         return r;
     }
@@ -108,7 +105,7 @@ public class RoomManager {
         Room r = new Room(g, dao, algo);
 
         // We inject the auth chain
-        ChannelEventAuthorization auth = r.add(createDoc);
+        ChannelEventAuthorization auth = r.addSeed(createDoc, Collections.emptyList());
         if (!auth.isAuthorized()) {
             throw new ForbiddenException("Room Creation denied with Event " + createAuth.getEventId() + ": " + createAuth.getReason());
         }
@@ -248,7 +245,7 @@ public class RoomManager {
         }
     }
 
-    public void queueForDiscovery(JsonObject event) {
+    public void queueForDiscovery(List<JsonObject> events) {
         // TODO add room discovery
     }
 

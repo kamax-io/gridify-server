@@ -31,6 +31,10 @@ public class BareGenericEvent extends BareEvent<JsonObject> {
         return GsonUtil.fromJson(doc, BareGenericEvent.class);
     }
 
+    public static String extractRoomId(JsonObject doc) {
+        return GsonUtil.findString(doc, EventKey.RoomId).orElse("");
+    }
+
     public static Long extractDepth(JsonObject doc) {
         return GsonUtil.getLong(doc, EventKey.Depth);
     }

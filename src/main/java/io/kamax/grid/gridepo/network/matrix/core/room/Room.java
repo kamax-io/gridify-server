@@ -34,9 +34,12 @@ import io.kamax.grid.gridepo.network.matrix.core.event.BareEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareGenericEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareMemberEvent;
 import io.kamax.grid.gridepo.network.matrix.core.event.EventKey;
+import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerLink;
+import io.kamax.grid.gridepo.network.matrix.core.federation.RemoteForbiddenException;
 import io.kamax.grid.gridepo.network.matrix.core.room.algo.RoomAlgo;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import io.kamax.grid.gridepo.util.KxLog;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
 import java.lang.invoke.MethodHandles;
@@ -86,7 +89,7 @@ public class Room {
                 .orElseGet(RoomState::empty);
 
         view = new RoomView(head, state);
-        log.info("Channel {}: Loaded saved state SID {}", sid, view.getState().getSid());
+        log.info("Room {}: Loaded saved state SID {}", getId(), view.getState().getSid());
     }
 
     public String getId() {
@@ -147,11 +150,9 @@ public class Room {
     }
 
     public RoomState getState(ChannelEvent event) {
-        Optional<Long> evLid = g.getStore().findEventLid(id, event.getId());
-        if (evLid.isPresent()) {
-            // We already know this event, we fetch its local state
+        if (event.hasLid()) {
             try {
-                ChannelStateDao stateDao = g.getStore().getStateForEvent(evLid.get());
+                ChannelStateDao stateDao = g.getStore().getStateForEvent(event.getLid());
                 return new RoomState(stateDao);
             } catch (ObjectNotFoundException e) {
                 // We don't have a local state for this
@@ -169,12 +170,13 @@ public class Room {
                 .map(evId -> g.getStore().findEvent(id, evId))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
+                .filter(ev -> ev.getMeta().isAllowed())
                 .collect(Collectors.toList());
-        if (authEvents.size() == bEv.getAuthEvents().size()) {
-            return new RoomState(authEvents);
+        if (authEvents.isEmpty()) {
+            throw new IllegalStateException("Cannot build room event state");
         }
 
-        throw new IllegalStateException("Cannot build room event state");
+        return new RoomState(authEvents);
     }
 
     public RoomState getFullState(String eventId) {
@@ -189,6 +191,20 @@ public class Room {
         // FIXME incomplete!
         List<JsonObject> authChain = state.getEvents().stream().map(ChannelEvent::getData).collect(Collectors.toList());
         return algo.orderTopologically(authChain);
+    }
+
+    public List<String> findMissingEvents(List<String> eventIds) {
+        List<String> missingEvents = new ArrayList<>();
+        for (String eventId : new HashSet<>(eventIds)) {
+            if (!g.getStore().findEventLid(id, eventId).isPresent()) {
+                missingEvents.add(eventId);
+            }
+        }
+        return missingEvents;
+    }
+
+    public boolean hasAll(List<String> eventIds) {
+        return findMissingEvents(eventIds).isEmpty();
     }
 
     // Add an event to the room without processing it or return the local copy
@@ -209,7 +225,7 @@ public class Room {
     }
 
     public ChannelEventAuthorization process(ChannelEvent event) {
-        log.debug("Processing Event {} || {}", event.getChannelId(), event.getId());
+        log.debug("Processing Event {} || {} || {}", event.asMatrix().getRoomId(), event.getId(), event.asMatrix().getType());
         RoomState state = getState(event);
         ChannelEventAuthorization auth = algo.authorize(state, event.getId(), event.getData());
         auth.setEvent(event);
@@ -226,6 +242,9 @@ public class Room {
         ChannelEventAuthorization auth = null;
         for (JsonObject eventDoc : eventDocs) {
             auth = add(eventDoc);
+            if (!auth.isAuthorized()) {
+                return auth;
+            }
         }
         return auth;
     }
@@ -279,11 +298,106 @@ public class Room {
     }
 
     // Add an event to the room
-    public synchronized ChannelEventAuthorization offer(ChannelEvent event) {
+    public ChannelEventAuthorization offer(String remoteDomain, String localDomain, ChannelEvent event) {
+        if (!event.hasLid()) {
+            throw new IllegalStateException("Event must be saved before being offered");
+        }
+
+        if (event.getMeta().isProcessed()) {
+            return ChannelEventAuthorization.from(event);
+        }
+
+        // Backfill if needed
+        // Not applicable for local events
+        // TODO check cluster
+        if (!StringUtils.equals(remoteDomain, localDomain)) {
+            // Backfill the auth chain first
+            if (!hasAll(event.asMatrix().getAuthEvents())) {
+                try {
+                    HomeServerLink originHs = g.overMatrix().hsMgr().getLink(localDomain, remoteDomain);
+                    List<JsonObject> authChain = originHs.getAuthChain(getId(), event.getId());
+                    algo.orderTopologically(authChain);
+                    for (JsonObject authDoc : authChain) {
+                        add(authDoc);
+                    }
+                } catch (RemoteForbiddenException e) {
+                    // The remote HS refused to send the auth chain, possibly being malicious
+                    // Refusing the event offer
+                    throw new ForbiddenException("Refused to provide auth chain for Event " + event.getId() + " in room " + getId());
+                }
+            }
+
+
+            List<String> missingParents = findMissingEvents(event.asMatrix().getPreviousEvents());
+            // Backfill the timeline
+            if (!missingParents.isEmpty()) {
+                // Populate the missing events mapping
+                Map<String, String> missingEvents = new HashMap<>();
+                for (String missingParent : missingParents) {
+                    missingEvents.put(missingParent, event.getId());
+                }
+
+                // Compute how far backfill must go
+                List<ChannelEvent> earliestEvents = getExtremities();
+                long minDepth = earliestEvents.stream()
+                        .min(Comparator.comparingLong(o -> o.asMatrix().getDepth()))
+                        .map(o -> o.asMatrix().getDepth())
+                        .orElse(algo.getBaseDepth());
+                List<String> earliestEventIds = getExtremityIds(earliestEvents);
+
+                // Compute which servers we will talk to
+                Set<String> remoteServers = new LinkedHashSet<>(); // To have unique entries while preserving entry order
+                remoteServers.add(remoteDomain);
+                remoteServers.addAll(getView().getJoinedServers());
+                List<HomeServerLink> servers = g.overMatrix().hsMgr().getLink(localDomain, remoteServers, false);
+
+                Stack<ChannelEvent> eventsToOffer = new Stack<>();
+                for (HomeServerLink remoteHs : servers) {
+                    if (g.isOrigin(remoteHs.getDomain())) {
+                        continue;
+                    }
+
+                    while (!missingEvents.isEmpty()) {
+                        // Compute the list of latest events not found yet
+                        Set<String> latestEvents = new HashSet<>(missingEvents.values());
+                        List<JsonObject> backfillEventDocs = remoteHs.getPreviousEvents(getId(), latestEvents, earliestEventIds, minDepth);
+                        if (backfillEventDocs.isEmpty()) {
+                            // Did not get all the info needed, we stop with this server
+                            break;
+                        }
+                        algo.orderTopologically(backfillEventDocs);
+
+                        for (JsonObject backfillEventDoc : backfillEventDocs) {
+                            ChannelEvent backfillEvent = inject(backfillEventDoc);
+                            eventsToOffer.push(backfillEvent);
+                            missingEvents.remove(backfillEvent.getId());
+                            eventsToOffer.push(backfillEvent);
+                            missingParents = findMissingEvents(backfillEvent.asMatrix().getPreviousEvents());
+                            if (backfillEvent.asMatrix().getDepth() > minDepth && !missingParents.isEmpty()) {
+                                for (String parent : missingParents) {
+                                    missingEvents.put(parent, backfillEvent.getId());
+                                }
+                            }
+                        }
+                    }
+
+                    if (missingEvents.isEmpty()) {
+                        // All events were found, exiting the loop
+                        break;
+                    }
+                }
+
+                // Offer all that has been found
+                for (ChannelEvent eventToOffer : eventsToOffer) {
+                    offer(remoteDomain, localDomain, eventToOffer);
+                }
+            }
+        }
+
         RoomState eventState = getState(event);
         ChannelEventAuthorization eventStateAuth = algo.authorize(eventState, event.getId(), event.getData());
         if (!eventStateAuth.isAuthorized()) {
-            throw new ForbiddenException("Event is not authorized: " + eventStateAuth.getReason());
+            return eventStateAuth;
         }
 
         RoomState state = getView().getState();
@@ -292,7 +406,7 @@ public class Room {
         event.processed(currentStateAuth);
         g.getStore().saveEvent(event);
         if (!currentStateAuth.isAuthorized()) {
-            throw new ForbiddenException("Event is not authorized");
+            return currentStateAuth;
         }
 
         List<Long> toRemove = event.getPreviousEvents().stream()
@@ -317,17 +431,39 @@ public class Room {
         return currentStateAuth;
     }
 
-    public ChannelEventAuthorization offer(String origin, JsonObject eventDoc) {
-        ChannelEvent event = ChannelEvent.from(sid, algo.getEventId(eventDoc), eventDoc);
-        event.getMeta().setReceivedFrom(origin);
-        event.getMeta().setReceivedAt(Instant.now());
-        return offer(event);
+    public ChannelEventAuthorization offer(String remoteDomain, String localDomain, JsonObject eventDoc) {
+        String eventId = algo.getEventId(eventDoc);
+        ChannelEvent event = findEvent(eventId).orElseGet(() -> ChannelEvent.forNotFound(sid, eventId));
+        if (event.getMeta().isProcessed()) {
+            return ChannelEventAuthorization.from(event);
+        }
+
+        if (!event.getMeta().isPresent()) {
+            event.getMeta().setProcessed(false);
+            event.setData(eventDoc);
+            event.getMeta().setReceivedFrom(remoteDomain);
+            event.getMeta().setReceivedAt(Instant.now());
+        }
+
+        event = g.getStore().saveEvent(event);
+        return offer(remoteDomain, localDomain, event);
+    }
+
+    public List<ChannelEventAuthorization> offer(String remoteDomain, String localDomain, List<JsonObject> eventDocs) {
+        algo.orderTopologically(eventDocs);
+
+        List<ChannelEventAuthorization> auths = new ArrayList<>();
+        for (JsonObject doc : eventDocs) {
+            auths.add(offer(remoteDomain, localDomain, doc));
+        }
+
+        return auths;
     }
 
     public ChannelEventAuthorization offer(String origin, BareEvent<?> event) {
         event.setOrigin(origin);
         event.setTimestamp(Instant.now().toEpochMilli());
-        return offer(origin, finalize(origin, populate(event.getJson())));
+        return offer(origin, origin, finalize(origin, populate(event.getJson())));
     }
 
     public RoomView getView() {

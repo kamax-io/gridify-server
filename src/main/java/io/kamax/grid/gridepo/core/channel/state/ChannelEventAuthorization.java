@@ -66,6 +66,10 @@ public class ChannelEventAuthorization {
 
     }
 
+    public static ChannelEventAuthorization from(ChannelEvent ev) {
+        return new ChannelEventAuthorization.Builder(ev.getId()).authorize(ev.getMeta().isAllowed(), "Previous processing");
+    }
+
     private String eventId;
     private transient ChannelEvent event;
     private boolean valid;
