@@ -95,6 +95,15 @@ CREATE TABLE channel_aliases
     CONSTRAINT c_adr_alias UNIQUE(channel_alias)
 );
 
+CREATE TABLE destination_stream_positions
+(
+    destination_type text NOT NULL,
+    destination_id text NOT NULL,
+    scope text,
+    stream_id bigint NOT NULL,
+    CONSTRAINT dest_stream_pos UNIQUE (destination_type, destination_id, scope)
+);
+
 CREATE TABLE identity_users
 (
     lid bigserial NOT NULL,

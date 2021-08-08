@@ -28,13 +28,16 @@ import io.undertow.server.RoutingHandler;
 public class MatrixHomeServerEndpointRegister {
 
     public static void apply(Gridepo g, RoutingHandler handler) {
+        KeyServerHandler keySrvHandler = new KeyServerHandler(g);
+
         handler
                 .setFallbackHandler(new UnrecognizedEndpointHandler())
                 .setInvalidMethodHandler(new UnrecognizedEndpointHandler())
 
                 .get("/.well-known/matrix/server", new WellKnownHandler(g))
 
-                .get("/_matrix/key/v2/server/{keyId}", new KeyServerHandler(g))
+                .get("/_matrix/key/v2/server", keySrvHandler)
+                .get("/_matrix/key/v2/server/{keyId}", keySrvHandler)
 
                 .put("/_matrix/federation/v1/send/{txnId}", new TransactionSendHandler(g))
                 .get("/_matrix/federation/v1/make_join/{roomId}/{userId}", new RoomMakeJoinHandler(g))

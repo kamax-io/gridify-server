@@ -35,6 +35,7 @@ import org.apache.http.client.utils.URIBuilder;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Instant;
 import java.util.*;
 
 public class HomeServerLink {
@@ -199,6 +200,20 @@ public class HomeServerLink {
 
     public List<JsonObject> getPreviousEvents(String roomId, Collection<String> latestEvents, Collection<String> earliestEvents, long minDeph) {
         return getPreviousEvents(roomId, latestEvents, earliestEvents, minDeph, 10);
+    }
+
+    public void push(JsonObject ev) {
+        long timestamp = Instant.now().toEpochMilli();
+        URI path = URI.create("/_matrix/federation/v1/send/" + timestamp);
+        JsonObject body = new JsonObject();
+        body.addProperty("origin", domain);
+        body.addProperty("origin_server_ts", timestamp);
+        body.add("pdus", GsonUtil.asArray(ev));
+        HomeServerRequest req = build(domain, "PUT", new URIBuilder(path), body);
+        HomeServerResponse response = client.doRequest(req);
+        if (response.getCode() != 200) {
+            throw new RemoteServerException(domain, response.getBody());
+        }
     }
 
 }

@@ -159,4 +159,6 @@ public interface DataStore {
 
     void removeThreePid(long userLid, ThreePid tpid);
 
+    void setStreamIdForDestination(String destinationType, String destination, String scope, long streamId);
+
 }

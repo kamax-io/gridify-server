@@ -97,6 +97,8 @@ public class MemoryStore implements DataStore, IdentityStore {
     private final Map<Long, Long> evSidToLid = new ConcurrentHashMap<>();
     private final Map<Long, Long> evLidToSid = new ConcurrentHashMap<>();
 
+    private final Map<String, Long> destsStreamId = new ConcurrentHashMap<>();
+
     private MemoryStore() {
         // only via static
     }
@@ -543,6 +545,11 @@ public class MemoryStore implements DataStore, IdentityStore {
         if (!tpidList.remove(tpidIn)) {
             throw new IllegalArgumentException("3PID not found");
         }
+    }
+
+    @Override
+    public void setStreamIdForDestination(String destinationType, String destination, String scope, long streamId) {
+        destsStreamId.put(destinationType + ":" + destination, streamId);
     }
 
     @Override

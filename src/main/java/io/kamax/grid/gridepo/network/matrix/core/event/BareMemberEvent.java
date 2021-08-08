@@ -35,6 +35,10 @@ public class BareMemberEvent extends BareEvent<BareMemberEvent.Content> {
                 .flatMap(c -> GsonUtil.findString(c, BareMemberEvent.Content.MembershipKey));
     }
 
+    public static String computeMembership(JsonObject doc) {
+        return findMembership(doc).orElseGet(RoomMembership.Leave::getId);
+    }
+
     public static BareMemberEvent makeFor(String userId, RoomMembership membership) {
         BareMemberEvent ev = new BareMemberEvent();
         ev.setStateKey(userId);

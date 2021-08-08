@@ -971,6 +971,23 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
         });
     }
 
+    @Override
+    public void setStreamIdForDestination(String destinationType, String destination, String scope, long streamId) {
+        String sql = "INSERT INTO destination_stream_positions(destination_type,destination_id,scope,stream_id) VALUES (?,?,?,?)" +
+                "ON CONFLICT DO UPDATE SET stream_id = EXCLUDED.stream_id WHERE stream_id < EXCLUDED.stream_id";
+        withStmtConsumer(sql, stmt -> {
+            stmt.setString(1, destinationType);
+            stmt.setString(2, destination);
+            stmt.setString(3, scope);
+            stmt.setLong(4, streamId);
+
+            int rc = stmt.executeUpdate();
+            if (rc != 1) {
+                throw new IllegalStateException("Set stream ID for destination: DB set " + rc + " rows. 1 expected");
+            }
+        });
+    }
+
     // Identity store stuff
     @Override
     public String getType() {

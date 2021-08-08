@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.ByteBuffer;
 import java.security.*;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -197,19 +198,31 @@ public class Ed25519Cryptopher implements Cryptopher {
     }
 
     @Override
-    public JsonObject getKeyDocument(String domain, KeyIdentifier keyId) {
-        Key key = getKey(keyId);
-        JsonObject keyDoc = new JsonObject();
-        keyDoc.addProperty("key", getPublicKeyBase64(key.getId()));
+    public JsonObject getKeyDocument(String domain, List<KeyIdentifier> keyIds) {
+        List<Key> keys = new ArrayList<>();
+        for (KeyIdentifier keyId : keyIds) {
+            keys.add(getKey(keyId));
+        }
+
+        JsonObject verifyKeysDoc = new JsonObject();
         JsonObject doc = new JsonObject();
         doc.add("old_verify_keys", new JsonObject());
         doc.addProperty("server_name", domain);
         doc.addProperty("valid_until_ts", Instant.now().plusSeconds(60 * 60 * 24).toEpochMilli()); // 24h
-        doc.add("verify_keys", GsonUtil.makeObj(key.getId().getAlgorithm() + ":" + key.getId().getSerial(), keyDoc));
+        doc.add("verify_keys", verifyKeysDoc);
 
-        Signature sign = sign(doc, key.getId());
-        JsonObject signDomain = GsonUtil.makeObj(sign.getKey().getAlgorithm() + ":" + sign.getKey().getSerial(), sign.getSignature());
-        JsonObject signDomains = GsonUtil.makeObj(domain, signDomain);
+        for (Key key : keys) {
+            JsonObject verifyKeyDoc = GsonUtil.makeObj("key", getPublicKeyBase64(key.getId()));
+            verifyKeysDoc.add(key.getId().getAlgorithm() + ":" + key.getId().getSerial(), verifyKeyDoc);
+        }
+
+        JsonObject signDomains = new JsonObject();
+        for (Key key : keys) {
+            Signature sign = sign(doc, key.getId());
+            JsonObject signDomain = GsonUtil.makeObj(sign.getKey().getAlgorithm() + ":" + sign.getKey().getSerial(), sign.getSignature());
+            signDomains.add(domain, signDomain);
+        }
+
         doc.add("signatures", signDomains);
         return doc;
     }

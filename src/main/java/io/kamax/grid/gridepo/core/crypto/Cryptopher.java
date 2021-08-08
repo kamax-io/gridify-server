@@ -21,8 +21,11 @@
 package io.kamax.grid.gridepo.core.crypto;
 
 import com.google.gson.JsonObject;
+import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
+import org.apache.commons.lang.StringUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 
 public interface Cryptopher {
@@ -51,6 +54,22 @@ public interface Cryptopher {
 
     KeyIdentifier getKeyWithPublic(String pubKeyBase64);
 
-    JsonObject getKeyDocument(String domain, KeyIdentifier keyId);
+    JsonObject getKeyDocument(String domain, List<KeyIdentifier> keys);
+
+    default JsonObject getKeyDocument(String domain, KeyIdentifier keyId) {
+        return getKeyDocument(domain, Collections.singletonList(keyId));
+    }
+
+    default JsonObject getKeyDocument(String domain, String keyId) {
+        if (StringUtils.isBlank(keyId)) {
+            return getKeyDocument(domain, getServerSigningKey().getId());
+        }
+
+        try {
+            return getKeyDocument(domain, RegularKeyIdentifier.parse(keyId));
+        } catch (IllegalArgumentException e) {
+            throw new ObjectNotFoundException("Key", keyId);
+        }
+    }
 
 }

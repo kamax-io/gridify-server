@@ -290,7 +290,10 @@ public class Room {
         view = new RoomView(seed.getId(), state);
 
         // Insert the seed event into the stream
-        g.getStore().addToStream(seed.getLid());
+        long streamId = g.getStore().addToStream(seed.getLid());
+        seed.setSid(streamId);
+
+        // Publish onto the signal bus
         ChannelMessageProcessed busEvent = new ChannelMessageProcessed(seed, auth);
         g.getBus().forTopic(SignalTopic.Room).publish(busEvent);
 
@@ -424,7 +427,10 @@ public class Room {
         view = new RoomView(event.getId(), state);
 
         // Insert the seed event into the stream
-        g.getStore().addToStream(event.getLid());
+        long streamId = g.getStore().addToStream(event.getLid());
+        event.setSid(streamId);
+
+        // Publish onto the signal bus
         ChannelMessageProcessed busEvent = new ChannelMessageProcessed(event, currentStateAuth);
         g.getBus().forTopic(SignalTopic.Room).publish(busEvent);
 

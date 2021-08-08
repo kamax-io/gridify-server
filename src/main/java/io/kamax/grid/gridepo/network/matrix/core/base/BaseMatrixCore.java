@@ -23,6 +23,8 @@ package io.kamax.grid.gridepo.network.matrix.core.base;
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.core.crypto.Cryptopher;
 import io.kamax.grid.gridepo.core.event.EventStreamer;
+import io.kamax.grid.gridepo.core.signal.SignalBus;
+import io.kamax.grid.gridepo.core.store.DataStore;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixCore;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixServer;
 import io.kamax.grid.gridepo.network.matrix.core.federation.FederationPusher;
@@ -44,8 +46,18 @@ public class BaseMatrixCore implements MatrixCore {
         this.g = g;
         rMgr = new RoomManager(g);
         hsMgr = new HomeServerManager(g);
-        fedPusher = new FederationPusher();
+        fedPusher = new FederationPusher(this);
         rDir = new RoomDirectory(g, g.getStore(), g.getBus(), hsMgr);
+    }
+
+    @Override
+    public SignalBus bus() {
+        return g.getBus();
+    }
+
+    @Override
+    public DataStore store() {
+        return g.getStore();
     }
 
     @Override

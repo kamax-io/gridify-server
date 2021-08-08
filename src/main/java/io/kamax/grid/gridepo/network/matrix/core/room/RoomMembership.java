@@ -22,6 +22,8 @@ package io.kamax.grid.gridepo.network.matrix.core.room;
 
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.Optional;
+
 public enum RoomMembership {
 
     Knock("knock"),
@@ -53,6 +55,10 @@ public enum RoomMembership {
 
     public boolean match(String id) {
         return StringUtils.equals(this.id, id);
+    }
+
+    public boolean match(Optional<String> idOpt) {
+        return idOpt.map(this::match).orElseGet(() -> RoomMembership.Leave.match(id));
     }
 
 }

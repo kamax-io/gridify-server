@@ -22,7 +22,6 @@ package io.kamax.grid.gridepo.network.matrix.http.handler.home.server;
 
 import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.core.crypto.RegularKeyIdentifier;
 import io.kamax.grid.gridepo.http.handler.Exchange;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixDataServer;
 
@@ -35,7 +34,7 @@ public class KeyServerHandler extends VhostServerApiHandler {
     @Override
     protected void handle(MatrixDataServer vHost, Exchange ex) {
         String keyId = ex.getPathVariable("keyId");
-        JsonObject keyDoc = vHost.getCrypto().getKeyDocument(vHost.getDomain(), RegularKeyIdentifier.parse(keyId));
+        JsonObject keyDoc = vHost.getCrypto().getKeyDocument(vHost.getDomain(), keyId);
         ex.respond(keyDoc);
     }
 
