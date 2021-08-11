@@ -30,8 +30,8 @@ import io.kamax.grid.gridepo.network.grid.http.handler.grid.identity.LoginPostHa
 import io.kamax.grid.gridepo.network.grid.http.handler.grid.identity.UserLookupHandler;
 import io.kamax.grid.gridepo.network.matrix.http.handler.OptionsHandler;
 import io.kamax.grid.gridepo.network.matrix.http.handler.UnrecognizedEndpointHandler;
+import io.kamax.grid.gridepo.network.matrix.http.handler.home.MatrixHomeClientEndpointRegister;
 import io.kamax.grid.gridepo.network.matrix.http.handler.home.MatrixHomeServerEndpointRegister;
-import io.kamax.grid.gridepo.network.matrix.http.handler.home.MatrixhHomeClientEndpointRegister;
 import io.kamax.grid.gridepo.network.matrix.http.handler.identity.HelloHandler;
 import io.kamax.grid.gridepo.util.KxLog;
 import io.kamax.grid.gridepo.util.TlsUtils;
@@ -140,7 +140,7 @@ public class MonolithHttpGridepo {
 
     private void buildMatrixHome(RoutingHandler handler, GridepoConfig.NetworkListener network) {
         if (StringUtils.equals("client", network.getApi())) {
-            MatrixhHomeClientEndpointRegister.apply(g, handler);
+            MatrixHomeClientEndpointRegister.apply(g, handler);
             log.info("Added Matrix client endpoints");
         } else if (StringUtils.equals("server", network.getApi())) {
             MatrixHomeServerEndpointRegister.apply(g, handler);

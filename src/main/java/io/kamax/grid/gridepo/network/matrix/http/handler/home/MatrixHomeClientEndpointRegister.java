@@ -32,7 +32,7 @@ import io.kamax.grid.gridepo.network.matrix.http.handler.home.client.*;
 import io.kamax.grid.gridepo.network.matrix.http.handler.home.client.dummy.UserSearchPublicisedGroups;
 import io.undertow.server.RoutingHandler;
 
-public class MatrixhHomeClientEndpointRegister {
+public class MatrixHomeClientEndpointRegister {
 
     public static void apply(Gridepo g, RoutingHandler handler) {
         EmptyJsonObjectHandler ejuHandler = new EmptyJsonObjectHandler(g, false);
