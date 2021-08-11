@@ -56,6 +56,8 @@ public class UserSession {
 
     private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
+    private static final String commandInLinePrefix = "~g";
+
     private final Gridepo g;
     private final String vHost;
     private final String userId;
@@ -320,6 +322,7 @@ public class UserSession {
     public void inviteToRoom(String roomId, String userId) {
         BareMemberEvent inviteEvent = BareMemberEvent.makeFor(userId, RoomMembership.Invite);
         inviteEvent.setSender(userId);
+        inviteEvent.setRoomId(roomId);
         throw new NotImplementedException();
     }
 
@@ -346,7 +349,7 @@ public class UserSession {
         }
 
         String body = GsonUtil.getStringOrNull(content, "body");
-        return StringUtils.startsWithIgnoreCase(body, "~gridepo");
+        return StringUtils.startsWithIgnoreCase(body, commandInLinePrefix);
     }
 
     private String processCommand(String roomId, String txnId, JsonObject cmdMessage) {
@@ -354,7 +357,7 @@ public class UserSession {
         String uuid = StringUtils.replace(UUID.randomUUID().toString(), "-", "");
 
         // We add the echo back
-        String requestEventId = "!~gridepo~command~" + uuid + "~request";
+        String requestEventId = "!" + commandInLinePrefix + "~command~" + uuid + "~request";
         RoomEvent requestEvent = new RoomEvent();
         requestEvent.setEventId(requestEventId);
         requestEvent.setType(RoomEventType.Message.getId());
@@ -367,12 +370,12 @@ public class UserSession {
 
         // We process the command
         String body = GsonUtil.getStringOrNull(cmdMessage, "body");
-        if (StringUtils.equals("~gridepo", body)) {
-            body = "Available commands:\n\r" +
-                    "\tfederation enable\n\r" +
+        if (StringUtils.equals(commandInLinePrefix, body)) {
+            body = "Available commands:\n" +
+                    "\tfederation enable\n" +
                     "\tfederation disable";
         } else {
-            String subCmb = StringUtils.substringAfter(body, "~gridepo ");
+            String subCmb = StringUtils.substringAfter(body, commandInLinePrefix + " ");
             if (StringUtils.isBlank(subCmb)) {
                 throw new IllegalArgumentException("Invalid command: " + body);
             }
@@ -386,13 +389,23 @@ public class UserSession {
                 g.overMatrix().getFedPusher().setEnabled(false);
                 body = "OK";
             }
+
+            if (StringUtils.equals("state", subCmb)) {
+                RoomState state = g.overMatrix().roomMgr().get(roomId).getView().getState();
+                body = "";
+                for (ChannelEvent ev : state.getEvents()) {
+                    body += GsonUtil.getPrettyForLog(ev.getData()) + "\n";
+                }
+            }
         }
 
 
-        String responseEventId = "!~gridepo~command~" + uuid + "~response";
+        String responseEventId = "!" + commandInLinePrefix + "~command~" + uuid + "~response";
         JsonObject content = new JsonObject();
         content.addProperty("msgtype", "m.text");
-        content.addProperty("body", body);
+        content.addProperty("body", "```\n" + body + "\n```");
+        content.addProperty("format", "org.matrix.custom.html");
+        content.addProperty("formatted_body", "<pre><code>" + body + "</code></pre>");
         RoomEvent rEv = new RoomEvent();
         rEv.setEventId(responseEventId);
         rEv.setType(RoomEventType.Message.getId());
@@ -439,11 +452,25 @@ public class UserSession {
     }
 
     public void addRoomAlias(String roomAlias, String roomId) {
-        throw new NotImplementedException();
+        if (StringUtils.isBlank(roomAlias)) {
+            throw new IllegalArgumentException("Room alias cannot be blank");
+        }
+
+        if (StringUtils.isBlank(roomId)) {
+            throw new IllegalArgumentException("Room ID cannot be blank");
+        }
+
+        // TODO check need to handle this?
+        // Everything is done via subscription to the channel message event in the room directory
     }
 
     public void removeRoomAlias(String roomAlias) {
-        throw new NotImplementedException();
+        if (StringUtils.isBlank(roomAlias)) {
+            throw new IllegalArgumentException("Room alias cannot be blank");
+        }
+
+        // TODO check need to handle this?
+        // Everything is done via subscription to the channel message event in the room directory
     }
 
     public Optional<RoomLookup> lookupRoomAlias(String roomAlias) {

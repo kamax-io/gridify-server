@@ -172,12 +172,12 @@ public class RoomState {
             return this;
         }
 
-        if (!ev.getMeta().isAllowed()) {
+        String scope = GsonUtil.getStringOrNull(ev.getData(), EventKey.StateKey);
+        if (Objects.isNull(scope)) {
             return this;
         }
 
-        String scope = GsonUtil.getStringOrNull(ev.getData(), EventKey.StateKey);
-        if (Objects.isNull(scope)) {
+        if (!ev.getMeta().isAllowed()) {
             return this;
         }
 

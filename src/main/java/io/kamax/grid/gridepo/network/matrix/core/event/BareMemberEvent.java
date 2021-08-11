@@ -47,7 +47,9 @@ public class BareMemberEvent extends BareEvent<BareMemberEvent.Content> {
     }
 
     public static BareMemberEvent join(String userId) {
-        return makeFor(userId, RoomMembership.Join);
+        BareMemberEvent ev = makeFor(userId, RoomMembership.Join);
+        ev.setSender(userId);
+        return ev;
     }
 
     public static BareMemberEvent leave(String userId) {

@@ -25,7 +25,6 @@ import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.http.handler.Exchange;
 import io.kamax.grid.gridepo.network.matrix.core.base.UserSession;
 import io.kamax.grid.gridepo.util.GsonUtil;
-import org.apache.commons.lang3.StringUtils;
 
 public class RoomDirectoryAddHandler extends AuthenticatedClientApiHandler {
 
@@ -36,19 +35,8 @@ public class RoomDirectoryAddHandler extends AuthenticatedClientApiHandler {
     @Override
     protected void handle(UserSession session, Exchange ex) {
         String rAlias = ex.getPathVariable("roomAlias");
-        if (StringUtils.isEmpty(rAlias)) {
-            throw new IllegalArgumentException("Missing Room Alias in path");
-        }
-
-        if (StringUtils.isBlank(rAlias)) {
-            throw new IllegalArgumentException("Room alias cannot be blank");
-        }
-
         JsonObject body = ex.parseJsonObject();
         String rId = GsonUtil.getStringOrThrow(body, "room_id");
-        if (StringUtils.isBlank(rId)) {
-            throw new IllegalArgumentException("Room alias cannot be blank");
-        }
 
         session.addRoomAlias(rAlias, rId);
 
