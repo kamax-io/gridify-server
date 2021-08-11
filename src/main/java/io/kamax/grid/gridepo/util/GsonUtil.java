@@ -54,7 +54,7 @@ public class GsonUtil {
         return new GsonBuilder().disableHtmlEscaping().setFieldNamingPolicy(FieldNamingPolicy.IDENTITY).create();
     }
 
-    public static JsonArray asArray(List<JsonElement> elements) {
+    public static JsonArray asArray(List<? extends JsonElement> elements) {
         JsonArray a = new JsonArray();
         elements.forEach(a::add);
         return a;

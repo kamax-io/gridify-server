@@ -21,7 +21,6 @@
 package io.kamax.grid.gridepo.network.matrix.http.handler.home;
 
 import io.kamax.grid.gridepo.Gridepo;
-import io.kamax.grid.gridepo.network.matrix.http.handler.UnrecognizedEndpointHandler;
 import io.kamax.grid.gridepo.network.matrix.http.handler.home.server.*;
 import io.undertow.server.RoutingHandler;
 
@@ -31,17 +30,16 @@ public class MatrixHomeServerEndpointRegister {
         KeyServerHandler keySrvHandler = new KeyServerHandler(g);
 
         handler
-                .setFallbackHandler(new UnrecognizedEndpointHandler())
-                .setInvalidMethodHandler(new UnrecognizedEndpointHandler())
-
                 .get("/.well-known/matrix/server", new WellKnownHandler(g))
 
                 .get("/_matrix/key/v2/server", keySrvHandler)
                 .get("/_matrix/key/v2/server/{keyId}", keySrvHandler)
 
                 .put("/_matrix/federation/v1/send/{txnId}", new TransactionSendHandler(g))
+
                 .get("/_matrix/federation/v1/make_join/{roomId}/{userId}", new RoomMakeJoinHandler(g))
                 .put("/_matrix/federation/v2/send_join/{roomId}/{userId}", new RoomSendJoinHandler(g))
+                .post("/_matrix/federation/v1/get_missing_events/{roomId}", new RoomMissingEventsHandler(g))
 
                 .get("/_matrix/federation/v1/query/directory", new RoomDirectoryLookupHandler(g))
         ;

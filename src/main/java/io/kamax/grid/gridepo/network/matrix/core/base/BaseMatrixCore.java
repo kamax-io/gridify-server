@@ -20,6 +20,7 @@
 
 package io.kamax.grid.gridepo.network.matrix.core.base;
 
+import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.Gridepo;
 import io.kamax.grid.gridepo.core.crypto.Cryptopher;
 import io.kamax.grid.gridepo.core.event.EventStreamer;
@@ -33,6 +34,11 @@ import io.kamax.grid.gridepo.network.matrix.core.room.RoomDirectory;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomManager;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+
 // FIXME do we need this?
 public class BaseMatrixCore implements MatrixCore {
 
@@ -41,6 +47,7 @@ public class BaseMatrixCore implements MatrixCore {
     private final HomeServerManager hsMgr;
     private final FederationPusher fedPusher;
     private final RoomDirectory rDir;
+    private final Map<String, Queue<JsonObject>> commandResponseQueues;
 
     public BaseMatrixCore(Gridepo g) {
         this.g = g;
@@ -48,6 +55,7 @@ public class BaseMatrixCore implements MatrixCore {
         hsMgr = new HomeServerManager(g);
         fedPusher = new FederationPusher(this);
         rDir = new RoomDirectory(g, g.getStore(), g.getBus(), hsMgr);
+        commandResponseQueues = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -98,6 +106,11 @@ public class BaseMatrixCore implements MatrixCore {
     @Override
     public FederationPusher getFedPusher() {
         return fedPusher;
+    }
+
+    @Override
+    public Queue<JsonObject> getCommandResponseQueue(String userId) {
+        return commandResponseQueues.computeIfAbsent(userId, uId -> new LinkedList<>());
     }
 
 }

@@ -129,7 +129,6 @@ public class Room {
                 .max()
                 .orElse(algo.getBaseDepth()) + 1;
 
-
         event.addProperty(EventKey.RoomId, id);
         event.add(EventKey.AuthEvents, GsonUtil.asArray(authEvents));
         event.add(EventKey.PrevEvents, GsonUtil.asArray(extIds));

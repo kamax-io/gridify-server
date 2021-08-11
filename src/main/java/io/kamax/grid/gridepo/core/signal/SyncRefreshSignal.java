@@ -1,6 +1,6 @@
 /*
  * Gridepo - Grid Data Server
- * Copyright (C) 2019 Kamax Sarl
+ * Copyright (C) 2021 Kamax Sarl
  *
  * https://www.kamax.io/
  *
@@ -20,12 +20,12 @@
 
 package io.kamax.grid.gridepo.core.signal;
 
-public enum SignalTopic {
+public class SyncRefreshSignal extends Signal {
 
-    Main,
-    Channel,
-    Room,
-    SyncRefresh,
-    Store
+    private static final SyncRefreshSignal instance = new SyncRefreshSignal();
+
+    public static SyncRefreshSignal get() {
+        return instance;
+    }
 
 }

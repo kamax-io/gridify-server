@@ -21,8 +21,18 @@
 package io.kamax.grid.gridepo.network.matrix.http.json;
 
 import com.google.gson.JsonObject;
+import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
+import io.kamax.grid.gridepo.util.GsonUtil;
+
+import java.util.Objects;
 
 public class RoomEvent {
+
+    public static RoomEvent make(ChannelEvent ev) {
+        RoomEvent rEv = GsonUtil.fromJson(ev.getData(), RoomEvent.class);
+        rEv.setEventId(ev.getId());
+        return rEv;
+    }
 
     private transient String channelId;
 
@@ -35,6 +45,10 @@ public class RoomEvent {
     private JsonObject unsigned;
     private Object content;
     private JsonObject grid;
+
+    public JsonObject toJson() {
+        return GsonUtil.makeObj(this);
+    }
 
     public String getChannelId() {
         return channelId;
@@ -93,6 +107,10 @@ public class RoomEvent {
     }
 
     public JsonObject getUnsigned() {
+        if (Objects.isNull(unsigned)) {
+            unsigned = new JsonObject();
+        }
+
         return unsigned;
     }
 

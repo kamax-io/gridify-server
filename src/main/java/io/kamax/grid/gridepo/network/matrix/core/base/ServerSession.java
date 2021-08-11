@@ -21,8 +21,10 @@
 package io.kamax.grid.gridepo.network.matrix.core.base;
 
 import com.google.gson.JsonObject;
+import io.kamax.grid.gridepo.core.channel.event.ChannelEvent;
 import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.exception.ForbiddenException;
+import io.kamax.grid.gridepo.exception.ObjectNotFoundException;
 import io.kamax.grid.gridepo.network.matrix.core.IncompatibleRoomVersionException;
 import io.kamax.grid.gridepo.network.matrix.core.MatrixCore;
 import io.kamax.grid.gridepo.network.matrix.core.event.BareGenericEvent;
@@ -114,6 +116,37 @@ public class ServerSession {
         }
 
         return auths;
+    }
+
+    public List<ChannelEvent> getEventsTree(String roomId, List<String> latestEventIds, List<String> earliestEventIds, long limit, long minDepth) {
+        Optional<Room> rOpt = core.roomMgr().find(roomId);
+        if (!rOpt.isPresent()) {
+            throw new ObjectNotFoundException("Room", roomId);
+        }
+        Room r = rOpt.get();
+
+        List<String> toRetrieve = new ArrayList<>(latestEventIds);
+        List<ChannelEvent> events = new ArrayList<>();
+        while (events.size() < limit && !toRetrieve.isEmpty()) {
+            String eventId = toRetrieve.remove(0);
+            r.findEvent(eventId).ifPresent(ev -> {
+                if (earliestEventIds.contains(ev.getId())) {
+                    return;
+                }
+
+                events.add(ev);
+                if (events.size() == limit) {
+                    toRetrieve.clear();
+                    return;
+                }
+
+                if (ev.asMatrix().getDepth() > minDepth) {
+                    toRetrieve.addAll(ev.asMatrix().getPreviousEvents());
+                }
+            });
+        }
+
+        return events;
     }
 
 }

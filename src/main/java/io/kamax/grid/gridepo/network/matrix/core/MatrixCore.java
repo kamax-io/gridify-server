@@ -20,6 +20,7 @@
 
 package io.kamax.grid.gridepo.network.matrix.core;
 
+import com.google.gson.JsonObject;
 import io.kamax.grid.gridepo.core.crypto.Cryptopher;
 import io.kamax.grid.gridepo.core.event.EventStreamer;
 import io.kamax.grid.gridepo.core.signal.SignalBus;
@@ -28,6 +29,8 @@ import io.kamax.grid.gridepo.network.matrix.core.federation.FederationPusher;
 import io.kamax.grid.gridepo.network.matrix.core.federation.HomeServerManager;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomDirectory;
 import io.kamax.grid.gridepo.network.matrix.core.room.RoomManager;
+
+import java.util.Queue;
 
 public interface MatrixCore {
 
@@ -50,5 +53,7 @@ public interface MatrixCore {
     EventStreamer getStreamer();
 
     FederationPusher getFedPusher();
+
+    Queue<JsonObject> getCommandResponseQueue(String userId);
 
 }

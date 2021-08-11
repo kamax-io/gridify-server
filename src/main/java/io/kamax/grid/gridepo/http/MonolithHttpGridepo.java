@@ -29,6 +29,7 @@ import io.kamax.grid.gridepo.network.grid.http.handler.grid.identity.AuthHandler
 import io.kamax.grid.gridepo.network.grid.http.handler.grid.identity.LoginPostHandler;
 import io.kamax.grid.gridepo.network.grid.http.handler.grid.identity.UserLookupHandler;
 import io.kamax.grid.gridepo.network.matrix.http.handler.OptionsHandler;
+import io.kamax.grid.gridepo.network.matrix.http.handler.UnrecognizedEndpointHandler;
 import io.kamax.grid.gridepo.network.matrix.http.handler.home.MatrixHomeServerEndpointRegister;
 import io.kamax.grid.gridepo.network.matrix.http.handler.home.MatrixhHomeClientEndpointRegister;
 import io.kamax.grid.gridepo.network.matrix.http.handler.identity.HelloHandler;
@@ -147,6 +148,8 @@ public class MonolithHttpGridepo {
         } else {
             throw new RuntimeException(network.getApi() + " is not a supported Matrix Home API");
         }
+
+        handler.setFallbackHandler(new UnrecognizedEndpointHandler()).setInvalidMethodHandler(new UnrecognizedEndpointHandler());
     }
 
     private void buildMatrixIdentity(RoutingHandler handler, GridepoConfig.NetworkListener network) {

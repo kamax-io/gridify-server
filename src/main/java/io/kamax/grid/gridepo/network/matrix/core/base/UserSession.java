@@ -33,12 +33,10 @@ import io.kamax.grid.gridepo.core.channel.state.ChannelEventAuthorization;
 import io.kamax.grid.gridepo.core.signal.AppStopping;
 import io.kamax.grid.gridepo.core.signal.ChannelMessageProcessed;
 import io.kamax.grid.gridepo.core.signal.SignalTopic;
+import io.kamax.grid.gridepo.core.signal.SyncRefreshSignal;
 import io.kamax.grid.gridepo.exception.ForbiddenException;
 import io.kamax.grid.gridepo.exception.NotImplementedException;
-import io.kamax.grid.gridepo.network.matrix.core.event.BareEvent;
-import io.kamax.grid.gridepo.network.matrix.core.event.BareGenericEvent;
-import io.kamax.grid.gridepo.network.matrix.core.event.BareMemberEvent;
-import io.kamax.grid.gridepo.network.matrix.core.event.RoomEventType;
+import io.kamax.grid.gridepo.network.matrix.core.event.*;
 import io.kamax.grid.gridepo.network.matrix.core.room.*;
 import io.kamax.grid.gridepo.network.matrix.http.json.RoomEvent;
 import io.kamax.grid.gridepo.network.matrix.http.json.SyncResponse;
@@ -80,6 +78,14 @@ public class UserSession {
 
     @Handler
     private void signal(ChannelMessageProcessed signal) {
+        log.debug("Got {} signal, interrupting sync wait", signal.getClass().getSimpleName());
+        synchronized (this) {
+            notifyAll();
+        }
+    }
+
+    @Handler
+    private void signal(SyncRefreshSignal signal) {
         log.debug("Got {} signal, interrupting sync wait", signal.getClass().getSimpleName());
         synchronized (this) {
             notifyAll();
@@ -197,6 +203,8 @@ public class UserSession {
     }
 
     public SyncResponse sync(SyncOptions options) {
+
+
         if (StringUtils.isEmpty(options.getToken())) {
             return syncInitial();
         }
@@ -206,12 +214,31 @@ public class UserSession {
 
             g.getBus().getMain().subscribe(this);
             g.getBus().forTopic(SignalTopic.Room).subscribe(this);
+            g.getBus().forTopic(SignalTopic.SyncRefresh).subscribe(this);
 
             SyncData data = new SyncData();
             data.setPosition(options.getToken());
 
             long sid = Long.parseLong(options.getToken());
             do {
+                if (!g.overMatrix().getCommandResponseQueue(userId).isEmpty()) {
+                    log.info("Emptying command response buffer");
+                    Map<String, SyncResponse.Room> roomCache = new HashMap<>();
+                    SyncResponse syncResponse = new SyncResponse();
+                    syncResponse.nextBatch = options.getToken();
+                    for (JsonObject response : g.overMatrix().getCommandResponseQueue(userId)) {
+                        String rId = GsonUtil.getStringOrThrow(response, EventKey.RoomId);
+                        SyncResponse.Room room = roomCache.computeIfAbsent(rId, id -> new SyncResponse.Room());
+                        RoomEvent rEv = GsonUtil.fromJson(response, RoomEvent.class);
+                        room.timeline.events.add(rEv);
+                    }
+                    log.info("Command response buffer cleared");
+                    g.overMatrix().getCommandResponseQueue(userId).clear();
+
+                    syncResponse.rooms.join.putAll(roomCache);
+                    return syncResponse;
+                }
+
                 if (g.isStopping()) {
                     break;
                 }
@@ -269,6 +296,7 @@ public class UserSession {
         } finally {
             g.getBus().getMain().unsubscribe(this);
             g.getBus().forTopic(SignalTopic.Room).unsubscribe(this);
+            g.getBus().forTopic(SignalTopic.SyncRefresh).unsubscribe(this);
         }
     }
 
@@ -296,17 +324,93 @@ public class UserSession {
     }
 
     public String send(String roomId, BareEvent<?> event) {
-        event.setOrigin(vHost);
         event.setSender(userId);
 
         ChannelEventAuthorization auth = g.overMatrix().roomMgr().get(roomId).offer(vHost, event);
         if (!auth.isAuthorized()) {
             throw new ForbiddenException(auth.getReason());
         }
+
         return auth.getEventId();
     }
 
+    private boolean isCommand(String type, JsonObject content) {
+        // FIXME do better!
+        if (!RoomEventType.Message.match(type)) {
+            return false;
+        }
+
+        String msgType = GsonUtil.getStringOrNull(content, "msgtype");
+        if (!StringUtils.equals("m.text", msgType)) {
+            return false;
+        }
+
+        String body = GsonUtil.getStringOrNull(content, "body");
+        return StringUtils.startsWithIgnoreCase(body, "~gridepo");
+    }
+
+    private String processCommand(String roomId, String txnId, JsonObject cmdMessage) {
+        // FIXME do better!
+        String uuid = StringUtils.replace(UUID.randomUUID().toString(), "-", "");
+
+        // We add the echo back
+        String requestEventId = "!~gridepo~command~" + uuid + "~request";
+        RoomEvent requestEvent = new RoomEvent();
+        requestEvent.setEventId(requestEventId);
+        requestEvent.setType(RoomEventType.Message.getId());
+        requestEvent.setRoomId(roomId);
+        requestEvent.setSender(userId);
+        requestEvent.setOriginServerTs(Instant.now().toEpochMilli());
+        requestEvent.setContent(cmdMessage);
+        requestEvent.getUnsigned().addProperty("transaction_id", txnId);
+        g.overMatrix().getCommandResponseQueue(userId).add(requestEvent.toJson());
+
+        // We process the command
+        String body = GsonUtil.getStringOrNull(cmdMessage, "body");
+        if (StringUtils.equals("~gridepo", body)) {
+            body = "Available commands:\n\r" +
+                    "\tfederation enable\n\r" +
+                    "\tfederation disable";
+        } else {
+            String subCmb = StringUtils.substringAfter(body, "~gridepo ");
+            if (StringUtils.isBlank(subCmb)) {
+                throw new IllegalArgumentException("Invalid command: " + body);
+            }
+
+            if (StringUtils.equals("federation enable", subCmb)) {
+                g.overMatrix().getFedPusher().setEnabled(true);
+                body = "OK";
+            }
+
+            if (StringUtils.equals("federation disable", subCmb)) {
+                g.overMatrix().getFedPusher().setEnabled(false);
+                body = "OK";
+            }
+        }
+
+
+        String responseEventId = "!~gridepo~command~" + uuid + "~response";
+        JsonObject content = new JsonObject();
+        content.addProperty("msgtype", "m.text");
+        content.addProperty("body", body);
+        RoomEvent rEv = new RoomEvent();
+        rEv.setEventId(responseEventId);
+        rEv.setType(RoomEventType.Message.getId());
+        rEv.setRoomId(roomId);
+        rEv.setSender("@:" + vHost);
+        rEv.setOriginServerTs(Instant.now().toEpochMilli());
+        rEv.setContent(content);
+        g.overMatrix().getCommandResponseQueue(userId).add(GsonUtil.makeObj(rEv));
+        g.overMatrix().bus().forTopic(SignalTopic.SyncRefresh).publish(SyncRefreshSignal.get());
+        log.info("Processed command {}", uuid);
+        return requestEventId;
+    }
+
     public String send(String roomId, String type, String txnId, JsonObject content) {
+        if (isCommand(type, content)) {
+            return processCommand(roomId, txnId, content);
+        }
+
         BareGenericEvent event = new BareGenericEvent();
         event.setType(type);
         event.getUnsigned().addProperty("transaction_id", txnId);

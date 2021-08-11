@@ -25,10 +25,7 @@ import com.google.gson.annotations.SerializedName;
 import io.kamax.grid.gridepo.util.GsonUtil;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public abstract class BareEvent<T> {
 
@@ -57,7 +54,7 @@ public abstract class BareEvent<T> {
     @SerializedName(EventKey.Hashes)
     private Map<String, String> hashes = new HashMap<>();
     @SerializedName(EventKey.Unsigned)
-    private transient JsonObject unsigned = new JsonObject();
+    private JsonObject unsigned;
     @SerializedName(EventKey.Content)
     private T content;
 
@@ -170,6 +167,10 @@ public abstract class BareEvent<T> {
     }
 
     public JsonObject getUnsigned() {
+        if (Objects.isNull(unsigned)) {
+            unsigned = new JsonObject();
+        }
+
         return unsigned;
     }
 

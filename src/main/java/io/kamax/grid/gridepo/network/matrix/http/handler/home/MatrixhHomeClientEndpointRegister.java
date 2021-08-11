@@ -28,8 +28,8 @@ import io.kamax.grid.gridepo.network.matrix.http.HomeClientAPIr0;
 import io.kamax.grid.gridepo.network.matrix.http.handler.EmptyJsonObjectHandler;
 import io.kamax.grid.gridepo.network.matrix.http.handler.JsonObjectHandler;
 import io.kamax.grid.gridepo.network.matrix.http.handler.OptionsHandler;
-import io.kamax.grid.gridepo.network.matrix.http.handler.UnrecognizedEndpointHandler;
 import io.kamax.grid.gridepo.network.matrix.http.handler.home.client.*;
+import io.kamax.grid.gridepo.network.matrix.http.handler.home.client.dummy.UserSearchPublicisedGroups;
 import io.undertow.server.RoutingHandler;
 
 public class MatrixhHomeClientEndpointRegister {
@@ -40,9 +40,6 @@ public class MatrixhHomeClientEndpointRegister {
         SendRoomStateHandler srsHandler = new SendRoomStateHandler(g);
 
         handler
-                .setFallbackHandler(new UnrecognizedEndpointHandler())
-                .setInvalidMethodHandler(new UnrecognizedEndpointHandler())
-
                 // CORS support
                 .add("OPTIONS", HomeClientAPI.Base + "/**", new OptionsHandler())
 
@@ -78,6 +75,9 @@ public class MatrixhHomeClientEndpointRegister {
                 .put(HomeClientAPIr0.Room + "/state/{type}/{stateKey}", srsHandler)
                 .get(HomeClientAPIr0.Room + "/messages", new RoomMessagesHandler(g))
 
+                // Room state endpoints
+                .get(HomeClientAPIr0.Room + "/members", new RoomMembersHandler(g))
+
                 // Room Directory endpoints
                 .get(HomeClientAPIr0.Directory + "/room/{roomAlias}", new RoomAliasLookupHandler(g))
                 .put(HomeClientAPIr0.Directory + "/room/{roomAlias}", new RoomDirectoryAddHandler(g))
@@ -100,8 +100,9 @@ public class MatrixhHomeClientEndpointRegister {
 
                 .post(HomeClientAPIr0.Base + "/keys/query", ejaHandler)
                 .post(HomeClientAPIr0.Base + "/keys/upload", ejaHandler)
-                .get(HomeClientAPI.Base + "/unstable/room_keys/version", new UnrecognizedEndpointHandler())
 
+                // Not in the spec, but requested by some clients
+                .post(HomeClientAPIr0.Base + "/publicised_groups", new UserSearchPublicisedGroups(g))
         ;
     }
 

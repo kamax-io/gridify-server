@@ -28,6 +28,7 @@ import io.kamax.grid.gridepo.util.GsonUtil;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class RoomState {
 
@@ -151,6 +152,13 @@ public class RoomState {
 
     public RoomMembership getMembership(String userId) {
         return findMembership(userId).orElse(RoomMembership.Leave);
+    }
+
+    public List<ChannelEvent> getMembers() {
+        return data.values().stream()
+                .filter(ev -> RoomEventType.Member.match(ev.getData()))
+                //.filter(ev -> RoomMembership.Join.match(BareMemberEvent.computeMembership(ev.getData())))
+                .collect(Collectors.toList());
     }
 
     public Optional<RoomJoinRule> getJoinRule() {
