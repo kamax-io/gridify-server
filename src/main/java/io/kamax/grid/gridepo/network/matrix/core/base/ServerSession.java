@@ -33,6 +33,7 @@ import io.kamax.grid.gridepo.network.matrix.core.room.*;
 import io.kamax.grid.gridepo.network.matrix.http.json.ServerTransaction;
 import io.kamax.grid.gridepo.util.GsonUtil;
 import io.kamax.grid.gridepo.util.KxLog;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 
 import java.lang.invoke.MethodHandles;
@@ -85,7 +86,7 @@ public class ServerSession {
         }
 
         RoomState state = r.getFullState(auth.getEventId());
-        List<JsonObject> authChain = r.getAuthChain(state);
+        List<JsonObject> authChain = r.getAuthChainJson(state);
 
         RoomJoinSeed seed = new RoomJoinSeed();
         seed.setDomain(vHost);
@@ -147,6 +148,66 @@ public class ServerSession {
         }
 
         return events;
+    }
+
+    public List<ChannelEvent> backfill(String roomId, Collection<String> eventIds, long limit) {
+        if (limit < 1) {
+            throw new IllegalArgumentException("Limit must be greater than 0");
+        }
+
+        Optional<Room> rOpt = core.roomMgr().find(roomId);
+        if (!rOpt.isPresent()) {
+            throw new ObjectNotFoundException("Room", roomId);
+        }
+        Room r = rOpt.get();
+
+        Queue<String> toRetrieve = new LinkedList<>(eventIds);
+        Set<String> eventIDs = new HashSet<>();
+        List<ChannelEvent> events = new ArrayList<>();
+        while (!toRetrieve.isEmpty()) {
+            Optional<ChannelEvent> evOpt = r.findEvent(toRetrieve.remove());
+            if (!evOpt.isPresent()) {
+                continue;
+            }
+
+            ChannelEvent ev = evOpt.get();
+            // FIXME this should not be needed, find out why we get duplicate events
+            if (!eventIDs.contains(ev.getId())) {
+                events.add(ev);
+                eventIDs.add(ev.getId());
+            }
+
+            if (events.size() >= limit) {
+                break;
+            }
+
+            toRetrieve.addAll(ev.asMatrix().getPreviousEvents());
+        }
+
+        return events;
+    }
+
+    public EventState getState(String roomId, String eventId) {
+        if (StringUtils.isBlank(roomId)) {
+            throw new IllegalArgumentException("Room ID not provided");
+        }
+
+        if (StringUtils.isBlank(eventId)) {
+            throw new IllegalArgumentException("Event ID not provided");
+        }
+
+        Room r = core.roomMgr().get(roomId);
+        RoomState state = core.roomMgr().get(roomId).getFullState(eventId);
+        List<ChannelEvent> authChain = r.getAuthChain(state);
+
+        EventState evState = new EventState();
+        evState.setAuthChain(authChain);
+        evState.setState(state.getEvents());
+        return evState;
+    }
+
+    public EventStateIds getStateIds(String roomId, String eventId) {
+        return EventStateIds.getIds(getState(roomId, eventId));
     }
 
 }

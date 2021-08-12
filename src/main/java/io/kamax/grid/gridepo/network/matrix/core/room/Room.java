@@ -186,9 +186,14 @@ public class Room {
         return new RoomState(dao);
     }
 
-    public List<JsonObject> getAuthChain(RoomState state) {
+    public List<ChannelEvent> getAuthChain(RoomState state) {
         // FIXME incomplete!
-        List<JsonObject> authChain = state.getEvents().stream().map(ChannelEvent::getData).collect(Collectors.toList());
+        return state.getEvents();
+    }
+
+    public List<JsonObject> getAuthChainJson(RoomState state) {
+        // FIXME incomplete!
+        List<JsonObject> authChain = getAuthChain(state).stream().map(ChannelEvent::getData).collect(Collectors.toList());
         return algo.orderTopologically(authChain);
     }
 
