@@ -20,13 +20,26 @@
 
 package io.kamax.grid.gridepo.util;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class KxLog {
 
+    private static final String g = "io.kamax.grid.gridepo";
+    private static final String gNetMx = g + ".network.matrix";
+
     public static Logger make(Class<?> c) {
-        return LoggerFactory.getLogger(c.getCanonicalName().replace("io.kamax.grid.gridepo", "g"));
+        String name = c.getCanonicalName();
+        if (name.startsWith(gNetMx)) {
+            name = StringUtils.replace(name, gNetMx, "[g.net.mx]", 1);
+        }
+
+        if (name.startsWith(g)) {
+            name = StringUtils.replace(name, g, "[g]", 1);
+        }
+
+        return LoggerFactory.getLogger(name);
     }
 
 }
