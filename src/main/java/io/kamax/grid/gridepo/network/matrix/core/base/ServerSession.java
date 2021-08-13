@@ -210,4 +210,16 @@ public class ServerSession {
         return EventStateIds.getIds(getState(roomId, eventId));
     }
 
+    public JsonObject getEvent(String eventId) {
+        List<ChannelEvent> events = core.store().findEvents("matrix", eventId);
+
+        for (ChannelEvent event : events) {
+            if (event.getMeta().isPresent()) {
+                return event.getData();
+            }
+        }
+
+        throw new ObjectNotFoundException("Event", eventId);
+    }
+
 }

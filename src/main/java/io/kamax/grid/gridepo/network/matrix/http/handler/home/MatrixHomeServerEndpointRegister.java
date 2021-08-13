@@ -39,6 +39,7 @@ public class MatrixHomeServerEndpointRegister {
 
                 .get("/_matrix/federation/v1/make_join/{roomId}/{userId}", new RoomMakeJoinHandler(g))
                 .put("/_matrix/federation/v2/send_join/{roomId}/{userId}", new RoomSendJoinHandler(g))
+                .get("/_matrix/federation/v1/event/{eventId}", new EventGetHandler(g))
                 .post("/_matrix/federation/v1/get_missing_events/{roomId}", new RoomMissingEventsHandler(g))
                 .get("/_matrix/federation/v1/backfill/{roomId}", new RoomBackfillHandler(g))
                 .get("/_matrix/federation/v1/state_ids/{roomId}", new RoomEventStateIdsHandler(g))

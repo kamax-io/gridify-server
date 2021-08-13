@@ -290,6 +290,13 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
+    public List<ChannelEvent> findEvents(String network, String eventId) {
+        return chEvents.values().stream()
+                .filter(ev -> StringUtils.equals(ev.getId(), eventId))
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public Optional<ChannelEvent> findEvent(long eSid) {
         return Optional.ofNullable(chEvents.get(eSid)).map(ev -> {
             ev.setSid(evLidToSid.get(ev.getLid()));

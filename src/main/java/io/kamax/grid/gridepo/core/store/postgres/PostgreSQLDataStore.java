@@ -523,6 +523,21 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
     }
 
     @Override
+    public List<ChannelEvent> findEvents(String network, String eventId) {
+        return withStmtFunction("SELECT * FROM channel_events ce JOIN channels c ON c.lid = ce.channel_lid WHERE c.network = ? AND ce.id = ?", stmt -> {
+            stmt.setString(1, network);
+            stmt.setString(2, eventId);
+            try (ResultSet rSet = stmt.executeQuery()) {
+                List<ChannelEvent> events = new ArrayList<>();
+                while (rSet.next()) {
+                    events.add(make(rSet));
+                }
+                return events;
+            }
+        });
+    }
+
+    @Override
     public Optional<ChannelEvent> findEvent(long eLid) {
         return withStmtFunction("SELECT * FROM channel_events ce LEFT JOIN channel_event_stream ces ON ces.lid = ce.lid WHERE ce.lid = ?", stmt -> {
             stmt.setLong(1, eLid);

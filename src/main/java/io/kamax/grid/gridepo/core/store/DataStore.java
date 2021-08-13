@@ -82,6 +82,8 @@ public interface DataStore {
 
     Optional<ChannelEvent> findEvent(String cId, String eId);
 
+    List<ChannelEvent> findEvents(String network, String eventId);
+
     Optional<ChannelEvent> findEvent(long eSid);
 
     void updateBackwardExtremities(long cLid, List<Long> toRemove, List<Long> toAdd);
