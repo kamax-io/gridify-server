@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Stop running instance if needed
-systemctl stop gridepo.service
+systemctl stop gridify.service
 
 # Disable service if exists
-systemctl disable gridepo.service
+systemctl disable gridify.service
 
 # remove symlink
-rm /usr/bin/gridepo
+rm /usr/bin/gridifydd

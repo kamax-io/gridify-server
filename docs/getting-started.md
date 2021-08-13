@@ -18,7 +18,7 @@ Minimum requirements:
 - DNS domain, sub-domain dedicated to the API strongly recommended
 - Valid CA certificate, Let's Encrypt recommended
 
-If you do not use Docker, you will also need Java 8 on the host running Gridepo
+If you do not use Docker, you will also need Java 8 on the host running the Gridify Server
 
 The following guide will assume you will use a sub-domain and use `grid.example.org` in the configuration snippets.
 Change this value to your liking. If you cannot use a sub-domain, an example of how to use `example.org` is available at
@@ -36,30 +36,34 @@ Follow [these steps](database.md).
 ## Configure
 > **NOTE**: Please view the install instruction for your platform, as this step might be optional or already handled for you.
 
-If you haven't created a configuration file yet, copy `gridepo.sample.yaml` to where the configuration file is stored given
-your installation method and edit to your needs.
+If you haven't created a configuration file yet, copy `gridify.sample.yaml` to where the configuration file is stored
+given your installation method and edit to your needs.
 
 The following items must be at least configured:
+
 - `domain`: Will represent the DNS/IP domain used to identify your server and build various IDs.
-- `storage.data`: File storage location for Gridepo, including cryptographic files (signing keys, etc.).
+- `storage.data`: File storage location for the Gridify Server, including cryptographic files (signing keys, etc.).
 - `storage.database.connection`: JDBC URL pointing to your PostgreSQL database.
 
-**NOTE:** The Grid protocol will separate IDs from domains/addresses, unlike Matrix. To ease the transition, Gridepo
-will use the provided domain (either DNS or IP, with or without port) to auto-discover and connect.
+**NOTE:** The Grid protocol will separate IDs from domains/addresses, unlike Matrix. To ease the transition, the Gridify
+Server will use the provided domain (either DNS or IP, with or without port) to auto-discover and connect.
 
 You can either set the direct, final destination or use [Well-known discovery](federation.md#discovery) if you want to
-keep familiar IDs and Aliases or use an arbitrary path for gridepo, like `/_grid/` to keep it all contained.
+keep familiar IDs and Aliases or use an arbitrary path for gridify, like `/_grid/` to keep it all contained.
 
 ## Integrate
-Gridepo provides two set of APIs:
+
+the Gridify Server provides two set of APIs:
 - Grid data federation endpoints, under `/data/`
 - Matrix Client endpoint, under `/_matrix/client/`
 
-Both will need to be passed to Gridepo. If you are already using Matrix, we recommend using a dedicated sub-domain as to
-not interfere with your current installation.
+Both will need to be passed to the Gridify Server. If you are already using Matrix, we recommend using a dedicated
+sub-domain as to not interfere with your current installation.
 
 ### Reverse proxy
-If you do not want to use a reverse proxy and instead make Gridepo serve HTTPS directly, skip this section and read the
+
+If you do not want to use a reverse proxy and instead make the Gridify Server serve HTTPS directly, skip this section
+and read the
 [Network section of the Configuration document](configure.md#listeners).
 
 #### nginx

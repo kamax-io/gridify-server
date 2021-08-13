@@ -12,8 +12,8 @@ Discovery is a 3 steps process:
 Format is:
 ```json
 {
-    "data": {
-        "server": "<URL without final slash where Gridepo is located>"
-    }
+  "data": {
+    "server": "<URL without final slash where the Gridify Server is located>"
+  }
 }
 ```

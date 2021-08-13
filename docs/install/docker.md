@@ -1,16 +1,17 @@
 # Docker
 ## Standalone image
-Repository is at [Docker Hub](https://hub.docker.com/r/kamax/gridepo/tags).
+Repository is at [Docker Hub](https://hub.docker.com/r/kamax/gridify-server/tags).
 ### Fetch
 Pull the latest stable image:
 ```bash
-docker pull kamax/gridepo
+docker pull kamax/gridify-server
 ```
 
 ### Configure
-On first run, simply using `GRID_DOMAIN` as an environment variable will create a default config for you.
-You can also provide a configuration file named `gridepo.yaml` in the volume mapped to `/etc/gridepo` before starting your
-container using the [sample configuration file](../../gridepo.sample.yaml).
+
+On first run, simply using `GRID_DOMAIN` as an environment variable will create a default config for you. You can also
+provide a configuration file named `gridify.yaml` in the volume mapped to `/etc/gridify` before starting your container
+using the [sample configuration file](../../config.sample.yaml).
 
 ### Run
 Use the following command after adapting to your needs:
@@ -18,19 +19,20 @@ Use the following command after adapting to your needs:
 - The volumes host paths
 
 ```bash
-docker run --rm -e GRID_DOMAIN=example.org -v /data/gridepo/etc:/etc/gridepo -v /data/gridepo/var:/var/gridepo -p 9009:9009 -t kamax/gridepo
+docker run --rm -e GRID_DOMAIN=example.org -v /data/gridify/etc:/etc/gridify -v /data/gridify/var:/var/gridify -p 9009:9009 -t kamax/gridify
 ```
 
-For more info, including the list of possible tags, see [the public repository](https://hub.docker.com/r/kamax/gridepo/)
+For more info, including the list of possible tags, see [the public repository](https://hub.docker.com/r/kamax/gridify/)
 
 ## Docker-compose
 Use the following definition:
+
 ```yaml
 version: '2'
 
 volumes:
-  gridepo-etc:
-  gridepo-var:
+  gridify-etc:
+  gridify-var:
   db:
 services:
   db:
@@ -38,20 +40,21 @@ services:
     restart: always
     volumes:
       - db:/var/lib/postgresql/data
-  gridepo:
-    image: 'kamax/gridepo:latest'
+  gridify:
+    image: 'kamax/gridify:latest'
     restart: always
     depends_on:
       - 'db'
     volumes:
-      - gridepo-etc:/etc/gridepo
-      - gridepo-var:/var/gridepo
+      - gridify-etc:/etc/gridify
+      - gridify-var:/var/gridify
     ports:
       - 9009:9009
     environment:
       - GRID_DOMAIN=
 ```
-Set the `GRID_DOMAIN` environment variable in the Gridepo container.
+
+Set the `GRID_DOMAIN` environment variable in the the Gridify Server container.
 
 You can then start the stack with the usual command:
 ```bash

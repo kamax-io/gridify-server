@@ -1,7 +1,7 @@
-Package: gridepo
+Package: gridify-server
 Maintainer: Kamax.io <foss@kamax.io>
-Homepage: https://gitlab.com/kamax-io/grid/gridepo
-Description: Data Server for The Grid protocol
+Homepage: https://gitlab.com/kamax-io/gridify/server
+Description: Unified communications server for Matrix and Grid protocol
 Architecture: all
 Section: net
 Priority: optional

@@ -27,4 +27,4 @@ if [[ -n "$CONF_FILE_PATH" ]] && [ ! -f "$CONF_FILE_PATH" ]; then
     echo
 fi
 
-exec java -jar /app/gridepo.jar -c /etc/gridepo/gridepo.yaml
+exec java -jar /app/gridifyd.jar -c /etc/gridify/server/config.yaml

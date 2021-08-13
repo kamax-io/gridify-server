@@ -1,5 +1,5 @@
 /*
- * Gridepo - Grid Data Server
+ * Gridify Server
  * Copyright (C) 2019 Kamax Sarl
  *
  * https://www.kamax.io/
@@ -23,7 +23,7 @@ import java.util.regex.Pattern
 String buildVersion() {
     def versionPattern = Pattern.compile("v(\\d+\\.)?(\\d+\\.)?(\\d+)(-.*)?")
 
-    String version = System.getenv('GRIDEPO_BUILD_VERSION')
+    String version = System.getenv('GRIDIFY_BUILD_VERSION')
     if (version == null || version.size() == 0) {
         version = sourceVersion()
     }
@@ -31,7 +31,7 @@ String buildVersion() {
 }
 
 String sourceVersion() {
-    String version = System.getenv('GRIDEPO_SOURCE_VERSION')
+    String version = System.getenv('GRIDIFY_SOURCE_VERSION')
     if (version != null && version.size() > 0) {
         return version
     }
@@ -61,13 +61,13 @@ apply plugin: 'application'
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'idea'
 
-group = 'io.kamax.grid'
+group = 'io.kamax.gridify'
 version = buildVersion()
-mainClassName = 'io.kamax.grid.gridepo.MonolithHttpGridepoApplication'
+mainClassName = 'io.kamax.gridify.server.MonolithHttpGridifyServerApplication'
 sourceCompatibility = '1.8'
 targetCompatibility = '1.8'
 
-def appName = 'gridepo'
+def appName = 'gridifyd'
 def appPublisher = 'kamax'
 
 def confFileName = "${appName}.sample.yaml"

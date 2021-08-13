@@ -1,0 +1,10 @@
+[Unit]
+Description=gridify-server
+After=syslog.target
+
+[Service]
+User=gridify
+ExecStart=/usr/bin/gridifyd -c /etc/gridify/server/config.yaml
+
+[Install]
+WantedBy=multi-user.target

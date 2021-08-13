@@ -1,0 +1,2 @@
+io.kamax.gridify.server.core.identity.store.memory.MemoryIdentityStoreSupplier
+io.kamax.gridify.server.core.identity.store.ldap.LdapIdentityStoreSupplier
