@@ -27,7 +27,7 @@ public class RegularKeyIdentifier extends GenericKeyIdentifier {
     public static RegularKeyIdentifier parse(String keyId) {
         String[] parts = StringUtils.split(keyId, ":");
         if (parts.length != 2) {
-            throw new IllegalArgumentException("Invalid key ID");
+            throw new IllegalArgumentException("Invalid key ID " + keyId);
         }
 
         return new RegularKeyIdentifier(parts[0], parts[1]);

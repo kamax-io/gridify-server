@@ -18,33 +18,47 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.gridify.server.network.grid.core;
+package io.kamax.gridify.server.core.store;
 
 import com.google.gson.JsonObject;
-import io.kamax.gridify.server.core.UserSession;
-import io.kamax.gridify.server.core.auth.UIAuthSession;
-import io.kamax.gridify.server.core.identity.User;
 
-public interface GridDataServerClient {
+public class DomainDao {
 
-    String getDomain();
+    private Long localId;
+    private String network;
+    private String domain;
+    private JsonObject properties;
 
-    User register(String username, String password);
+    public Long getLocalId() {
+        return localId;
+    }
 
-    User login(UIAuthSession auth, String stage);
+    public void setLocalId(long localId) {
+        this.localId = localId;
+    }
 
-    boolean isLocal(UserID uId);
+    public String getNetwork() {
+        return network;
+    }
 
-    UserSession withToken(String token);
+    public void setNetwork(String network) {
+        this.network = network;
+    }
 
-    UIAuthSession login();
+    public String getDomain() {
+        return domain;
+    }
 
-    UserSession login(User user);
+    public void setDomain(String domain) {
+        this.domain = domain;
+    }
 
-    UserSession login(UIAuthSession session);
+    public JsonObject getProperties() {
+        return properties;
+    }
 
-    UserSession login(JsonObject doc);
-
-    UserSession login(String username, String password);
+    public void setProperties(JsonObject properties) {
+        this.properties = properties;
+    }
 
 }

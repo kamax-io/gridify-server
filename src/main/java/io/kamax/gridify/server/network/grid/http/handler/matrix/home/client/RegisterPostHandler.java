@@ -29,6 +29,7 @@ import io.kamax.gridify.server.exception.ForbiddenException;
 import io.kamax.gridify.server.exception.NotImplementedException;
 import io.kamax.gridify.server.http.handler.Exchange;
 import io.kamax.gridify.server.network.grid.ProtocolEventMapper;
+import io.kamax.gridify.server.network.grid.core.GridDataServerClient;
 import io.kamax.gridify.server.network.matrix.http.handler.home.client.ClientApiHandler;
 import io.kamax.gridify.server.util.GsonUtil;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -61,6 +62,8 @@ public class RegisterPostHandler extends ClientApiHandler {
 
     @Override
     protected void handle(Exchange exchange) {
+        GridDataServerClient gClient = g.overGrid().vHost(exchange.requireHost()).forData().asClient();
+
         if (!g.getIdentity().canRegister()) {
             throw new ForbiddenException("Registrations are not allowed");
         }
@@ -99,8 +102,8 @@ public class RegisterPostHandler extends ClientApiHandler {
         String password = GsonUtil.getStringOrNull(req, "password");
 
 
-        User user = g.register(username, password);
-        UserSession session = g.overGrid().forData().asClient().login(user);
+        User user = g.overGrid().vHost(exchange.requireHost()).forData().asClient().register(username, password);
+        UserSession session = gClient.login(user);
 
         JsonObject reply = new JsonObject();
         reply.addProperty("user_id", ProtocolEventMapper.forUserIdFromGridToMatrix(session.getUser().getGridId().full()));
@@ -109,7 +112,7 @@ public class RegisterPostHandler extends ClientApiHandler {
 
         // Required for some clients who fail if not present, even if not mandatory and deprecated.
         // https://github.com/Nheko-Reborn/mtxclient/issues/7
-        reply.addProperty("home_server", g.getDomain());
+        reply.addProperty("home_server", gClient.getDomain());
 
         exchange.respondJson(reply);
     }

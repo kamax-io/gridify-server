@@ -30,6 +30,7 @@ import io.kamax.gridify.server.core.signal.SignalTopic;
 import io.kamax.gridify.server.core.store.ChannelStateDao;
 import io.kamax.gridify.server.exception.ForbiddenException;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
+import io.kamax.gridify.server.network.matrix.core.crypto.MatrixDomainCryptopher;
 import io.kamax.gridify.server.network.matrix.core.event.BareEvent;
 import io.kamax.gridify.server.network.matrix.core.event.BareGenericEvent;
 import io.kamax.gridify.server.network.matrix.core.event.BareMemberEvent;
@@ -141,8 +142,8 @@ public class Room {
         return event;
     }
 
-    public JsonObject finalize(String origin, JsonObject event) {
-        JsonObject signedOff = algo.signEvent(event, g.getCrypto(), origin);
+    public JsonObject finalize(MatrixDomainCryptopher crypto, JsonObject event) {
+        JsonObject signedOff = algo.signEvent(event, crypto);
         String eventId = algo.getEventId(signedOff);
         log.debug("Signed off Event {}: {}", eventId, GsonUtil.getPrettyForLog(signedOff));
         return signedOff;
@@ -360,7 +361,7 @@ public class Room {
 
                 Stack<ChannelEvent> eventsToOffer = new Stack<>();
                 for (HomeServerLink remoteHs : servers) {
-                    if (g.isOrigin(remoteHs.getDomain())) {
+                    if (g.overMatrix().isLocal(remoteHs.getDomain())) {
                         continue;
                     }
 
@@ -470,10 +471,10 @@ public class Room {
         return auths;
     }
 
-    public ChannelEventAuthorization offer(String origin, BareEvent<?> event) {
-        event.setOrigin(origin);
+    public ChannelEventAuthorization offer(BareEvent<?> event, MatrixDomainCryptopher crypto) {
+        event.setOrigin(crypto.getDomain());
         event.setTimestamp(Instant.now().toEpochMilli());
-        return offer(origin, origin, finalize(origin, populate(event.getJson())));
+        return offer(crypto.getDomain(), crypto.getDomain(), finalize(crypto, populate(event.getJson())));
     }
 
     public RoomView getView() {

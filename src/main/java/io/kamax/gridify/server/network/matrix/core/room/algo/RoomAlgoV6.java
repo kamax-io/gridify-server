@@ -25,8 +25,8 @@ import io.kamax.gridify.server.codec.CanonicalJson;
 import io.kamax.gridify.server.codec.GridHash;
 import io.kamax.gridify.server.core.channel.event.ChannelEvent;
 import io.kamax.gridify.server.core.channel.state.ChannelEventAuthorization;
-import io.kamax.gridify.server.core.crypto.Cryptopher;
 import io.kamax.gridify.server.network.matrix.core.crypto.CryptoJson;
+import io.kamax.gridify.server.network.matrix.core.crypto.MatrixDomainCryptopher;
 import io.kamax.gridify.server.network.matrix.core.event.*;
 import io.kamax.gridify.server.network.matrix.core.federation.RoomJoinTemplate;
 import io.kamax.gridify.server.network.matrix.core.room.RoomJoinRule;
@@ -607,14 +607,14 @@ public class RoomAlgoV6 implements RoomAlgo {
     }
 
     @Override
-    public JsonObject signEvent(JsonObject event, Cryptopher crypto, String domain) {
+    public JsonObject signEvent(JsonObject event, MatrixDomainCryptopher crypto) {
         // We compute the content hash
         JsonObject hashesDoc = computeContentHashObject(event);
         // We redact the event to its minimal state
         JsonObject docMinimal = redact(event);
         // We add the content hash
         docMinimal.add(EventKey.Hashes, hashesDoc);
-        JsonObject docMinimalSigned = CryptoJson.signUnsafe(docMinimal, crypto, domain);
+        JsonObject docMinimalSigned = CryptoJson.signUnsafe(docMinimal, crypto);
 
         // We copy the signatures from the minimal signed event onto the full event
         event.add(EventKey.Hashes, hashesDoc);

@@ -36,7 +36,7 @@ public class DoApproveInvite extends GridApiHandler {
 
     @Override
     protected void handle(Exchange exchange) {
-        ServerSession s = g.overGrid().forData().asServer(exchange.authenticate());
+        ServerSession s = g.overGrid().vHost(exchange.requireHost()).forData().asServer(exchange.authenticate());
         InviteApprovalRequest request = exchange.parseJsonTo(InviteApprovalRequest.class);
         exchange.respond(s.approveInvite(request));
     }

@@ -1,3 +1,10 @@
+CREATE TABLE config
+(
+    name text NOT NULL,
+    data jsonb,
+    CONSTRAINT config_name_uq UNIQUE (name)
+);
+
 CREATE TABLE entities
 (
     lid bigserial NOT NULL,
@@ -20,6 +27,15 @@ CREATE TABLE entity_routes
     revoked boolean NOT NULL DEFAULT false,
     eventSet jsonb NOT NULL,
     eventUnset jsonb DEFAULT NULL
+);
+
+CREATE TABLE domains
+(
+    lid bigserial NOT NULL,
+    network text NOT NULL,
+    host text NOT NULL,
+    properties jsonb,
+    CONSTRAINT d_ids UNIQUE (network, host)
 );
 
 CREATE TABLE channels

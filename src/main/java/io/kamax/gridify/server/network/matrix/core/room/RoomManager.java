@@ -28,6 +28,7 @@ import io.kamax.gridify.server.exception.EntityUnreachableException;
 import io.kamax.gridify.server.exception.ForbiddenException;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
 import io.kamax.gridify.server.network.matrix.core.UserID;
+import io.kamax.gridify.server.network.matrix.core.crypto.MatrixDomainCryptopher;
 import io.kamax.gridify.server.network.matrix.core.event.BareCreateEvent;
 import io.kamax.gridify.server.network.matrix.core.event.BareEvent;
 import io.kamax.gridify.server.network.matrix.core.event.BareMemberEvent;
@@ -63,22 +64,22 @@ public class RoomManager {
         return RoomAlgos.getVersions();
     }
 
-    public Room createRoom(String domain, String creator, JsonObject options) {
+    public Room createRoom(MatrixDomainCryptopher crypto, String creator, JsonObject options) {
         String algoVersion = GsonUtil.getStringOrNull(options, "room_version");
         if (StringUtils.isBlank(algoVersion)) {
             algoVersion = g.getConfig().getRoom().getCreation().getVersion();
         }
         RoomAlgo algo = RoomAlgos.get(algoVersion);
 
-        ChannelDao dao = new ChannelDao("matrix", algo.generateRoomId(domain), algo.getVersion());
+        ChannelDao dao = new ChannelDao("matrix", algo.generateRoomId(crypto.getDomain()), algo.getVersion());
         dao = g.getStore().saveChannel(dao);
 
         Room r = new Room(g, dao.getSid(), dao.getId(), algo);
         rooms.put(r.getId(), r);
 
-        List<BareEvent<?>> createEvents = algo.getCreationEvents(domain, creator, options);
+        List<BareEvent<?>> createEvents = algo.getCreationEvents(crypto.getDomain(), creator, options);
         createEvents.stream()
-                .map(ev -> r.offer(domain, ev))
+                .map(ev -> r.offer(ev, crypto))
                 .filter(auth -> !auth.isAuthorized())
                 .findAny().ifPresent(auth -> {
                     throw new RuntimeException("Room creation failed because of initial event " + auth.getEventId() + " being rejected: " + auth.getReason());
@@ -155,7 +156,7 @@ public class RoomManager {
                 // We use the correct algo to build a complete join event
                 RoomAlgo algo = RoomAlgos.get(joinTemplate.getRoomVersion());
                 JsonObject joinEvent = algo.buildJoinEvent(joinTemplate);
-                JsonObject joinEventSignedOff = algo.signEvent(joinEvent, g.overMatrix().crypto(), user.network());
+                JsonObject joinEventSignedOff = algo.signEvent(joinEvent, g.overMatrix().vHost(user.network()).asServer().getCrypto());
 
                 // We offer the signed off event to the resident server
                 RoomJoinSeed response = srv.sendJoin(lookup.getId(), user.full(), joinEventSignedOff);
@@ -195,7 +196,7 @@ public class RoomManager {
         throw new ForbiddenException("Could not find a resident server to perform join with");
     }
 
-    public Room joinLocal(Room r, String userIdRaw) {
+    public Room joinLocal(Room r, String userIdRaw, MatrixDomainCryptopher crypto) {
         UserID uId = UserID.parse(userIdRaw);
         BareMemberEvent bEv = new BareMemberEvent();
         bEv.setOrigin(uId.network());
@@ -203,7 +204,7 @@ public class RoomManager {
         bEv.setSender(userIdRaw);
         bEv.setStateKey(userIdRaw);
         bEv.getContent().setMembership(RoomMembership.Join);
-        ChannelEventAuthorization auth = r.offer(uId.network(), bEv);
+        ChannelEventAuthorization auth = r.offer(bEv, crypto);
         if (!auth.isAuthorized()) {
             throw new ForbiddenException(auth.getReason());
         }
@@ -211,17 +212,17 @@ public class RoomManager {
         return r;
     }
 
-    public Room joinLocal(String userIdRaw, String roomId) {
-        return joinLocal(get(roomId), userIdRaw);
+    public Room joinLocal(String userIdRaw, String roomId, MatrixDomainCryptopher crypto) {
+        return joinLocal(get(roomId), userIdRaw, crypto);
     }
 
-    public Room join(String userIdRaw, String roomIdOrAlias) {
+    public Room join(String userIdRaw, String roomIdOrAlias, MatrixDomainCryptopher crypto) {
         log.debug("Performing join of user {} in room address {}", userIdRaw, roomIdOrAlias);
 
         UserID uId = UserID.parse(userIdRaw);
         if (!RoomAlias.sigillMatch(roomIdOrAlias)) {
             log.debug("Room address is an ID, no resolution needed");
-            return joinLocal(userIdRaw, roomIdOrAlias);
+            return joinLocal(userIdRaw, roomIdOrAlias, crypto);
         }
 
         log.debug("Room address is an alias, resolving");
@@ -236,7 +237,7 @@ public class RoomManager {
             Room r = cOpt.get();
             if (r.getView().isServerJoined(uId.network())) {
                 log.debug("Server is already in the room, performing self-join");
-                return joinLocal(r, userIdRaw);
+                return joinLocal(r, userIdRaw, crypto);
             } else {
                 return joinRemote(uId, data);
             }

@@ -20,6 +20,15 @@
 
 package io.kamax.gridify.server.network.matrix.core;
 
+import com.google.gson.JsonObject;
+import io.kamax.gridify.server.core.event.EventStreamer;
+import io.kamax.gridify.server.core.signal.SignalBus;
+import io.kamax.gridify.server.network.matrix.core.crypto.MatrixDomainCryptopher;
+import io.kamax.gridify.server.network.matrix.core.federation.FederationPusher;
+import io.kamax.gridify.server.network.matrix.core.room.RoomDirectory;
+import io.kamax.gridify.server.network.matrix.core.room.RoomManager;
+
+import java.util.Queue;
 import java.util.Set;
 
 public interface MatrixServer {
@@ -28,10 +37,24 @@ public interface MatrixServer {
 
     Set<String> getRoomVersions();
 
-    MatrixIdentityServer forIdentity();
+    MatrixDomainCryptopher crypto();
+
+    RoomManager roomMgr();
+
+    RoomDirectory roomDir();
+
+    EventStreamer getStreamer();
+
+    SignalBus getBus();
+
+    FederationPusher getFedPusher();
+
+    Queue<JsonObject> getCommandResponseQueue(String userId);
 
     MatrixDataClient asClient();
 
     MatrixDataServer asServer();
+
+    boolean isStopping();
 
 }

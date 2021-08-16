@@ -23,7 +23,7 @@ import java.util.regex.Pattern
 String buildVersion() {
     def versionPattern = Pattern.compile("v(\\d+\\.)?(\\d+\\.)?(\\d+)(-.*)?")
 
-    String version = System.getenv('GRIDIFY_BUILD_VERSION')
+    String version = System.getenv('GRIDIFYD_BUILD_VERSION')
     if (version == null || version.size() == 0) {
         version = sourceVersion()
     }
@@ -31,7 +31,7 @@ String buildVersion() {
 }
 
 String sourceVersion() {
-    String version = System.getenv('GRIDIFY_SOURCE_VERSION')
+    String version = System.getenv('GRIDIFYD_SOURCE_VERSION')
     if (version != null && version.size() > 0) {
         return version
     }
@@ -255,15 +255,15 @@ task debBuild(dependsOn: build) {
     }
 }
 
-task dockerBuild(type: Exec, dependsOn: build) {
+task dockerBuild(type: Exec) {
     commandLine 'docker', 'build', '-t', dockerImageTag, dockerBuildPath
 
     doFirst {
         copy {
             from "${projectDir}/src/main/docker/Dockerfile",
                     "${projectDir}/src/main/docker/start.sh",
-                    "${projectDir}/src/main/script/${appName}",
-                    "${project.buildDir}/libs/${appName}.jar"
+                    "${project.buildDir}/libs/${appName}.jar",
+                    "${project.buildDir}/scriptsShadow/${appName}"
             into dockerBuildPath
         }
     }

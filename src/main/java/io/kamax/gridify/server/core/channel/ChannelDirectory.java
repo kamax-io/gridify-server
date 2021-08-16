@@ -30,6 +30,7 @@ import io.kamax.gridify.server.core.signal.SignalTopic;
 import io.kamax.gridify.server.core.store.DataStore;
 import io.kamax.gridify.server.network.grid.core.ChannelAlias;
 import io.kamax.gridify.server.network.grid.core.ChannelID;
+import io.kamax.gridify.server.network.grid.core.GridDataServer;
 import io.kamax.gridify.server.network.grid.core.ServerID;
 import io.kamax.gridify.server.util.GsonUtil;
 import io.kamax.gridify.server.util.KxLog;
@@ -47,6 +48,10 @@ public class ChannelDirectory {
     private final ServerID origin;
     private final DataStore store;
     private final DataServerManager srvMgr;
+
+    public ChannelDirectory(GridDataServer g) {
+        this(g.server().getOrigin(), g.server().gridify().getStore(), g.server().gridify().getBus(), g.dataServerMgr());
+    }
 
     public ChannelDirectory(ServerID origin, DataStore store, SignalBus bus, DataServerManager srvMgr) {
         this.origin = origin;

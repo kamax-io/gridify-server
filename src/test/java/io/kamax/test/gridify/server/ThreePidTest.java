@@ -28,16 +28,20 @@ import static org.junit.Assert.*;
 
 public class ThreePidTest {
 
-    private static String medium1 = "email";
-    private static String address1 = "john.doe@example.org";
-    private static String medium2 = "msisdn";
-    private static String address2 = "123456789";
+    private static final String medium1 = "email";
+    private static final String address1 = "john.doe@example.org";
+    private static final String medium2 = "msisdn";
+    private static final String address2 = "123456789";
 
     @Test
     public void basic() {
         ThreePid tp1 = new GenericThreePid(medium1, address1);
         assertTrue(medium1.contentEquals(tp1.getMedium()));
         assertTrue(address1.contentEquals(tp1.getAddress()));
+
+        ThreePid tp2 = new GenericThreePid(medium2, address2);
+        assertTrue(medium2.contentEquals(tp2.getMedium()));
+        assertTrue(address2.contentEquals(tp2.getAddress()));
     }
 
     @Test

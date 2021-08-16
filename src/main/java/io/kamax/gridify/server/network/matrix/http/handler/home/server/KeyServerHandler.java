@@ -34,7 +34,7 @@ public class KeyServerHandler extends VhostServerApiHandler {
     @Override
     protected void handle(MatrixDataServer vHost, Exchange ex) {
         String keyId = ex.getPathVariable("keyId");
-        JsonObject keyDoc = vHost.getCrypto().getKeyDocument(vHost.getDomain(), keyId);
+        JsonObject keyDoc = vHost.getKeyDocument(keyId);
         ex.respond(keyDoc);
     }
 

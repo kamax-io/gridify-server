@@ -4,12 +4,6 @@ if [[ -n "$CONF_FILE_PATH" ]] && [ ! -f "$CONF_FILE_PATH" ]; then
     echo "Generating config file $CONF_FILE_PATH"
     touch "CONF_FILE_PATH"
 
-    if [[ -n "$GRID_DOMAIN" ]]; then
-        echo "Setting Grid domain to $GRID_DOMAIN"
-        echo "domain: '$GRID_DOMAIN'" >> "$CONF_FILE_PATH"
-        echo >> "$CONF_FILE_PATH"
-    fi
-
     if [[ -n "$DATA_DIR_PATH" ]]; then
         echo "Setting Data path to $DATA_DIR_PATH"
         echo "storage:" >> "$CONF_FILE_PATH"
@@ -24,7 +18,8 @@ if [[ -n "$CONF_FILE_PATH" ]] && [ ! -f "$CONF_FILE_PATH" ]; then
         echo >> "$CONF_FILE_PATH"
     fi
 
+    echo "Configuration done!"
     echo
 fi
 
-exec java -jar /app/gridifyd.jar -c /etc/gridify/server/config.yaml
+exec java -jar /app/lib/gridifyd.jar -c "$CONF_FILE_PATH"

@@ -21,7 +21,6 @@
 package io.kamax.gridify.server.core;
 
 import com.google.gson.JsonObject;
-import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.core.channel.Channel;
 import io.kamax.gridify.server.core.channel.ChannelLookup;
 import io.kamax.gridify.server.core.channel.ChannelMembership;
@@ -49,16 +48,16 @@ public class ServerSession {
 
     private static final Logger log = KxLog.make(ServerSession.class);
 
-    private final GridifyServer g;
+    private final GridServer gSrv;
     private final ServerID id;
 
-    public ServerSession(GridifyServer g, ServerID id) {
-        this.g = g;
-        this.id = id;
+    public ServerSession(GridServer gSrv) {
+        this.gSrv = gSrv;
+        this.id = gSrv.getOrigin();
     }
 
     private void markActive() {
-        g.getServers().get(id).setActive();
+        gSrv.forData().dataServerMgr().get(gSrv.getOrigin()).setActive();
     }
 
     public JsonObject approveInvite(InviteApprovalRequest request) {
@@ -74,15 +73,15 @@ public class ServerSession {
             throw new IllegalArgumentException("Illegal membership action " + mEv.getContent().getAction());
         }
 
-        if (!g.isLocal(UserID.parse(mEv.getScope()))) {
+        if (!gSrv.isLocal(UserID.parse(mEv.getScope()))) {
             throw new IllegalArgumentException("Not authoritative for user " + mEv.getScope());
         }
 
         String chId = mEv.getChannelId();
         log.info("Approving invite from {} for {} in {}", mEv.getSender(), mEv.getScope(), chId);
 
-        JsonObject invEv = g.getEventService().sign(request.getObject());
-        Optional<Channel> chOpt = g.getChannelManager().find(ChannelID.parse(chId));
+        JsonObject invEv = gSrv.evSvc().sign(request.getObject());
+        Optional<Channel> chOpt = gSrv.forData().getChannelManager().find(ChannelID.parse(chId));
 
         if (chOpt.isPresent()) {
             ChannelEventAuthorization auth = chOpt.get().offer(id.full(), invEv);
@@ -90,7 +89,7 @@ public class ServerSession {
                 throw new ForbiddenException("Invite is not allowed given state");
             }
         } else {
-            g.getChannelManager().create(id.full(), invEv, request.getContext().getState());
+            gSrv.forData().getChannelManager().create(id.full(), invEv, request.getContext().getState());
         }
 
         log.info("Invite is approved");
@@ -106,23 +105,23 @@ public class ServerSession {
         ChannelID cId = ChannelID.parse(ev.getChannelId());
 
         // We make sure we know the channel itself
-        Channel c = g.getChannelManager().find(cId).orElseThrow(() -> new ObjectNotFoundException("Channel", cId));
+        Channel c = gSrv.forData().getChannelManager().find(cId).orElseThrow(() -> new ObjectNotFoundException("Channel", cId));
 
         // We make sure we are in the channel in the first place, else it's not possible for us to approve the join
-        if (!c.getView().isJoined(g.getOrigin())) {
+        if (!c.getView().isJoined(gSrv.getOrigin())) {
             throw new EntityUnreachableException();
         }
 
-        ev.setOrigin(id.full());
+        ev.setOrigin(gSrv.getOrigin().full());
         JsonObject evBuilt = c.makeEvent(ev);
-        JsonObject evFinal = g.getEventService().finalize(evBuilt);
+        JsonObject evFinal = gSrv.evSvc().finalize(evBuilt);
         ChannelEventAuthorization auth = c.authorize(evFinal);
         if (!auth.isAuthorized()) {
             throw new ForbiddenException("Approval to join channel " + cId + ": " + auth.getReason());
         }
 
         // We actively check that the server can be reached before approving a join
-        if (!g.getServers().get(id).ping(g.getOrigin().full())) {
+        if (!gSrv.forData().dataServerMgr().get(id).ping(gSrv.getOrigin().full())) {
             throw new ForbiddenException("Your origin " + id + " is not reachable");
         }
 
@@ -156,7 +155,7 @@ public class ServerSession {
 
         evChanMap.forEach((cId, objs) -> {
             log.info("Injecting {} event(s) in room {}", objs.size(), cId);
-            results.addAll(g.getChannelManager().get(cId).offer(id.full(), objs));
+            results.addAll(gSrv.forData().getChannelManager().get(cId).offer(id.full(), objs));
         });
 
         return results;
@@ -165,17 +164,17 @@ public class ServerSession {
     public Optional<ChannelLookup> lookup(ChannelAlias chAlias) {
         markActive();
 
-        if (!StringUtils.equalsIgnoreCase(g.getDomain(), chAlias.network())) {
+        if (!StringUtils.equalsIgnoreCase(gSrv.getDomain(), chAlias.network())) {
             return Optional.empty();
         }
 
-        Optional<ChannelLookup> lookup = g.getChannelDirectory().lookup(chAlias, false);
+        Optional<ChannelLookup> lookup = gSrv.forData().getChannelDirectory().lookup(chAlias, false);
         if (!lookup.isPresent()) {
             return Optional.empty();
         }
 
         ChannelID cId = lookup.get().getId();
-        Optional<Channel> ch = g.getChannelManager().find(cId);
+        Optional<Channel> ch = gSrv.forData().getChannelManager().find(cId);
         if (!ch.isPresent()) {
             return Optional.empty();
         }
@@ -190,7 +189,7 @@ public class ServerSession {
     public Optional<ChannelEvent> getEvent(ChannelID cId, EventID eId) {
         markActive();
 
-        return g.getStore().findEvent(cId.full(), eId.full());
+        return gSrv.store().findEvent(cId.full(), eId.full());
     }
 
 }

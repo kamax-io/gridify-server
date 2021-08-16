@@ -21,7 +21,6 @@
 package io.kamax.gridify.server.core;
 
 import com.google.gson.JsonObject;
-import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.core.channel.*;
 import io.kamax.gridify.server.core.channel.event.BareAliasEvent;
 import io.kamax.gridify.server.core.channel.event.BareMemberEvent;
@@ -35,15 +34,13 @@ import io.kamax.gridify.server.core.signal.ChannelMessageProcessed;
 import io.kamax.gridify.server.core.signal.SignalTopic;
 import io.kamax.gridify.server.exception.ForbiddenException;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
-import io.kamax.gridify.server.network.grid.core.ChannelAlias;
-import io.kamax.gridify.server.network.grid.core.ChannelID;
-import io.kamax.gridify.server.network.grid.core.EventID;
-import io.kamax.gridify.server.network.grid.core.UserID;
+import io.kamax.gridify.server.network.grid.core.*;
 import io.kamax.gridify.server.util.KxLog;
 import net.engio.mbassy.listener.Handler;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
+import java.lang.invoke.MethodHandles;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
@@ -53,22 +50,22 @@ import java.util.stream.Collectors;
 
 public class UserSession {
 
-    private static final Logger log = KxLog.make(UserSession.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
-    private GridifyServer g;
+    private GridDataServer g;
     private String network;
     private User user;
     private UserID uId;
     private String accessToken;
 
-    public UserSession(GridifyServer g, String network, User user) {
+    public UserSession(GridDataServer g, String network, User user) {
         this.g = g;
         this.network = network;
         this.user = user;
         this.uId = UserID.parse(user.getNetworkId(network));
     }
 
-    public UserSession(GridifyServer g, String network, User user, String accessToken) {
+    public UserSession(GridDataServer g, String network, User user, String accessToken) {
         this(g, network, user);
         this.accessToken = accessToken;
     }
@@ -110,7 +107,7 @@ public class UserSession {
     public SyncData syncInitial() {
         SyncData data = new SyncData();
         data.setInitial(true);
-        data.setPosition(Long.toString(g.getStreamer().getPosition()));
+        data.setPosition(Long.toString(g.server().gridify().getStreamer().getPosition()));
 
         // FIXME this doesn't scale - we only care about channels where the user has ever been into
         // so we shouldn't even deal with those. Need to make storage smarter in this case
@@ -119,7 +116,7 @@ public class UserSession {
             // FIXME we need to get the HEAD event of the timeline instead
             Channel c = g.getChannelManager().get(cId);
             String evID = c.getView().getHead();
-            data.getEvents().add(g.getStore().getEvent(cId.full(), evID));
+            data.getEvents().add(g.server().gridify().getStore().getEvent(cId.full(), evID));
         });
 
         return data;
@@ -127,8 +124,8 @@ public class UserSession {
 
     public SyncData sync(SyncOptions options) {
         try {
-            g.getBus().getMain().subscribe(this);
-            g.getBus().forTopic(SignalTopic.Channel).subscribe(this);
+            g.server().gridify().getBus().getMain().subscribe(this);
+            g.server().gridify().getBus().forTopic(SignalTopic.Channel).subscribe(this);
 
             Instant end = Instant.now().plusMillis(options.getTimeout());
 
@@ -141,11 +138,11 @@ public class UserSession {
 
             long sid = Long.parseLong(options.getToken());
             do {
-                if (g.isStopping()) {
+                if (g.server().gridify().isStopping()) {
                     break;
                 }
 
-                List<ChannelEvent> events = g.getStreamer().next(sid);
+                List<ChannelEvent> events = g.server().gridify().getStreamer().next(sid);
                 if (!events.isEmpty()) {
                     long position = events.stream()
                             .filter(ev -> ev.getMeta().isProcessed())
@@ -193,8 +190,8 @@ public class UserSession {
 
             return data;
         } finally {
-            g.getBus().getMain().unsubscribe(this);
-            g.getBus().forTopic(SignalTopic.Channel).unsubscribe(this);
+            g.server().gridify().getBus().getMain().unsubscribe(this);
+            g.server().gridify().getBus().forTopic(SignalTopic.Channel).unsubscribe(this);
         }
     }
 
@@ -250,7 +247,7 @@ public class UserSession {
         aliases.add(alias);
 
         BareAliasEvent ev = new BareAliasEvent();
-        ev.setScope(g.getOrigin().full());
+        ev.setScope(g.server().getOrigin().full());
         ev.setSender(user.getNetworkId(network));
         ev.getContent().setAliases(aliases);
 
@@ -269,7 +266,7 @@ public class UserSession {
         aliases.remove(alias);
 
         BareAliasEvent ev = new BareAliasEvent();
-        ev.setScope(g.getOrigin().full());
+        ev.setScope(g.server().getOrigin().full());
         ev.setSender(user.getNetworkId(network));
         ev.getContent().setAliases(aliases);
 

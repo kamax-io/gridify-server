@@ -29,12 +29,14 @@ import io.kamax.gridify.server.core.channel.state.ChannelState;
 import io.kamax.gridify.server.core.identity.GenericThreePid;
 import io.kamax.gridify.server.core.identity.ThreePid;
 import io.kamax.gridify.server.core.store.DataStore;
+import io.kamax.gridify.server.core.store.DomainDao;
 import io.kamax.gridify.server.core.store.UserDao;
 import io.kamax.gridify.server.network.grid.core.ChannelID;
 import io.kamax.gridify.server.network.grid.core.EventID;
 import io.kamax.gridify.server.network.grid.core.UserID;
 import io.kamax.gridify.server.util.GsonUtil;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -63,6 +65,32 @@ public abstract class DataStoreTest {
     @Before
     public void before() {
         store = getNewStore();
+    }
+
+    @Test
+    public void addDomain() {
+        DomainDao dao = new DomainDao();
+        dao.setNetwork("blah");
+        dao.setDomain("example.org");
+        dao.setProperties(GsonUtil.makeObj("hello", "world"));
+
+        DomainDao newDao = store.saveDomain(dao);
+        assertNotNull(dao.getLocalId());
+        assertTrue(StringUtils.equals(dao.getNetwork(), newDao.getNetwork()));
+        assertTrue(StringUtils.equals(dao.getDomain(), newDao.getDomain()));
+        assertNotNull(dao.getProperties());
+        assertTrue(dao.getProperties().has("hello"));
+        assertTrue(StringUtils.equals("world", dao.getProperties().get("hello").getAsString()));
+
+        List<DomainDao> daos = store.listDomains("blah");
+        assertEquals(1, daos.size());
+        newDao = daos.get(0);
+        assertNotNull(dao.getLocalId());
+        assertTrue(StringUtils.equals(dao.getNetwork(), newDao.getNetwork()));
+        assertTrue(StringUtils.equals(dao.getDomain(), newDao.getDomain()));
+        assertNotNull(dao.getProperties());
+        assertTrue(dao.getProperties().has("hello"));
+        assertTrue(StringUtils.equals("world", dao.getProperties().get("hello").getAsString()));
     }
 
     @Test

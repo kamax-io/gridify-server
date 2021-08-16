@@ -38,9 +38,7 @@ import io.kamax.gridify.server.core.store.DataStore;
 import io.kamax.gridify.server.exception.EntityUnreachableException;
 import io.kamax.gridify.server.exception.ForbiddenException;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
-import io.kamax.gridify.server.network.grid.core.ChannelAlias;
-import io.kamax.gridify.server.network.grid.core.ChannelID;
-import io.kamax.gridify.server.network.grid.core.UserID;
+import io.kamax.gridify.server.network.grid.core.*;
 import io.kamax.gridify.server.util.GsonUtil;
 import io.kamax.gridify.server.util.KxLog;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -61,6 +59,7 @@ public class ChannelManager {
     private static final Logger log = KxLog.make(ChannelManager.class);
 
     private GridifyServer g;
+    private GridDataServer gSrv;
     private SignalBus bus;
     private EventService evSvc;
     private DataStore store;
@@ -68,7 +67,16 @@ public class ChannelManager {
 
     private Map<ChannelID, Channel> channels = new ConcurrentHashMap<>();
 
-    public ChannelManager(GridifyServer g, SignalBus bus, EventService evSvc, DataStore store, DataServerManager dsmgr) {
+    public ChannelManager(GridDataServer g) {
+        this(g.server().gridify(), g.server().evSvc(), g.dataServerMgr());
+        this.gSrv = g;
+    }
+
+    private ChannelManager(GridifyServer g, EventService evSvc, DataServerManager dsMgr) {
+        this(g, g.getBus(), evSvc, g.getStore(), dsMgr);
+    }
+
+    private ChannelManager(GridifyServer g, SignalBus bus, EventService evSvc, DataStore store, DataServerManager dsmgr) {
         this.g = g;
         this.bus = bus;
         this.evSvc = evSvc;
@@ -77,8 +85,8 @@ public class ChannelManager {
     }
 
     private Channel fromDao(ChannelDao dao) {
-        // FIXME get version from somewhere
-        return new Channel(dao, g.getOrigin(), ChannelAlgos.get(null), evSvc, store, dsmgr, bus);
+        // FIXME get proper domain and version from somewhere
+        return new Channel(dao, ServerID.fromDns(g.getServerId()), ChannelAlgos.get(null), evSvc, store, dsmgr, bus);
     }
 
     private ChannelID generateId() {
@@ -87,7 +95,7 @@ public class ChannelManager {
         byte[] tsBytes = buffer.array();
         String localpart = new String(tsBytes, StandardCharsets.UTF_8) + RandomStringUtils.randomAlphanumeric(4);
 
-        return ChannelID.from(localpart, g.getDomain());
+        return ChannelID.from(localpart, "");
     }
 
     public Channel createChannel(String creator) {
@@ -100,10 +108,10 @@ public class ChannelManager {
         ChannelDao dao = new ChannelDao("grid", generateId().full(), "0");
         dao = store.saveChannel(dao); // FIXME rollback creation in case of failure, or use transaction
 
-        Channel ch = new Channel(dao, g.getOrigin(), algo, evSvc, store, dsmgr, bus);
+        Channel ch = new Channel(dao, gSrv.server().getOrigin(), algo, evSvc, store, dsmgr, bus);
         channels.put(ch.getId(), ch);
 
-        List<BareEvent> createEvents = algo.getCreationEvents(creator);
+        List<BareEvent<?>> createEvents = algo.getCreationEvents(creator);
         createEvents.stream()
                 .map(ch::makeEvent)
                 .map(ev -> evSvc.finalize(ev))
@@ -123,7 +131,7 @@ public class ChannelManager {
 
         BareCreateEvent createEv = GsonUtil.fromJson(stateJson.get(0), BareCreateEvent.class);
         String version = StringUtils.defaultIfEmpty(createEv.getContent().getVersion(), ChannelAlgoV0_0.Version);
-        Channel ch = new Channel(dao, g.getOrigin(), ChannelAlgos.get(version), evSvc, store, dsmgr, bus);
+        Channel ch = new Channel(dao, gSrv.server().getOrigin(), ChannelAlgos.get(version), evSvc, store, dsmgr, bus);
 
         ChannelEventAuthorization auth = ch.inject(from, seedJson, stateJson);
         if (!auth.isAuthorized()) {
@@ -156,7 +164,7 @@ public class ChannelManager {
     }
 
     public Channel join(ChannelAlias cAlias, UserID uId) {
-        ChannelLookup data = g.getChannelDirectory().lookup(cAlias, true)
+        ChannelLookup data = gSrv.getChannelDirectory().lookup(cAlias, true)
                 .orElseThrow(() -> new ObjectNotFoundException("Channel alias", cAlias.full()));
 
         BareMemberEvent bEv = new BareMemberEvent();
@@ -168,7 +176,7 @@ public class ChannelManager {
         Optional<Channel> cOpt = find(data.getId());
         if (cOpt.isPresent()) {
             Channel c = cOpt.get();
-            if (c.getView().getAllServers().stream().anyMatch(g::isLocal)) {
+            if (c.getView().getAllServers().stream().anyMatch(s -> gSrv.server().isLocal(s))) {
                 // We are joined, so we can make our own event
 
                 ChannelEventAuthorization auth = c.makeAndOffer(bEv.getJson());
@@ -189,8 +197,8 @@ public class ChannelManager {
         for (DataServer srv : dsmgr.get(data.getServers(), true)) {
             String origin = srv.getId().full();
             try {
-                ApprovalExchange ex = srv.approveJoin(g.getOrigin().full(), bEv);
-                JsonObject seed = g.getEventService().finalize(ex.getObject());
+                ApprovalExchange ex = srv.approveJoin(gSrv.server().getOrigin().full(), bEv);
+                JsonObject seed = evSvc.finalize(ex.getObject());
                 if (cOpt.isPresent()) {
                     Channel c = cOpt.get();
 

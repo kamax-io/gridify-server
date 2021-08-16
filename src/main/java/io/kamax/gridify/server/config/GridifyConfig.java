@@ -167,7 +167,6 @@ public class GridifyConfig {
 
     private List<Listener> listeners = new ArrayList<>();
     private CryptoConfig crypto = new CryptoConfig();
-    private String domain;
     private ChannelConfig channel = new ChannelConfig();
     private StorageConfig storage = new StorageConfig();
     private IdentityConfig identity = new IdentityConfig();
@@ -188,14 +187,6 @@ public class GridifyConfig {
 
     public void setCrypto(CryptoConfig crypto) {
         this.crypto = crypto;
-    }
-
-    public String getDomain() {
-        return domain;
-    }
-
-    public void setDomain(String domain) {
-        this.domain = domain;
     }
 
     public ChannelConfig getChannel() {

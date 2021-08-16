@@ -20,6 +20,7 @@
 
 package io.kamax.gridify.server.core.store.postgres;
 
+import com.google.gson.JsonElement;
 import io.kamax.gridify.server.config.StorageConfig;
 import io.kamax.gridify.server.core.auth.Credentials;
 import io.kamax.gridify.server.core.auth.SecureCredentials;
@@ -27,10 +28,7 @@ import io.kamax.gridify.server.core.channel.ChannelDao;
 import io.kamax.gridify.server.core.channel.event.ChannelEvent;
 import io.kamax.gridify.server.core.identity.*;
 import io.kamax.gridify.server.core.identity.store.local.LocalAuthIdentityStore;
-import io.kamax.gridify.server.core.store.ChannelStateDao;
-import io.kamax.gridify.server.core.store.DataStore;
-import io.kamax.gridify.server.core.store.SqlConnectionPool;
-import io.kamax.gridify.server.core.store.UserDao;
+import io.kamax.gridify.server.core.store.*;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
 import io.kamax.gridify.server.util.GsonUtil;
 import io.kamax.gridify.server.util.KxLog;
@@ -220,6 +218,75 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
     private ChannelDao makeChannel(ResultSet rSet) throws SQLException {
         return new ChannelDao(rSet.getLong("lid"), rSet.getString("network"), rSet.getString("id"), rSet.getString("version"));
+    }
+
+    @Override
+    public void setConfig(String id, JsonElement value) {
+        String sql = "INSERT INTO config (name, data) VALUES (?,?::jsonb) " +
+                "ON CONFLICT ON CONSTRAINT config_name_uq DO UPDATE SET data = EXCLUDED.data";
+        withStmtConsumer(sql, stmt -> {
+            stmt.setString(1, id);
+            stmt.setString(2, GsonUtil.toJson(value));
+            int rc = stmt.executeUpdate();
+            if (rc != 1) {
+                throw new IllegalStateException("Config item " + id + ": DB updated " + rc + " rows. 1 expected");
+            }
+        });
+    }
+
+    @Override
+    public JsonElement getConfig(String id) {
+        String sql = "SELECT data FROM config WHERE name = ?";
+        return withStmtFunction(sql, stmt -> {
+            stmt.setString(1, id);
+            try (ResultSet rSet = stmt.executeQuery()) {
+                if (!rSet.next()) {
+                    throw new ObjectNotFoundException("Config", id);
+                }
+
+                String data = rSet.getString(1);
+                JsonElement el = GsonUtil.parse(data);
+                return el;
+            }
+        });
+    }
+
+    @Override
+    public DomainDao saveDomain(DomainDao dao) {
+        String sql = "INSERT INTO domains (network,host,properties) VALUES (?,?,?::jsonb) RETURNING lid";
+        long lid = withStmtFunction(sql, stmt -> {
+            stmt.setString(1, dao.getNetwork());
+            stmt.setString(2, dao.getDomain());
+            stmt.setString(3, GsonUtil.toJson(dao.getProperties()));
+            try (ResultSet rSet = stmt.executeQuery()) {
+                if (!rSet.next()) {
+                    throw new IllegalStateException("Inserted domain " + dao.getNetwork() + ":" + dao.getDomain() + " in stream but got no SID back");
+                }
+                return rSet.getLong(1);
+            }
+        });
+        dao.setLocalId(lid);
+        return dao;
+    }
+
+    @Override
+    public List<DomainDao> listDomains(String network) {
+        String sql = "SELECT * FROM domains WHERE network = ?";
+        return withStmtFunction(sql, stmt -> {
+            stmt.setString(1, network);
+            try (ResultSet rSet = stmt.executeQuery()) {
+                List<DomainDao> daos = new ArrayList<>();
+                while (rSet.next()) {
+                    DomainDao dao = new DomainDao();
+                    dao.setLocalId(rSet.getLong("lid"));
+                    dao.setNetwork(rSet.getString("network"));
+                    dao.setDomain(rSet.getString("host"));
+                    dao.setProperties(GsonUtil.parseObj(rSet.getString("properties")));
+                    daos.add(dao);
+                }
+                return daos;
+            }
+        });
     }
 
     @Override

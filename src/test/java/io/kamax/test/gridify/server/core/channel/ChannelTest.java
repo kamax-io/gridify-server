@@ -31,6 +31,8 @@ import io.kamax.gridify.server.core.channel.event.BarePowerEvent;
 import io.kamax.gridify.server.core.channel.state.ChannelEventAuthorization;
 import io.kamax.gridify.server.core.channel.state.ChannelState;
 import io.kamax.gridify.server.core.crypto.Cryptopher;
+import io.kamax.gridify.server.core.crypto.KeyIdentifier;
+import io.kamax.gridify.server.core.crypto.KeyType;
 import io.kamax.gridify.server.core.crypto.ed25519.Ed25519Cryptopher;
 import io.kamax.gridify.server.core.event.EventService;
 import io.kamax.gridify.server.core.federation.DataServerManager;
@@ -70,7 +72,8 @@ public class ChannelTest {
         SignalBus bus = SignalBus.getDefault();
         Cryptopher crypto = new Ed25519Cryptopher(new MemoryKeyStore());
         DataStore store = MemoryStore.getNew();
-        EventService evSvc = new EventService(sId, crypto);
+        KeyIdentifier mainKeyId = crypto.generateKey(KeyType.Regular);
+        EventService evSvc = new EventService(sId, mainKeyId, crypto);
         ChannelAlgo algo = new ChannelAlgoV0_0();
         DataServerManager srvMgr = new DataServerManager();
         ChannelDao cDao = store.saveChannel(new ChannelDao("grid", cId.full(), "0"));

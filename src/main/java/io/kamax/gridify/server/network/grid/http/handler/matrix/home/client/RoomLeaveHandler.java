@@ -37,7 +37,7 @@ public class RoomLeaveHandler extends ClientApiHandler {
 
     @Override
     protected void handle(Exchange exchange) {
-        UserSession s = g.overGrid().forData().asClient().withToken(exchange.getAccessToken());
+        UserSession s = g.withToken(exchange.getAccessToken());
 
         String mId = exchange.getPathVariable("roomId");
         if (StringUtils.isEmpty(mId)) {

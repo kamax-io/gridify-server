@@ -21,12 +21,12 @@
 package io.kamax.gridify.server.network.grid.http.handler.matrix;
 
 import com.google.gson.JsonObject;
-import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.core.SyncData;
 import io.kamax.gridify.server.core.channel.ChannelMembership;
 import io.kamax.gridify.server.core.channel.event.ChannelEvent;
 import io.kamax.gridify.server.core.channel.state.ChannelState;
 import io.kamax.gridify.server.network.grid.ProtocolEventMapper;
+import io.kamax.gridify.server.network.grid.core.GridDataServer;
 import io.kamax.gridify.server.network.matrix.http.json.RoomEvent;
 import io.kamax.gridify.server.util.GsonUtil;
 import io.kamax.gridify.server.util.KxLog;
@@ -149,7 +149,7 @@ public class SyncResponse {
 
     }
 
-    public static SyncResponse build(GridifyServer g, String uId, SyncData data) {
+    public static SyncResponse build(GridDataServer g, String uId, SyncData data) {
         Map<String, Room> roomCache = new HashMap<>();
         SyncResponse r = new SyncResponse();
         r.setNextBatch(data.getPosition());

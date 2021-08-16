@@ -21,7 +21,6 @@
 package io.kamax.gridify.server.network.matrix.core.base;
 
 import com.google.gson.JsonObject;
-import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.core.SyncData;
 import io.kamax.gridify.server.core.SyncOptions;
 import io.kamax.gridify.server.core.channel.ChannelDao;
@@ -36,6 +35,7 @@ import io.kamax.gridify.server.core.signal.SignalTopic;
 import io.kamax.gridify.server.core.signal.SyncRefreshSignal;
 import io.kamax.gridify.server.exception.ForbiddenException;
 import io.kamax.gridify.server.exception.NotImplementedException;
+import io.kamax.gridify.server.network.matrix.core.MatrixServer;
 import io.kamax.gridify.server.network.matrix.core.event.*;
 import io.kamax.gridify.server.network.matrix.core.room.*;
 import io.kamax.gridify.server.network.matrix.http.json.RoomEvent;
@@ -58,12 +58,12 @@ public class UserSession {
 
     private static final String commandInLinePrefix = "~g";
 
-    private final GridifyServer g;
+    private final MatrixServer g;
     private final String vHost;
     private final String userId;
     private final String accessToken;
 
-    public UserSession(GridifyServer g, String vHost, String userId, String accessToken) {
+    public UserSession(MatrixServer g, String vHost, String userId, String accessToken) {
         this.g = g;
         this.vHost = vHost;
         this.userId = userId;
@@ -182,7 +182,7 @@ public class UserSession {
         SyncData data = new SyncData();
         data.setInitial(true);
         data.setPosition(Long.toString(g.getStreamer().getPosition()));
-        List<ChannelDao> rooms = g.overMatrix().roomMgr().listInvolved(userId);
+        List<ChannelDao> rooms = g.roomMgr().listInvolved(userId);
         log.debug("Found involvement with {} rooms", rooms.size());
         rooms.forEach(dao -> {
             Room r = getRoom(dao.getId());
@@ -223,19 +223,19 @@ public class UserSession {
 
             long sid = Long.parseLong(options.getToken());
             do {
-                if (!g.overMatrix().getCommandResponseQueue(userId).isEmpty()) {
+                if (!g.getCommandResponseQueue(userId).isEmpty()) {
                     log.info("Emptying command response buffer");
                     Map<String, SyncResponse.Room> roomCache = new HashMap<>();
                     SyncResponse syncResponse = new SyncResponse();
                     syncResponse.nextBatch = options.getToken();
-                    for (JsonObject response : g.overMatrix().getCommandResponseQueue(userId)) {
+                    for (JsonObject response : g.getCommandResponseQueue(userId)) {
                         String rId = GsonUtil.getStringOrThrow(response, EventKey.RoomId);
                         SyncResponse.Room room = roomCache.computeIfAbsent(rId, id -> new SyncResponse.Room());
                         RoomEvent rEv = GsonUtil.fromJson(response, RoomEvent.class);
                         room.timeline.events.add(rEv);
                     }
                     log.info("Command response buffer cleared");
-                    g.overMatrix().getCommandResponseQueue(userId).clear();
+                    g.getCommandResponseQueue(userId).clear();
 
                     syncResponse.rooms.join.putAll(roomCache);
                     return syncResponse;
@@ -245,7 +245,7 @@ public class UserSession {
                     break;
                 }
 
-                List<ChannelEvent> events = g.overMatrix().getStreamer().next(sid);
+                List<ChannelEvent> events = g.getStreamer().next(sid);
                 for (ChannelEvent event : events) {
                     if (!event.getMeta().isProcessed()) {
                         break;
@@ -263,7 +263,7 @@ public class UserSession {
                         }
 
                         // if we are subscribed to the channel at that point in time
-                        Room r = g.overMatrix().roomMgr().get(ev.asMatrix().getRoomId());
+                        Room r = g.roomMgr().get(ev.asMatrix().getRoomId());
                         RoomState state = r.getState(ev);
                         RoomMembership m = state.getMembership(userId);
                         log.info("Membership for Event LID {}: {}", ev.getLid(), m);
@@ -303,20 +303,20 @@ public class UserSession {
     }
 
     public Room createRoom(JsonObject options) {
-        return g.overMatrix().roomMgr().createRoom(vHost, userId, options);
+        return g.roomMgr().createRoom(g.crypto(), userId, options);
     }
 
     public Room joinRoom(String roomIdOrAlias) {
-        return g.overMatrix().roomMgr().join(userId, roomIdOrAlias);
+        return g.roomMgr().join(userId, roomIdOrAlias, g.crypto());
     }
 
     public Room getRoom(String roomId) {
-        return g.overMatrix().roomMgr().get(roomId);
+        return g.roomMgr().get(roomId);
     }
 
     public void leaveRoom(String roomId) {
         BareMemberEvent bareEvent = BareMemberEvent.leave(userId);
-        g.overMatrix().roomMgr().get(roomId).offer(vHost, bareEvent);
+        g.roomMgr().get(roomId).offer(bareEvent, g.crypto());
     }
 
     public void inviteToRoom(String roomId, String userId) {
@@ -329,7 +329,8 @@ public class UserSession {
     public String send(String roomId, BareEvent<?> event) {
         event.setSender(userId);
 
-        ChannelEventAuthorization auth = g.overMatrix().roomMgr().get(roomId).offer(vHost, event);
+        Room r = g.roomMgr().get(roomId);
+        ChannelEventAuthorization auth = r.offer(event, g.crypto());
         if (!auth.isAuthorized()) {
             throw new ForbiddenException(auth.getReason());
         }
@@ -366,7 +367,7 @@ public class UserSession {
         requestEvent.setOriginServerTs(Instant.now().toEpochMilli());
         requestEvent.setContent(cmdMessage);
         requestEvent.getUnsigned().addProperty("transaction_id", txnId);
-        g.overMatrix().getCommandResponseQueue(userId).add(requestEvent.toJson());
+        g.getCommandResponseQueue(userId).add(requestEvent.toJson());
 
         // We process the command
         String body = GsonUtil.getStringOrNull(cmdMessage, "body");
@@ -381,17 +382,17 @@ public class UserSession {
             }
 
             if (StringUtils.equals("federation enable", subCmb)) {
-                g.overMatrix().getFedPusher().setEnabled(true);
+                g.getFedPusher().setEnabled(true);
                 body = "OK";
             }
 
             if (StringUtils.equals("federation disable", subCmb)) {
-                g.overMatrix().getFedPusher().setEnabled(false);
+                g.getFedPusher().setEnabled(false);
                 body = "OK";
             }
 
             if (StringUtils.equals("state", subCmb)) {
-                RoomState state = g.overMatrix().roomMgr().get(roomId).getView().getState();
+                RoomState state = g.roomMgr().get(roomId).getView().getState();
                 body = "";
                 for (ChannelEvent ev : state.getEvents()) {
                     body += GsonUtil.getPrettyForLog(ev.getData()) + "\n";
@@ -413,8 +414,8 @@ public class UserSession {
         rEv.setSender("@:" + vHost);
         rEv.setOriginServerTs(Instant.now().toEpochMilli());
         rEv.setContent(content);
-        g.overMatrix().getCommandResponseQueue(userId).add(GsonUtil.makeObj(rEv));
-        g.overMatrix().bus().forTopic(SignalTopic.SyncRefresh).publish(SyncRefreshSignal.get());
+        g.getCommandResponseQueue(userId).add(GsonUtil.makeObj(rEv));
+        g.getBus().forTopic(SignalTopic.SyncRefresh).publish(SyncRefreshSignal.get());
         log.info("Processed command {}", uuid);
         return requestEventId;
     }
@@ -474,7 +475,7 @@ public class UserSession {
     }
 
     public Optional<RoomLookup> lookupRoomAlias(String roomAlias) {
-        return g.overMatrix().roomDir().lookup(vHost, RoomAlias.parse(roomAlias), true);
+        return g.roomDir().lookup(vHost, RoomAlias.parse(roomAlias), true);
     }
 
 }

@@ -22,7 +22,7 @@ package io.kamax.gridify.server.network.matrix.core.room.algo;
 
 import com.google.gson.JsonObject;
 import io.kamax.gridify.server.core.channel.state.ChannelEventAuthorization;
-import io.kamax.gridify.server.core.crypto.Cryptopher;
+import io.kamax.gridify.server.network.matrix.core.crypto.MatrixDomainCryptopher;
 import io.kamax.gridify.server.network.matrix.core.event.BareEvent;
 import io.kamax.gridify.server.network.matrix.core.event.BarePowerEvent;
 import io.kamax.gridify.server.network.matrix.core.federation.RoomJoinTemplate;
@@ -82,11 +82,10 @@ public interface RoomAlgo {
      * This may not be equivalent to calling hash() then sign() on the doc.
      *
      * @param doc    The doc to sign off
-     * @param crypto The cryptopher to use to sign
-     * @param domain The domain unser which the signature should be added
+     * @param crypto The cryptopher to sign with
      * @return A copy of the doc with the added hash and signature
      */
-    JsonObject signEvent(JsonObject doc, Cryptopher crypto, String domain);
+    JsonObject signEvent(JsonObject doc, MatrixDomainCryptopher crypto);
 
     JsonObject redact(JsonObject doc);
 

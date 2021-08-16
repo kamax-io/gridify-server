@@ -1,6 +1,6 @@
 /*
  * Gridify Server
- * Copyright (C) 2021 Kamax Sarl
+ * Copyright (C) 2019 Kamax Sarl
  *
  * https://www.kamax.io/
  *
@@ -18,32 +18,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.gridify.server.network.grid.core;
+package io.kamax.gridify.server.core.crypto;
 
-import io.kamax.gridify.server.GridifyServer;
-import io.kamax.gridify.server.core.event.EventService;
-import io.kamax.gridify.server.core.federation.DataServerManager;
-import io.kamax.gridify.server.core.store.DataStore;
+public class PublicKey {
 
-public interface GridServer {
+    public static PublicKey get(KeyIdentifier id, String hash) {
+        PublicKey key = new PublicKey();
+        key.id = id.getId();
+        key.hash = hash;
+        return key;
+    }
 
-    GridifyServer gridify();
+    private String id;
+    private String hash;
 
-    ServerID getOrigin();
+    public String getId() {
+        return id;
+    }
 
-    String getDomain();
-
-    DataServerManager dataSrvMgr();
-
-    EventService evSvc();
-
-    DataStore store();
-
-    boolean isLocal(ServerID id);
-
-    boolean isLocal(UserID uId);
-
-    GridDataServer forData();
-
+    public String getHash() {
+        return hash;
+    }
 
 }

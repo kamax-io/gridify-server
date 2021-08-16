@@ -34,14 +34,9 @@ import io.kamax.gridify.server.core.auth.Credentials;
 import io.kamax.gridify.server.core.auth.UIAuthSession;
 import io.kamax.gridify.server.core.auth.UIAuthStage;
 import io.kamax.gridify.server.core.auth.multi.MultiStoreAuthService;
-import io.kamax.gridify.server.core.channel.ChannelDirectory;
-import io.kamax.gridify.server.core.channel.ChannelManager;
-import io.kamax.gridify.server.core.crypto.Cryptopher;
+import io.kamax.gridify.server.core.crypto.*;
 import io.kamax.gridify.server.core.crypto.ed25519.Ed25519Cryptopher;
-import io.kamax.gridify.server.core.event.EventService;
 import io.kamax.gridify.server.core.event.EventStreamer;
-import io.kamax.gridify.server.core.federation.DataServerManager;
-import io.kamax.gridify.server.core.federation.FederationPusher;
 import io.kamax.gridify.server.core.identity.GenericThreePid;
 import io.kamax.gridify.server.core.identity.IdentityManager;
 import io.kamax.gridify.server.core.identity.ThreePid;
@@ -58,10 +53,10 @@ import io.kamax.gridify.server.exception.InternalServerError;
 import io.kamax.gridify.server.exception.InvalidTokenException;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
 import io.kamax.gridify.server.exception.UnauthenticatedException;
-import io.kamax.gridify.server.network.grid.core.*;
+import io.kamax.gridify.server.network.grid.core.GridCore;
+import io.kamax.gridify.server.network.grid.core.SimpleGridServer;
 import io.kamax.gridify.server.network.matrix.core.MatrixCore;
 import io.kamax.gridify.server.network.matrix.core.base.BaseMatrixCore;
-import io.kamax.gridify.server.network.matrix.core.room.RoomManager;
 import io.kamax.gridify.server.util.GsonUtil;
 import io.kamax.gridify.server.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
@@ -77,7 +72,9 @@ public class MonolithGridifyServer implements GridifyServer {
 
     private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
-    private final ServerID origin;
+    private final String serverId;
+    private final PublicKey pubKey;
+
     private final Algorithm jwtAlgo;
     private final JWTVerifier jwtVerifier;
 
@@ -88,29 +85,20 @@ public class MonolithGridifyServer implements GridifyServer {
     private final Cryptopher crypto;
     private final AuthService authSvc;
     private final IdentityManager idMgr;
-    private final EventService evSvc;
-    private final ChannelManager chMgr;
-    private final RoomManager rMgr;
-    private final ChannelDirectory chDir;
+
     private final EventStreamer streamer;
-    private final DataServerManager dsMgr;
-    private final FederationPusher fedPush;
 
     private final MatrixCore mxCore;
+    private final GridCore gCore;
 
     private boolean isStopping;
-    private Map<String, Boolean> tokens = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> tokens = new ConcurrentHashMap<>();
 
     public MonolithGridifyServer(GridifyConfig cfg) {
         this.cfg = cfg;
         if (cfg.getAuth().getFlows().isEmpty()) {
             cfg.getAuth().addFlow().addStage("m.login.password");
         }
-
-        if (StringUtils.isBlank(cfg.getDomain())) {
-            throw new RuntimeException("Configuration: domain cannot be blank");
-        }
-        origin = ServerID.fromDns(cfg.getDomain());
 
         bus = new SignalBus();
 
@@ -128,6 +116,7 @@ public class MonolithGridifyServer implements GridifyServer {
         } else {
             throw new IllegalArgumentException("Unknown keys storage: " + kStoreType);
         }
+        crypto = new Ed25519Cryptopher(kStore);
 
         // FIXME use ServiceLoader
         String dbStoreType = cfg.getStorage().getDatabase().getType();
@@ -139,47 +128,72 @@ public class MonolithGridifyServer implements GridifyServer {
             throw new IllegalArgumentException("Unknown database type: " + dbStoreType);
         }
 
-        dsMgr = new DataServerManager();
-        crypto = new Ed25519Cryptopher(kStore);
+        if (!store.hasConfig("core.server.id")) {
+            store.setConfig("core.server.id", UUID.randomUUID());
+        }
+        serverId = store.getConfigString("core.server.id");
+
+        if (!store.hasConfig("core.crypto.publicKey")) {
+            KeyIdentifier id = crypto.generateKey(KeyType.Regular);
+            String hash = crypto.getPublicKeyBase64(id);
+            store.setConfig("core.crypto.publicKey", PublicKey.get(id, hash));
+        }
+        pubKey = store.getConfig("core.crypto.publicKey", PublicKey.class);
 
         String jwtSeed = cfg.getCrypto().getSeed().get("jwt");
-        if (StringUtils.isEmpty(jwtSeed)) {
-            log.warn("JWT secret is not set, computing one from main signing key. Please set a JWT secret in your config");
-            jwtSeed = GridHash.get().hashFromUtf8(cfg.getDomain() + crypto.getServerSigningKey().getPrivateKeyBase64());
+        if (StringUtils.isBlank(jwtSeed)) {
+            // FIXME re-enable warning
+            //log.warn("JWT secret is not set, computing one from main signing key. Please set a JWT secret in your config");
+            jwtSeed = GridHash.get().hashFromUtf8(serverId + crypto.getKey(RegularKeyIdentifier.parse(pubKey.getId())).getPrivateKeyBase64());
         }
 
         jwtAlgo = Algorithm.HMAC256(jwtSeed);
         jwtVerifier = JWT.require(jwtAlgo)
-                .withIssuer(cfg.getDomain())
+                .withIssuer(serverId)
                 .build();
-
-        evSvc = new EventService(origin, crypto);
 
         idMgr = new IdentityManager(cfg.getIdentity(), store, crypto);
         authSvc = new MultiStoreAuthService(this);
-
-        chMgr = new ChannelManager(this, bus, evSvc, store, dsMgr);
-        rMgr = new RoomManager(this);
         streamer = new EventStreamer(store);
 
-        chDir = new ChannelDirectory(origin, store, bus, dsMgr);
-        fedPush = new FederationPusher(this, dsMgr);
-
         mxCore = new BaseMatrixCore(this);
+        gCore = new SimpleGridServer(this, serverId); // FIXME give a proper domain
+    }
 
-        log.info("We are {}", getDomain());
-        log.info("Serving domain(s):");
-        log.info("  - {}", origin.full());
+    // FIXME check where it is used and if it used correctly
+    @Override
+    public String getServerId() {
+        return serverId;
+    }
+
+    @Override
+    public PublicKey getPublicKey() {
+        return pubKey;
+    }
+
+    @Override
+    public void setup(JsonObject setupDoc) {
+        String username = GsonUtil.getStringOrNull(setupDoc, "admin_username");
+        if (StringUtils.isBlank(username)) {
+            throw new IllegalArgumentException("Admin username is missing");
+        }
+        String pass = GsonUtil.getStringOrNull(setupDoc, "admin_password");
+        if (StringUtils.isBlank(pass)) {
+            throw new IllegalArgumentException("Admin password cannot be empty/blank");
+        }
+
+        log.info("Creating initial admin account");
+        register(username, pass);
+
+        String domain = GsonUtil.getStringOrNull(setupDoc, "matrix_domain");
+        if (StringUtils.isNotBlank(domain)) {
+            mxCore.addDomain(domain);
+        }
     }
 
     @Override
     public void start() {
         isStopping = false;
-
-        if (idMgr.isUsernameAvailable("admin")) {
-            log.info("Creating initial admin account");
-            register("admin", "admin");
-        }
     }
 
     @Override
@@ -187,8 +201,6 @@ public class MonolithGridifyServer implements GridifyServer {
         isStopping = true;
 
         bus.getMain().publish(AppStopping.Signal);
-
-        fedPush.stop();
     }
 
     @Override
@@ -202,38 +214,8 @@ public class MonolithGridifyServer implements GridifyServer {
     }
 
     @Override
-    public String getDomain() {
-        return cfg.getDomain();
-    }
-
-    @Override
-    public ServerID getOrigin() {
-        return origin;
-    }
-
-    @Override
-    public boolean isLocal(ServerID sId) {
-        return getOrigin().equals(sId);
-    }
-
-    @Override
     public SignalBus getBus() {
         return bus;
-    }
-
-    @Override
-    public ChannelManager getChannelManager() {
-        return chMgr;
-    }
-
-    @Override
-    public ChannelDirectory getChannelDirectory() {
-        return chDir;
-    }
-
-    @Override
-    public EventService getEventService() {
-        return evSvc;
     }
 
     @Override
@@ -242,29 +224,14 @@ public class MonolithGridifyServer implements GridifyServer {
     }
 
     @Override
-    public DataServerManager getServers() {
-        return dsMgr;
-    }
-
-    @Override
-    public FederationPusher getFedPusher() {
-        return fedPush;
-    }
-
-    @Override
     public AuthService getAuth() {
         return authSvc;
     }
 
     @Override
-    public UserSession withToken(String token) {
-        return overGrid().forData().asClient().withToken(token);
-    }
-
-    @Override
     public String createSessionToken(String network, User usr) {
         String token = JWT.create()
-                .withIssuer(cfg.getDomain())
+                .withIssuer(serverId)
                 .withIssuedAt(new Date())
                 .withExpiresAt(Date.from(Instant.ofEpochMilli(Long.MAX_VALUE)))
                 .withClaim(GridType.id().internal().getId(), usr.getId())
@@ -329,71 +296,8 @@ public class MonolithGridifyServer implements GridifyServer {
     }
 
     @Override
-    public boolean isLocal(UserID uId) {
-        return idMgr.findUser(new GenericThreePid(GridType.of("id.net.grid"), uId.full())).isPresent();
-    }
-
-    @Override
-    public GridServer overGrid() {
-        return () -> new GridDataServer() {
-            @Override
-            public ServerSession asServer(String srvId) {
-                return new ServerSession(MonolithGridifyServer.this, ServerID.parse(srvId));
-            }
-
-            @Override
-            public GridDataServerClient asClient() {
-                return new GridDataServerClient() {
-                    @Override
-                    public UserSession withToken(String token) {
-                        User u = validateSessionToken(token);
-                        return new UserSession(MonolithGridifyServer.this, "grid", u);
-                    }
-
-                    @Override
-                    public UIAuthSession login() {
-                        return MonolithGridifyServer.this.login("grid");
-                    }
-
-                    @Override
-                    public UserSession login(User user) {
-                        return withToken(createSessionToken("grid", user));
-                    }
-
-                    @Override
-                    public UserSession login(UIAuthSession session) {
-                        User u = MonolithGridifyServer.this.login(session, GridType.of("auth.id.password"));
-                        return login(u);
-                    }
-
-                    @Override
-                    public UserSession login(JsonObject doc) {
-                        Optional<String> sessionId = GsonUtil.findString(doc, "session");
-                        UIAuthSession session;
-                        if (sessionId.isPresent()) {
-                            session = getAuth().getSession(sessionId.get());
-                        } else {
-                            session = login();
-                        }
-
-                        session.complete(doc);
-                        return login(session);
-                    }
-
-                    @Override
-                    public UserSession login(String username, String password) {
-                        JsonObject id = new JsonObject();
-                        id.addProperty("type", GridType.id().internal().getId());
-                        id.addProperty("value", username);
-                        JsonObject doc = new JsonObject();
-                        doc.addProperty("type", GridType.of("auth.id.password"));
-                        doc.addProperty("password", password);
-                        doc.add("identifier", id);
-                        return login(doc);
-                    }
-                };
-            }
-        };
+    public GridCore overGrid() {
+        return gCore;
     }
 
     @Override

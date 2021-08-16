@@ -20,6 +20,7 @@
 
 package io.kamax.gridify.server.core.store;
 
+import com.google.gson.JsonElement;
 import io.kamax.gridify.server.config.IdentityConfig;
 import io.kamax.gridify.server.core.GridType;
 import io.kamax.gridify.server.core.auth.Credentials;
@@ -70,12 +71,15 @@ public class MemoryStore implements DataStore, IdentityStore {
         return cfg;
     }
 
+    private final AtomicLong dLid = new AtomicLong(0);
     private final AtomicLong uLid = new AtomicLong(0);
     private final AtomicLong chSid = new AtomicLong(0);
     private final AtomicLong evLid = new AtomicLong(0);
     private final AtomicLong evSid = new AtomicLong(0);
     private final AtomicLong sSid = new AtomicLong(0);
 
+    private final Map<String, JsonElement> config = new ConcurrentHashMap<>();
+    private final Map<Long, DomainDao> domains = new ConcurrentHashMap<>();
     private final Map<Long, UserDao> users = new ConcurrentHashMap<>();
     private final Map<Long, Set<ThreePid>> userStoreIds = new ConcurrentHashMap<>();
     private final Map<Long, Map<String, SecureCredentials>> userCreds = new ConcurrentHashMap<>();
@@ -109,6 +113,35 @@ public class MemoryStore implements DataStore, IdentityStore {
 
     private String makeRef(String cId, String eId) {
         return cId + "/" + eId;
+    }
+
+    @Override
+    public void setConfig(String id, JsonElement value) {
+        config.put(id, value);
+    }
+
+    @Override
+    public JsonElement getConfig(String id) {
+        JsonElement el = config.get(id);
+        if (Objects.isNull(el)) {
+            throw new ObjectNotFoundException("Config", id);
+        }
+        return el;
+    }
+
+    @Override
+    public DomainDao saveDomain(DomainDao dao) {
+        long lid = dLid.incrementAndGet();
+        dao.setLocalId(lid);
+        domains.put(lid, dao);
+        return dao;
+    }
+
+    @Override
+    public List<DomainDao> listDomains(String network) {
+        return domains.values().stream()
+                .filter(dao -> StringUtils.equals(network, dao.getNetwork()))
+                .collect(Collectors.toList());
     }
 
     @Override

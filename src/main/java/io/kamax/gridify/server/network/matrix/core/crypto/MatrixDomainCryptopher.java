@@ -18,32 +18,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.gridify.server.network.grid.core;
+package io.kamax.gridify.server.network.matrix.core.crypto;
 
-import io.kamax.gridify.server.GridifyServer;
-import io.kamax.gridify.server.core.event.EventService;
-import io.kamax.gridify.server.core.federation.DataServerManager;
-import io.kamax.gridify.server.core.store.DataStore;
+import com.google.gson.JsonObject;
+import io.kamax.gridify.server.core.crypto.Signature;
 
-public interface GridServer {
+import java.nio.charset.StandardCharsets;
 
-    GridifyServer gridify();
-
-    ServerID getOrigin();
+public interface MatrixDomainCryptopher {
 
     String getDomain();
 
-    DataServerManager dataSrvMgr();
+    Signature sign(JsonObject obj);
 
-    EventService evSvc();
+    Signature sign(byte[] data);
 
-    DataStore store();
-
-    boolean isLocal(ServerID id);
-
-    boolean isLocal(UserID uId);
-
-    GridDataServer forData();
-
+    default Signature sign(String message) {
+        return sign(message.getBytes(StandardCharsets.UTF_8));
+    }
 
 }

@@ -39,15 +39,14 @@ public class MonolithGridifyServerTest {
     @Test
     public void channelCreate() {
         GridifyConfig cfg = GridifyConfig.inMemory();
-        cfg.setDomain("localhost");
         GridifyServer g = new MonolithGridifyServer(cfg);
         g.start();
 
         User u = g.register("gridify", "gridify");
-        UserSession uSess = g.overGrid().forData().asClient().login(u);
+        UserSession uSess = g.overGrid().vHost("localhost").forData().asClient().login(u);
         String uId = uSess.getUser().getNetworkId("grid");
 
-        Channel ch = g.getChannelManager().createChannel(uId);
+        Channel ch = g.overGrid().getChannelManager().createChannel(uId);
         assertEquals(ChannelMembership.Join, ch.getView().getState().getMembership(uId));
 
         SyncData data = uSess.sync(new SyncOptions().setToken("0").setTimeout(0));

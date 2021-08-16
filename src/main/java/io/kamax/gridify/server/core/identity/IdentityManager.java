@@ -44,7 +44,7 @@ public class IdentityManager {
     }
 
     public boolean canRegister() {
-        return store.getUserCount() == 0 || cfg.getRegister().isEnabled();
+        return hasUsers() || cfg.getRegister().isEnabled();
     }
 
     public boolean isUsernameAvailable(String username) {
@@ -76,6 +76,10 @@ public class IdentityManager {
 
     public Optional<User> findUser(ThreePid tpid) {
         return store.findUserByTreePid(tpid).map(this::getUser);
+    }
+
+    public boolean hasUsers() {
+        return store.getUserCount() > 0;
     }
 
 }

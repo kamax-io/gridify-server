@@ -21,8 +21,19 @@
 package io.kamax.gridify.server.network.grid.core;
 
 import io.kamax.gridify.server.core.ServerSession;
+import io.kamax.gridify.server.core.channel.ChannelDirectory;
+import io.kamax.gridify.server.core.channel.ChannelManager;
+import io.kamax.gridify.server.core.federation.DataServerManager;
 
 public interface GridDataServer {
+
+    GridServer server();
+
+    DataServerManager dataServerMgr();
+
+    ChannelManager getChannelManager();
+
+    ChannelDirectory getChannelDirectory();
 
     ServerSession asServer(String srvId);
 

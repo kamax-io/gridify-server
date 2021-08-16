@@ -26,7 +26,6 @@ import io.kamax.gridify.server.core.crypto.KeyType;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * DataStore to persist signing keys and the identifier for the current long-term signing key
@@ -88,20 +87,5 @@ public interface KeyStore {
      * @throws ObjectNotFoundException If no key is found for that identifier
      */
     void delete(KeyIdentifier id) throws ObjectNotFoundException;
-
-    /**
-     * DataStore the information of which key is the current signing key
-     *
-     * @param id The key identifier
-     * @throws IllegalArgumentException If the key is not known to the store
-     */
-    void setCurrentKey(KeyIdentifier id) throws IllegalArgumentException;
-
-    /**
-     * Retrieve the previously stored information of which key is the current signing key, if any
-     *
-     * @return The optional key identifier that was previously stored
-     */
-    Optional<KeyIdentifier> getCurrentKey();
 
 }

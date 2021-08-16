@@ -20,30 +20,20 @@
 
 package io.kamax.gridify.server.network.grid.core;
 
-import io.kamax.gridify.server.GridifyServer;
-import io.kamax.gridify.server.core.event.EventService;
-import io.kamax.gridify.server.core.federation.DataServerManager;
-import io.kamax.gridify.server.core.store.DataStore;
+import io.kamax.gridify.server.core.channel.ChannelDirectory;
+import io.kamax.gridify.server.core.channel.ChannelManager;
+import io.kamax.gridify.server.core.federation.FederationPusher;
 
-public interface GridServer {
+public interface GridCore {
 
-    GridifyServer gridify();
+    GridServer vHost(String domain);
 
-    ServerID getOrigin();
+    boolean isOrigin(String domain);
 
-    String getDomain();
+    ChannelManager getChannelManager();
 
-    DataServerManager dataSrvMgr();
+    ChannelDirectory getChannelDirectory();
 
-    EventService evSvc();
-
-    DataStore store();
-
-    boolean isLocal(ServerID id);
-
-    boolean isLocal(UserID uId);
-
-    GridDataServer forData();
-
+    FederationPusher fedPusher();
 
 }

@@ -75,7 +75,7 @@ public class ChannelAlgoV0_0 implements ChannelAlgo {
         return senderPl >= actionPl;
     }
 
-    private boolean canEvent(BarePowerEvent.Content pls, long senderPl, BareEvent ev) {
+    private boolean canEvent(BarePowerEvent.Content pls, long senderPl, BareEvent<?> ev) {
         Long defPl;
 
         if (StringUtils.isNotEmpty(ev.getScope())) {
@@ -391,8 +391,8 @@ public class ChannelAlgoV0_0 implements ChannelAlgo {
     }
 
     @Override
-    public List<BareEvent> getCreationEvents(String creator) {
-        List<BareEvent> events = new ArrayList<>();
+    public List<BareEvent<?>> getCreationEvents(String creator) {
+        List<BareEvent<?>> events = new ArrayList<>();
         BareCreateEvent createEv = new BareCreateEvent();
         createEv.getContent().setCreator(creator);
         createEv.setSender(creator);

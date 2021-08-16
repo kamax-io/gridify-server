@@ -49,6 +49,6 @@ public interface ChannelAlgo {
 
     ChannelEventAuthorization authorize(ChannelState state, EventID evId, JsonObject ev);
 
-    List<BareEvent> getCreationEvents(String creator);
+    List<BareEvent<?>> getCreationEvents(String creator);
 
 }

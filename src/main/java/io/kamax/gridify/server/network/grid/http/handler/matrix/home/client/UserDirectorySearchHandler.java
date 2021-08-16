@@ -43,7 +43,7 @@ public class UserDirectorySearchHandler extends ClientApiHandler {
         JsonArray results = new JsonArray();
         String term = GsonUtil.getStringOrThrow(exchange.parseJsonObject(), "search_term");
         if (StringUtils.length(term) > 1 && StringUtils.startsWith(term, "@") && !StringUtils.contains(term, ":")) {
-            String uId = term + ":" + g.getDomain();
+            String uId = term + ":" + exchange.requireHost();
             JsonObject result = new JsonObject();
             result.addProperty("user_id", uId);
             result.addProperty("display_name", term.substring(1) + " (Auto-complete server)");

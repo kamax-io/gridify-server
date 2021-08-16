@@ -51,7 +51,7 @@ public class LoginHandler extends ClientApiHandler {
             // Required for some clients who fail if not present, even if not mandatory and deprecated.
             // https://github.com/Nheko-Reborn/mtxclient/issues/7
             // TODO Check if still needed
-            reply.addProperty("home_server", g.getDomain());
+            reply.addProperty("home_server", exchange.requireHost());
 
             exchange.respondJson(reply);
         } catch (UnauthenticatedException e) {

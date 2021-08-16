@@ -22,13 +22,12 @@ package io.kamax.test.gridify.server.core.crypto.ed25519;
 
 import com.google.gson.JsonObject;
 import io.kamax.gridify.server.codec.CanonicalJson;
-import io.kamax.gridify.server.core.crypto.KeyAlgorithm;
-import io.kamax.gridify.server.core.crypto.KeyIdentifier;
-import io.kamax.gridify.server.core.crypto.RegularKeyIdentifier;
+import io.kamax.gridify.server.core.crypto.*;
 import io.kamax.gridify.server.core.crypto.ed25519.Ed25519Cryptopher;
 import io.kamax.gridify.server.core.crypto.ed25519.Ed25519Key;
 import io.kamax.gridify.server.core.store.crypto.MemoryKeyStore;
 import io.kamax.gridify.server.network.matrix.core.crypto.CryptoJson;
+import io.kamax.gridify.server.network.matrix.core.crypto.MatrixDomainCryptopher;
 import io.kamax.gridify.server.network.matrix.core.room.algo.RoomAlgo;
 import io.kamax.gridify.server.network.matrix.core.room.algo.RoomAlgoV6;
 import io.kamax.gridify.server.util.GsonUtil;
@@ -47,20 +46,39 @@ import java.nio.charset.StandardCharsets;
 
 import static junit.framework.TestCase.assertTrue;
 
+// FIXME uses other classes like MatrixDomainCrypto, should be self-contained
 public class Ed25519CryptopherTest {
 
     private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private final static String prefix = "src/test/resources/events/";
+    private static Key key;
+    private static MatrixDomainCryptopher domainCrypto;
     private static Ed25519Cryptopher cryptopher;
 
     @BeforeClass
     public static void beforeClass() {
-        MemoryKeyStore keyStore = new MemoryKeyStore();
         KeyIdentifier keyId = new RegularKeyIdentifier(KeyAlgorithm.Ed25519, "1");
-        keyStore.add(new Ed25519Key(keyId, TestData.SIGN_KEY_SEED));
-        keyStore.setCurrentKey(keyId);
+        key = new Ed25519Key(keyId, TestData.SIGN_KEY_SEED);
+        MemoryKeyStore keyStore = new MemoryKeyStore();
+        keyStore.add(key);
         cryptopher = new Ed25519Cryptopher(keyStore);
+        domainCrypto = new MatrixDomainCryptopher() {
+            @Override
+            public String getDomain() {
+                return "example.org";
+            }
+
+            @Override
+            public Signature sign(JsonObject obj) {
+                return cryptopher.sign(obj, key.getId());
+            }
+
+            @Override
+            public Signature sign(byte[] data) {
+                return cryptopher.sign(data, keyId);
+            }
+        };
     }
 
     private String loadFrom(String path) throws IOException {
@@ -75,7 +93,7 @@ public class Ed25519CryptopherTest {
         String controlJson = CanonicalJson.encode(GsonUtil.parseObj(loadFrom(control)));
 
         JsonObject sourceData = GsonUtil.parseObj(loadFrom(source));
-        sourceData = CryptoJson.signUnsafe(sourceData, cryptopher, "example.org");
+        sourceData = CryptoJson.signUnsafe(sourceData, domainCrypto);
         String sourceJson = CanonicalJson.encode(sourceData);
 
         log.info("Signed JSON: {}", sourceJson);
@@ -91,7 +109,7 @@ public class Ed25519CryptopherTest {
         String controlJson = CanonicalJson.encode(GsonUtil.parseObj(loadFrom(control)));
         RoomAlgo algo = new RoomAlgoV6();
         JsonObject sourceData = GsonUtil.parseObj(loadFrom(source));
-        sourceData = algo.signEvent(sourceData, cryptopher, "example.org");
+        sourceData = algo.signEvent(sourceData, domainCrypto);
         String sourceJson = CanonicalJson.encode(sourceData);
 
         log.info("Signed JSON: {}", sourceJson);
@@ -121,12 +139,12 @@ public class Ed25519CryptopherTest {
 
     @Test
     public void signOffCreate() throws IOException {
-        signEvent(prefix + "m.room.create-raw.txt", prefix + "m.room.create-signed.txt");
+        signEvent("m.room.create");
     }
 
     @Test
     public void signOffMessage() throws IOException {
-        signEvent(prefix + "m.room.message-raw.txt", prefix + "m.room.message-signed.txt");
+        signEvent("m.room.message");
     }
 
 }

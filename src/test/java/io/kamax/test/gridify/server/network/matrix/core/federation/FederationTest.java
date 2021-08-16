@@ -72,7 +72,6 @@ public class FederationTest {
         l1.addNetwork(GridifyConfig.NetworkListeners.forMatrixHomeServer());
         l1.setPort(dp1);
         GridifyConfig cfg1 = GridifyConfig.inMemory();
-        cfg1.setDomain(dn1);
         cfg1.getListeners().add(l1);
 
         String dh2 = "localhost";
@@ -82,12 +81,12 @@ public class FederationTest {
         l2.addNetwork(GridifyConfig.NetworkListeners.forMatrixHomeServer());
         l2.setPort(dp2);
         GridifyConfig cfg2 = GridifyConfig.inMemory();
-        cfg2.setDomain(dn2);
         cfg2.getListeners().add(l2);
 
         mg1 = new MonolithHttpGridifyServer(cfg1);
         g1 = mg1.start();
         mx1 = g1.overMatrix();
+        mx1.addDomain(dn1);
         n1 = "jane";
         a1 = "@" + n1 + ":" + dn1;
         mx1.getFedPusher().setAsync(false);
@@ -99,6 +98,7 @@ public class FederationTest {
         mg2 = new MonolithHttpGridifyServer(cfg2);
         g2 = mg2.start();
         mx2 = g2.overMatrix();
+        mx2.addDomain(dn2);
         n2 = "john";
         a2 = "@" + n2 + ":" + dn2;
         mx2.getFedPusher().setAsync(false);

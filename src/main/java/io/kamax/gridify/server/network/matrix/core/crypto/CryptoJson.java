@@ -22,7 +22,6 @@ package io.kamax.gridify.server.network.matrix.core.crypto;
 
 import com.google.gson.JsonObject;
 import io.kamax.gridify.server.codec.CanonicalJson;
-import io.kamax.gridify.server.core.crypto.Cryptopher;
 import io.kamax.gridify.server.core.crypto.Signature;
 import io.kamax.gridify.server.network.matrix.core.event.EventKey;
 import io.kamax.gridify.server.util.GsonUtil;
@@ -35,15 +34,15 @@ public class CryptoJson {
 
     private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
-    public static Signature computeSignature(JsonObject event, Cryptopher crypto) {
+    public static Signature computeSignature(JsonObject event, MatrixDomainCryptopher crypto) {
         // We get the canonical version
         String eventCanonical = CanonicalJson.encode(event);
         log.debug("Signing HS request: {}", eventCanonical);
         // We generate the signature for the event
-        return crypto.sign(eventCanonical, crypto.getServerSigningKey().getId());
+        return crypto.sign(eventCanonical);
     }
 
-    public static JsonObject signUnsafe(JsonObject doc, Cryptopher crypto, String domain) {
+    public static JsonObject signUnsafe(JsonObject doc, MatrixDomainCryptopher crypto) {
         JsonObject signaturesDoc = GsonUtil.popOrCreateObj(doc, EventKey.Signatures);
 
         // We generate the signature for the event
@@ -51,7 +50,7 @@ public class CryptoJson {
 
         // We add the signature to the signatures dictionary
         JsonObject signLocalDoc = GsonUtil.makeObj(sign.getKey().getId(), sign.getSignature());
-        signaturesDoc.add(domain, signLocalDoc);
+        signaturesDoc.add(crypto.getDomain(), signLocalDoc);
 
         // We replace the event signatures original dictionary with the new one
         doc.add(EventKey.Signatures, signaturesDoc);
@@ -64,11 +63,10 @@ public class CryptoJson {
      *
      * @param doc    The doc to sign
      * @param crypto The cryptopher to use
-     * @param domain The domain under which the signature should be made
      * @return A copy of the doc with the added signature
      */
-    public JsonObject signJson(JsonObject doc, Cryptopher crypto, String domain) {
-        return CryptoJson.signUnsafe(doc.deepCopy(), crypto, domain);
+    public JsonObject signJson(JsonObject doc, MatrixDomainCryptopher crypto) {
+        return CryptoJson.signUnsafe(doc.deepCopy(), crypto);
     }
 
 }

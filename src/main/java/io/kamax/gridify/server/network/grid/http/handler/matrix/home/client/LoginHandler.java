@@ -44,16 +44,16 @@ public class LoginHandler extends ClientApiHandler {
         try {
             JsonObject credentials = exchange.parseJsonObject();
             JsonObject gCreds = ProtocolMapper.m2gCredentials(credentials);
-            UserSession session = g.overGrid().forData().asClient().login(gCreds);
+            UserSession session = g.overGrid().vHost(exchange.requireHost()).forData().asClient().login(gCreds);
 
             JsonObject reply = new JsonObject();
-            reply.addProperty("user_id", "@" + session.getUser().getId() + ":" + g.getDomain());
+            reply.addProperty("user_id", "@" + session.getUser().getId() + ":" + exchange.requireHost());
             reply.addProperty("access_token", session.getAccessToken());
             reply.addProperty("device_id", RandomStringUtils.randomAlphanumeric(8));
 
             // Required for some clients who fail if not present, even if not mandatory and deprecated.
             // https://github.com/Nheko-Reborn/mtxclient/issues/7
-            reply.addProperty("home_server", g.getDomain());
+            reply.addProperty("home_server", exchange.requireHost());
 
             exchange.respondJson(reply);
         } catch (UnauthenticatedException e) {

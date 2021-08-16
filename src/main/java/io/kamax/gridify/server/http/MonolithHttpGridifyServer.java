@@ -20,9 +20,11 @@
 
 package io.kamax.gridify.server.http;
 
+import com.google.gson.JsonObject;
 import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.config.GridifyConfig;
 import io.kamax.gridify.server.core.MonolithGridifyServer;
+import io.kamax.gridify.server.http.handler.Exchange;
 import io.kamax.gridify.server.network.grid.http.handler.grid.data.*;
 import io.kamax.gridify.server.network.grid.http.handler.grid.data.channel.GetEventHandler;
 import io.kamax.gridify.server.network.grid.http.handler.grid.identity.AuthHandler;
@@ -34,15 +36,28 @@ import io.kamax.gridify.server.network.matrix.http.handler.UnrecognizedEndpointH
 import io.kamax.gridify.server.network.matrix.http.handler.home.MatrixHomeClientEndpointRegister;
 import io.kamax.gridify.server.network.matrix.http.handler.home.MatrixHomeServerEndpointRegister;
 import io.kamax.gridify.server.network.matrix.http.handler.identity.HelloHandler;
+import io.kamax.gridify.server.util.GsonUtil;
 import io.kamax.gridify.server.util.KxLog;
 import io.kamax.gridify.server.util.TlsUtils;
 import io.undertow.Handlers;
 import io.undertow.Undertow;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.RoutingHandler;
+import io.undertow.server.handlers.BlockingHandler;
+import io.undertow.server.handlers.RedirectHandler;
+import io.undertow.util.HttpString;
+import io.undertow.util.QueryParameterUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
@@ -189,14 +204,14 @@ public class MonolithHttpGridifyServer {
             if (Objects.isNull(l.getNetwork())) {
                 log.info("Absent network configuration on listener {}:{}, adding default", l.getAddress(), l.getPort());
                 l.setNetwork(new ArrayList<>());
-                l.addNetwork(GridifyConfig.NetworkListener.build("grid", "data", "client"));
-                l.addNetwork(GridifyConfig.NetworkListener.build("grid", "data", "server"));
-                l.addNetwork(GridifyConfig.NetworkListener.build("grid", "identity", "client"));
-                l.addNetwork(GridifyConfig.NetworkListener.build("grid", "identity", "server"));
+                //l.addNetwork(GridifyConfig.NetworkListener.build("grid", "data", "client"));
+                //l.addNetwork(GridifyConfig.NetworkListener.build("grid", "data", "server"));
+                //l.addNetwork(GridifyConfig.NetworkListener.build("grid", "identity", "client"));
+                //l.addNetwork(GridifyConfig.NetworkListener.build("grid", "identity", "server"));
                 l.addNetwork(GridifyConfig.NetworkListener.build("matrix", "home", "client"));
                 l.addNetwork(GridifyConfig.NetworkListener.build("matrix", "home", "server"));
-                l.addNetwork(GridifyConfig.NetworkListener.build("matrix", "identity", "client"));
-                l.addNetwork(GridifyConfig.NetworkListener.build("matrix", "identity", "server"));
+                //l.addNetwork(GridifyConfig.NetworkListener.build("matrix", "identity", "client"));
+                //l.addNetwork(GridifyConfig.NetworkListener.build("matrix", "identity", "server"));
             }
         }
 
@@ -216,6 +231,87 @@ public class MonolithHttpGridifyServer {
                     throw new RuntimeException(network.getProtocol() + " is not a supported listener protocol");
                 }
             }
+
+            handler.post("/admin/firstRunWizard", new BlockingHandler(exchange -> {
+                Exchange ex = new Exchange(exchange);
+                if (g.getIdentity().hasUsers()) {
+                    throw new IllegalStateException("Server is already setup");
+                }
+
+                JsonObject body = new JsonObject();
+                String reqContentType = ex.getContentType().orElse("application/octet-stream");
+                String bodyRaw = ex.getBodyUtf8();
+                if (StringUtils.startsWith(reqContentType, "application/x-www-form-urlencoded")) {
+                    Map<String, Deque<String>> parms = QueryParameterUtils.parseQueryString(bodyRaw, StandardCharsets.UTF_8.name());
+                    for (Map.Entry<String, Deque<String>> entry : parms.entrySet()) {
+                        if (entry.getValue().size() <= 0) {
+                            return;
+                        }
+
+                        if (entry.getValue().size() > 1) {
+                            body.add(entry.getKey(), GsonUtil.asArray(entry.getValue()));
+                        } else {
+                            body.addProperty(entry.getKey(), entry.getValue().peekFirst());
+                        }
+                    }
+                } else if (StringUtils.startsWith(reqContentType, "application/json")) {
+                    body = GsonUtil.parseObj(bodyRaw);
+                }
+
+                g.setup(body);
+
+                new RedirectHandler("/").handleRequest(exchange);
+            }));
+
+            handler.get("/admin", new RedirectHandler("/admin/"));
+            handler.get("/admin/**", new HttpHandler() {
+                @Override
+                public void handleRequest(HttpServerExchange exchange) throws Exception {
+                    String path = "/html" + exchange.getRequestPath();
+                    log.debug("Path: {}", path);
+                    InputStream elIs = getClass().getResourceAsStream(path);
+                    if (Objects.isNull(elIs)) {
+                        String htmlPath = path + ".html";
+                        elIs = getClass().getResourceAsStream(htmlPath);
+                    }
+                    if (Objects.isNull(elIs)) {
+                        String indexPath = path + "/index.html";
+                        elIs = getClass().getResourceAsStream(indexPath);
+                    }
+                    if (Objects.isNull(elIs)) {
+                        exchange.setStatusCode(404);
+                        exchange.getResponseSender().send("Not found", StandardCharsets.UTF_8);
+                        exchange.endExchange();
+                        return;
+                    }
+                    try {
+                        String data = IOUtils.toString(Objects.requireNonNull(elIs), StandardCharsets.UTF_8);
+                        exchange.getResponseHeaders().put(HttpString.tryFromString("Content-Type"), "text/html");
+                        exchange.getResponseSender().send(data, StandardCharsets.UTF_8);
+                        exchange.endExchange();
+                    } finally {
+                        elIs.close();
+                    }
+                }
+            });
+
+            handler.get("/", new HttpHandler() {
+                @Override
+                public void handleRequest(HttpServerExchange exchange) throws Exception {
+                    if (!g.getIdentity().hasUsers()) {
+                        new RedirectHandler("/admin/firstRunWizard").handleRequest(exchange);
+                    } else {
+                        log.info("Serving homepage");
+                        try (InputStream elIs = getClass().getResourceAsStream("/html/index.html")) {
+                            String data = IOUtils.toString(Objects.requireNonNull(elIs), StandardCharsets.UTF_8);
+                            exchange.getResponseHeaders().put(HttpString.tryFromString("Content-Type"), "text/html");
+                            exchange.getResponseSender().send(data, StandardCharsets.UTF_8);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+            });
 
             if (cfg.isTls()) {
                 log.info("Setting listener {}:{} as HTTPS", cfg.getAddress(), cfg.getPort());

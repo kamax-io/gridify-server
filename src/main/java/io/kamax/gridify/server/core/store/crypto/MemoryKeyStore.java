@@ -23,13 +23,15 @@ package io.kamax.gridify.server.core.store.crypto;
 import io.kamax.gridify.server.core.crypto.*;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MemoryKeyStore implements KeyStore {
 
-    private Map<KeyType, Map<String, Map<String, FileKeyJson>>> keys = new ConcurrentHashMap<>();
-    private KeyIdentifier current;
+    private final Map<KeyType, Map<String, Map<String, FileKeyJson>>> keys = new ConcurrentHashMap<>();
 
     private Map<String, FileKeyJson> getMap(KeyType type, String algo) {
         return keys.computeIfAbsent(type, k -> new ConcurrentHashMap<>()).computeIfAbsent(algo, k -> new ConcurrentHashMap<>());
@@ -94,20 +96,6 @@ public class MemoryKeyStore implements KeyStore {
         }
 
         keys.computeIfAbsent(id.getType(), k -> new ConcurrentHashMap<>()).computeIfAbsent(id.getAlgorithm(), k -> new ConcurrentHashMap<>()).remove(id.getSerial());
-    }
-
-    @Override
-    public void setCurrentKey(KeyIdentifier id) throws IllegalArgumentException {
-        if (!has(id)) {
-            throw new IllegalArgumentException("Key " + id.getType() + ":" + id.getAlgorithm() + ":" + id.getSerial() + " is not known to the store");
-        }
-
-        current = id;
-    }
-
-    @Override
-    public Optional<KeyIdentifier> getCurrentKey() {
-        return Optional.ofNullable(current);
     }
 
 }

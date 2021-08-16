@@ -40,7 +40,7 @@ public class SyncHandler extends ClientApiHandler {
 
     @Override
     protected void handle(Exchange exchange) {
-        UserSession session = g.overGrid().forData().asClient().withToken(exchange.getAccessToken());
+        UserSession session = g.withToken(exchange.getAccessToken());
         String since = StringUtils.defaultIfBlank(exchange.getQueryParameter("since"), "");
 
         SyncOptions options = new SyncOptions();
@@ -61,7 +61,7 @@ public class SyncHandler extends ClientApiHandler {
 
         SyncData data = session.sync(options);
         String mxId = ProtocolEventMapper.forUserIdFromGridToMatrix(session.getUser().getNetworkId("grid"));
-        exchange.respondJson(SyncResponse.build(g, mxId, data));
+        exchange.respondJson(SyncResponse.build(g.overGrid().vHost(exchange.requireHost()).forData(), mxId, data));
     }
 
 }

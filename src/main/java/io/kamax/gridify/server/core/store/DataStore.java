@@ -20,6 +20,8 @@
 
 package io.kamax.gridify.server.core.store;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import io.kamax.gridify.server.core.auth.Credentials;
 import io.kamax.gridify.server.core.auth.SecureCredentials;
 import io.kamax.gridify.server.core.channel.ChannelDao;
@@ -30,12 +32,46 @@ import io.kamax.gridify.server.exception.ObjectNotFoundException;
 import io.kamax.gridify.server.network.grid.core.ChannelID;
 import io.kamax.gridify.server.network.grid.core.ServerID;
 import io.kamax.gridify.server.network.matrix.core.room.RoomState;
+import io.kamax.gridify.server.util.GsonUtil;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 public interface DataStore {
+
+    default boolean hasConfig(String id) {
+        try {
+            getConfig(id);
+            return true;
+        } catch (ObjectNotFoundException e) {
+            return false;
+        }
+    }
+
+    void setConfig(String id, JsonElement value);
+
+    default void setConfig(String id, Object o) {
+        setConfig(id, GsonUtil.get().toJsonTree(o));
+    }
+
+    JsonElement getConfig(String id);
+
+    default String getConfigString(String id) {
+        return getConfig(id).getAsString();
+    }
+
+    default JsonObject getConfigObj(String id) {
+        return getConfig(id).getAsJsonObject();
+    }
+
+    default <T> T getConfig(String id, Class<T> type) {
+        return GsonUtil.fromJson(getConfigObj(id), type);
+    }
+
+    DomainDao saveDomain(DomainDao dao);
+
+    List<DomainDao> listDomains(String network);
 
     List<ChannelDao> listChannels();
 

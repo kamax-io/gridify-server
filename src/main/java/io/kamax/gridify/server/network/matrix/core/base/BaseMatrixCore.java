@@ -23,26 +23,27 @@ package io.kamax.gridify.server.network.matrix.core.base;
 import com.google.gson.JsonObject;
 import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.core.crypto.Cryptopher;
+import io.kamax.gridify.server.core.crypto.KeyIdentifier;
+import io.kamax.gridify.server.core.crypto.KeyType;
 import io.kamax.gridify.server.core.event.EventStreamer;
 import io.kamax.gridify.server.core.signal.SignalBus;
 import io.kamax.gridify.server.core.store.DataStore;
+import io.kamax.gridify.server.core.store.DomainDao;
 import io.kamax.gridify.server.network.matrix.core.MatrixCore;
 import io.kamax.gridify.server.network.matrix.core.MatrixServer;
+import io.kamax.gridify.server.network.matrix.core.domain.MatrixDomain;
 import io.kamax.gridify.server.network.matrix.core.federation.FederationPusher;
 import io.kamax.gridify.server.network.matrix.core.federation.HomeServerManager;
 import io.kamax.gridify.server.network.matrix.core.room.RoomDirectory;
 import io.kamax.gridify.server.network.matrix.core.room.RoomManager;
-import org.apache.commons.lang3.StringUtils;
 
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-// FIXME do we need this?
 public class BaseMatrixCore implements MatrixCore {
 
     private final GridifyServer g;
+    private final Map<String, MatrixServer> vHosts;
     private final RoomManager rMgr;
     private final HomeServerManager hsMgr;
     private final FederationPusher fedPusher;
@@ -51,11 +52,23 @@ public class BaseMatrixCore implements MatrixCore {
 
     public BaseMatrixCore(GridifyServer g) {
         this.g = g;
+
+        vHosts = new HashMap<>();
         rMgr = new RoomManager(g);
         hsMgr = new HomeServerManager(g);
         fedPusher = new FederationPusher(this);
         rDir = new RoomDirectory(g, g.getStore(), g.getBus(), hsMgr);
         commandResponseQueues = new ConcurrentHashMap<>();
+
+        init();
+    }
+
+    private void init() {
+        List<DomainDao> domainDaos = g.getStore().listDomains("matrix");
+        for (DomainDao dao : domainDaos) {
+            MatrixDomain domain = MatrixDomain.fromDao(dao);
+            vHosts.put(domain.getHost(), new BaseMatrixServer(g, domain));
+        }
     }
 
     @Override
@@ -90,12 +103,45 @@ public class BaseMatrixCore implements MatrixCore {
 
     @Override
     public boolean isLocal(String host) {
-        return StringUtils.equals(g.getDomain(), host);
+        return vHosts.containsKey(host);
+    }
+
+    @Override
+    public MatrixDomain addDomain(String vHost) {
+        if (isLocal(vHost)) {
+            throw new IllegalStateException("Domain " + vHost + " is already registered");
+        }
+
+        KeyIdentifier keyId = crypto().generateKey(KeyType.Regular);
+        MatrixDomain domain = new MatrixDomain();
+        domain.setHost(vHost);
+        domain.setSigningKey(keyId);
+        domain.setOldSigningKeys(new ArrayList<>());
+
+        DomainDao dao = store().saveDomain(domain.toDao());
+        domain.setLid(dao.getLocalId());
+
+        vHosts.put(domain.getHost(), new BaseMatrixServer(g, domain));
+        return domain;
+    }
+
+    @Override
+    public MatrixServer forDomain(String domain) {
+        return vHost(domain);
+    }
+
+    @Override
+    public void removeDomain(String domain) {
+
     }
 
     @Override
     public MatrixServer vHost(String host) {
-        return new BaseMatrixServer(g, host);
+        MatrixServer srv = vHosts.get(host);
+        if (Objects.isNull(srv)) {
+            throw new IllegalArgumentException("Unknown host " + host);
+        }
+        return srv;
     }
 
     @Override

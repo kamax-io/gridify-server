@@ -43,7 +43,7 @@ public class ChannelDirectoryLookupHandler extends GridApiHandler {
 
     @Override
     protected void handle(Exchange exchange) {
-        ServerSession s = g.overGrid().forData().asServer(exchange.authenticate());
+        ServerSession s = g.overGrid().vHost(exchange.requireHost()).forData().asServer(exchange.authenticate());
 
         JsonObject body = exchange.parseJsonObject();
         String aliasRaw = GsonUtil.getStringOrThrow(body, "alias");

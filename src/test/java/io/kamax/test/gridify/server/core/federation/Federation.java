@@ -45,6 +45,7 @@ public class Federation {
 
     protected static MonolithHttpGridifyServer mg1;
     protected static GridifyServer g1;
+    protected static String dn1;
     protected static String n1;
     protected static String a1;
     protected static UserID u1;
@@ -52,6 +53,7 @@ public class Federation {
 
     protected static MonolithHttpGridifyServer mg2;
     protected static GridifyServer g2;
+    protected static String dn2;
     protected static String n2;
     protected static String a2;
     protected static UserID u2;
@@ -65,24 +67,24 @@ public class Federation {
 
         String dh1 = "localhost";
         int dp1 = 60001;
-        String dn1 = dh1 + ":" + dp1;
+        dn1 = dh1 + ":" + dp1;
         GridifyConfig.Listener l1 = new GridifyConfig.Listener();
         l1.addNetwork(GridifyConfig.NetworkListeners.forGridDataServer());
         l1.addNetwork(GridifyConfig.NetworkListeners.forGridIdentityServer());
         l1.setPort(dp1);
         GridifyConfig cfg1 = GridifyConfig.inMemory();
-        cfg1.setDomain(dn1);
+        //cfg1.setDomain(dn1);
         cfg1.getListeners().add(l1);
 
         String dh2 = "localhost";
         int dp2 = 60002;
-        String dn2 = dh2 + ":" + dp2;
+        dn2 = dh2 + ":" + dp2;
         GridifyConfig.Listener l2 = new GridifyConfig.Listener();
         l2.addNetwork(GridifyConfig.NetworkListeners.forGridDataServer());
         l2.addNetwork(GridifyConfig.NetworkListeners.forGridIdentityServer());
         l2.setPort(dp2);
         GridifyConfig cfg2 = GridifyConfig.inMemory();
-        cfg2.setDomain(dn2);
+        //cfg2.setDomain(dn2);
         cfg2.getListeners().add(l2);
 
         MonolithHttpGridifyServer mg1 = new MonolithHttpGridifyServer(cfg1);
@@ -91,18 +93,18 @@ public class Federation {
         n1 = "dark";
         a1 = "@" + n1 + "@" + dn1;
         g1 = mg1.start();
-        g1.getFedPusher().setAsync(false);
+        g1.overGrid().fedPusher().setAsync(false);
         User u1b = g1.register(n1, pass);
-        s1 = g1.overGrid().forData().asClient().login(u1b);
+        s1 = g1.overGrid().vHost(dn1).forData().asClient().login(u1b);
         s1.getUser().addThreePid(new GenericThreePid("g.id.net.grid.alias", a1));
         u1 = s1.getUser().getGridId();
 
         n2 = "light";
         a2 = "@" + n2 + "@" + dn2;
         g2 = mg2.start();
-        g2.getFedPusher().setAsync(false);
+        g2.overGrid().fedPusher().setAsync(false);
         User u2b = g2.register(n2, pass);
-        s2 = g2.overGrid().forData().asClient().login(u2b);
+        s2 = g2.overGrid().vHost(dn2).forData().asClient().login(u2b);
         s2.getUser().addThreePid(new GenericThreePid("g.id.net.grid.alias", a2));
         u2 = s2.getUser().getGridId();
     }
@@ -121,7 +123,7 @@ public class Federation {
     protected String makeSharedChannel() {
         Channel g1c1 = s1.createChannel();
         String cId = g1c1.getId().full();
-        ChannelAlias c1Alias = new ChannelAlias("test", g1.getDomain());
+        ChannelAlias c1Alias = new ChannelAlias("test", dn1);
 
         BareAliasEvent aEv = new BareAliasEvent();
         aEv.addAlias(c1Alias);

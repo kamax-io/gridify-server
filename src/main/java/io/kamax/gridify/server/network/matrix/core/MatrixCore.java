@@ -25,6 +25,7 @@ import io.kamax.gridify.server.core.crypto.Cryptopher;
 import io.kamax.gridify.server.core.event.EventStreamer;
 import io.kamax.gridify.server.core.signal.SignalBus;
 import io.kamax.gridify.server.core.store.DataStore;
+import io.kamax.gridify.server.network.matrix.core.domain.MatrixDomain;
 import io.kamax.gridify.server.network.matrix.core.federation.FederationPusher;
 import io.kamax.gridify.server.network.matrix.core.federation.HomeServerManager;
 import io.kamax.gridify.server.network.matrix.core.room.RoomDirectory;
@@ -47,6 +48,12 @@ public interface MatrixCore {
     HomeServerManager hsMgr();
 
     boolean isLocal(String host);
+
+    MatrixDomain addDomain(String domain);
+
+    MatrixServer forDomain(String domain);
+
+    void removeDomain(String domain);
 
     MatrixServer vHost(String host);
 

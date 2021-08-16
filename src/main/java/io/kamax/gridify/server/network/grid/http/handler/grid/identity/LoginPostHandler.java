@@ -40,7 +40,7 @@ public class LoginPostHandler extends GridApiHandler {
         JsonObject reqBody = exchange.parseJsonObject();
         String sId = GsonUtil.getStringOrThrow(reqBody, "session");
         UIAuthSession authSession = g.getAuth().getSession(sId);
-        UserSession userSession = g.overGrid().forData().asClient().login(authSession);
+        UserSession userSession = g.overGrid().vHost(exchange.requireHost()).forData().asClient().login(authSession);
         exchange.respond(GsonUtil.makeObj("token", userSession.getAccessToken()));
     }
 

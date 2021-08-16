@@ -20,15 +20,12 @@
 
 package io.kamax.gridify.server.core.store.crypto;
 
-import com.google.gson.JsonObject;
 import io.kamax.gridify.server.core.crypto.*;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
 import io.kamax.gridify.server.util.GsonUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -40,13 +37,9 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 public class FileKeyStore implements KeyStore {
 
-    private static final Logger log = LoggerFactory.getLogger(FileKeyStore.class);
-
-    private final String currentFilename = "current";
     private final String base;
 
     public FileKeyStore(String path) {
@@ -66,7 +59,7 @@ public class FileKeyStore implements KeyStore {
         }
 
         if (!f.isDirectory()) {
-            throw new RuntimeException("Key store path is not a directory: " + f.toString());
+            throw new RuntimeException("Key store path is not a directory: " + f);
         }
     }
 
@@ -79,13 +72,13 @@ public class FileKeyStore implements KeyStore {
 
         if (b.exists()) {
             if (!b.isDirectory()) {
-                throw new RuntimeException("Key store path already exists but is not a directory: " + b.toString());
+                throw new RuntimeException("Key store path already exists but is not a directory: " + b);
             }
         } else {
             try {
                 FileUtils.forceMkdir(b);
             } catch (IOException e) {
-                throw new RuntimeException("Unable to create key store path at " + b.toString(), e);
+                throw new RuntimeException("Unable to create key store path at " + b, e);
             }
         }
 
@@ -121,7 +114,7 @@ public class FileKeyStore implements KeyStore {
         for (File algo : algos) {
             File[] serials = algo.listFiles();
             if (Objects.isNull(serials)) {
-                throw new IllegalStateException("Cannot list stored key serials: was expecting " + algo.toString() + " to be a directory");
+                throw new IllegalStateException("Cannot list stored key serials: was expecting " + algo + " to be a directory");
             }
 
             for (File serial : serials) {
@@ -186,45 +179,6 @@ public class FileKeyStore implements KeyStore {
 
         if (!keyFile.delete()) {
             throw new RuntimeException("Unable to delete key " + id.getId());
-        }
-    }
-
-    @Override
-    public void setCurrentKey(KeyIdentifier id) throws IllegalArgumentException {
-        if (!has(id)) {
-            throw new IllegalArgumentException("Key " + id.getType() + ":" + id.getAlgorithm() + ":" + id.getSerial() + " is not known to the store");
-        }
-
-        JsonObject json = new JsonObject();
-        json.addProperty("type", id.getType().name());
-        json.addProperty("algo", id.getAlgorithm());
-        json.addProperty("serial", id.getSerial());
-
-        File f = Paths.get(base, currentFilename).toFile();
-
-        try (FileOutputStream keyOs = new FileOutputStream(f, false)) {
-            IOUtils.write(GsonUtil.get().toJson(json), keyOs, StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new RuntimeException("Unable to write to " + f.toString(), e);
-        }
-    }
-
-    @Override
-    public Optional<KeyIdentifier> getCurrentKey() {
-        File f = Paths.get(base, currentFilename).toFile();
-        if (!f.exists()) {
-            return Optional.empty();
-        }
-
-        if (!f.isFile()) {
-            throw new IllegalStateException("Current key file is not a file: " + f.toString());
-        }
-
-        try (FileInputStream keyIs = new FileInputStream(f)) {
-            JsonObject json = GsonUtil.parseObj(IOUtils.toString(keyIs, StandardCharsets.UTF_8));
-            return Optional.of(new GenericKeyIdentifier(KeyType.valueOf(GsonUtil.getStringOrThrow(json, "type")), GsonUtil.getStringOrThrow(json, "algo"), GsonUtil.getStringOrThrow(json, "serial")));
-        } catch (IOException e) {
-            throw new RuntimeException("Unable to read " + f.toString(), e);
         }
     }
 

@@ -20,28 +20,28 @@
 
 package io.kamax.gridify.server;
 
+import com.google.gson.JsonObject;
 import io.kamax.gridify.server.config.GridifyConfig;
 import io.kamax.gridify.server.core.UserSession;
 import io.kamax.gridify.server.core.auth.AuthService;
 import io.kamax.gridify.server.core.auth.UIAuthSession;
-import io.kamax.gridify.server.core.channel.ChannelDirectory;
-import io.kamax.gridify.server.core.channel.ChannelManager;
 import io.kamax.gridify.server.core.crypto.Cryptopher;
-import io.kamax.gridify.server.core.event.EventService;
+import io.kamax.gridify.server.core.crypto.PublicKey;
 import io.kamax.gridify.server.core.event.EventStreamer;
-import io.kamax.gridify.server.core.federation.DataServerManager;
-import io.kamax.gridify.server.core.federation.FederationPusher;
 import io.kamax.gridify.server.core.identity.IdentityManager;
 import io.kamax.gridify.server.core.identity.User;
 import io.kamax.gridify.server.core.signal.SignalBus;
 import io.kamax.gridify.server.core.store.DataStore;
-import io.kamax.gridify.server.network.grid.core.GridServer;
-import io.kamax.gridify.server.network.grid.core.ServerID;
-import io.kamax.gridify.server.network.grid.core.UserID;
+import io.kamax.gridify.server.network.grid.core.GridCore;
 import io.kamax.gridify.server.network.matrix.core.MatrixCore;
-import org.apache.commons.lang3.StringUtils;
 
 public interface GridifyServer {
+
+    String getServerId();
+
+    PublicKey getPublicKey();
+
+    void setup(JsonObject setupDoc);
 
     void start();
 
@@ -51,16 +51,6 @@ public interface GridifyServer {
 
     GridifyConfig getConfig();
 
-    String getDomain();
-
-    ServerID getOrigin();
-
-    default boolean isOrigin(String sId) {
-        return StringUtils.equals(sId, getOrigin().full());
-    }
-
-    boolean isLocal(ServerID sId);
-
     SignalBus getBus();
 
     DataStore getStore();
@@ -69,21 +59,9 @@ public interface GridifyServer {
 
     IdentityManager getIdentity();
 
-    ChannelManager getChannelManager();
-
-    ChannelDirectory getChannelDirectory();
-
-    EventService getEventService();
-
     EventStreamer getStreamer();
 
-    DataServerManager getServers();
-
-    FederationPusher getFedPusher();
-
     AuthService getAuth();
-
-    UserSession withToken(String token);
 
     String createSessionToken(String network, User usr);
 
@@ -97,10 +75,12 @@ public interface GridifyServer {
 
     User login(UIAuthSession auth, String stage);
 
-    boolean isLocal(UserID uId);
-
-    GridServer overGrid();
+    GridCore overGrid();
 
     MatrixCore overMatrix();
+
+    default UserSession withToken(String token) {
+        return overGrid().vHost("").forData().asClient().withToken(token);
+    }
 
 }

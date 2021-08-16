@@ -20,15 +20,18 @@
 
 package io.kamax.gridify.server.network.matrix.core;
 
-import io.kamax.gridify.server.core.crypto.Cryptopher;
+import com.google.gson.JsonObject;
 import io.kamax.gridify.server.network.matrix.core.base.ServerSession;
+import io.kamax.gridify.server.network.matrix.core.crypto.MatrixDomainCryptopher;
 import io.kamax.gridify.server.network.matrix.core.federation.HomeServerRequest;
 
 public interface MatrixDataServer {
 
     String getDomain();
 
-    Cryptopher getCrypto();
+    MatrixDomainCryptopher getCrypto();
+
+    JsonObject getKeyDocument(String keyId);
 
     ServerSession forRequest(HomeServerRequest mxReq);
 

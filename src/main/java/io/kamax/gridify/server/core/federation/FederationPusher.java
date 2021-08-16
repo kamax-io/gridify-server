@@ -60,7 +60,7 @@ public class FederationPusher {
         }
 
         log.info("Got event {} to process", signal.getEvent().getLid());
-        if (!g.isOrigin(signal.getEvent().getOrigin())) {
+        if (!g.overGrid().isOrigin(signal.getEvent().getOrigin())) {
             log.debug("Origin check: {} is not an local origin", signal.getEvent().getOrigin());
             return;
         }
@@ -74,13 +74,13 @@ public class FederationPusher {
         ForkJoinTask<Void> task = pool.submit(new RecursiveAction() {
             @Override
             protected void compute() {
-                Set<ServerID> servers = g.getChannelManager().get(ev.getChannelId()).getView().getOtherServers();
+                Set<ServerID> servers = g.overGrid().getChannelManager().get(ev.getChannelId()).getView().getOtherServers();
                 log.debug("Will push to {} server(s)", servers.size());
 
                 invokeAll(srvMgr.get(servers).stream().map(srv -> new RecursiveAction() {
                     @Override
                     protected void compute() {
-                        srv.push(g.getOrigin().full(), ev);
+                        srv.push(ev.getOrigin(), ev);
                         log.info("Event {} was pushed to {}", ev.getLid(), srv.getId().full());
                     }
                 }).collect(Collectors.toList()));

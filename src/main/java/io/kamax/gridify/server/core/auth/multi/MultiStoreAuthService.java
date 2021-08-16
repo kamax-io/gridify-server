@@ -24,13 +24,10 @@ import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.config.IdentityConfig;
 import io.kamax.gridify.server.config.UIAuthConfig;
 import io.kamax.gridify.server.core.auth.AuthService;
-import io.kamax.gridify.server.core.auth.Credentials;
 import io.kamax.gridify.server.core.auth.UIAuthSession;
-import io.kamax.gridify.server.core.identity.GenericThreePid;
 import io.kamax.gridify.server.core.identity.IdentityStore;
 import io.kamax.gridify.server.core.identity.IdentityStoreSupplier;
 import io.kamax.gridify.server.core.identity.IdentityStoreSuppliers;
-import io.kamax.gridify.server.core.store.MemoryStore;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
 import io.kamax.gridify.server.util.KxLog;
 import org.slf4j.Logger;
@@ -42,10 +39,9 @@ public class MultiStoreAuthService implements AuthService {
 
     private static final Logger log = KxLog.make(MultiStoreAuthService.class);
 
-    private Map<String, IdentityStore> storeByLabel = new ConcurrentHashMap<>();
-
-    private Set<IdentityStore> stores = new HashSet<>();
-    private Map<String, UIAuthSession> sessions = new ConcurrentHashMap<>();
+    private final Map<String, IdentityStore> storeByLabel = new ConcurrentHashMap<>();
+    private final Set<IdentityStore> stores = new HashSet<>();
+    private final Map<String, UIAuthSession> sessions = new ConcurrentHashMap<>();
 
     private IdentityStore forLabel(String label, IdentityConfig.Store storeCfg) {
         return storeByLabel.computeIfAbsent(label, l -> {
@@ -72,16 +68,6 @@ public class MultiStoreAuthService implements AuthService {
         g.getConfig().getIdentity().getStores().forEach((label, storeCfg) -> {
             IdentityStore store = forLabel(label, storeCfg);
             stores.add(store);
-
-            if (g.getConfig().getIdentity().getStores().size() == 1 && store instanceof MemoryStore) {
-                MemoryStore storeMem = (MemoryStore) store;
-                long uLid = storeMem.addUser("a");
-                storeMem.addThreePid(uLid, new GenericThreePid("g.id.local.username", "a"));
-                storeMem.addThreePid(uLid, new GenericThreePid("m.id.user", "a"));
-                storeMem.addThreePid(uLid, new GenericThreePid("g.id.net.matrix", "@a:" + g.getConfig().getDomain()));
-                storeMem.addCredentials(uLid, new Credentials("g.auth.id.password", "a"));
-                storeMem.addCredentials(uLid, new Credentials("m.login.password", "a"));
-            }
         });
 
         if (stores.isEmpty()) {

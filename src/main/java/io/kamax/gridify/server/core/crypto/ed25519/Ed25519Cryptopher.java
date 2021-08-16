@@ -27,7 +27,6 @@ import io.kamax.gridify.server.core.crypto.Signature;
 import io.kamax.gridify.server.core.crypto.*;
 import io.kamax.gridify.server.core.store.crypto.KeyStore;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
-import io.kamax.gridify.server.util.GsonUtil;
 import net.i2p.crypto.eddsa.EdDSAEngine;
 import net.i2p.crypto.eddsa.EdDSAPrivateKey;
 import net.i2p.crypto.eddsa.EdDSAPublicKey;
@@ -39,19 +38,13 @@ import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.security.*;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class Ed25519Cryptopher implements Cryptopher {
-
-    private static final Logger log = LoggerFactory.getLogger(Ed25519Cryptopher.class);
 
     private final EdDSAParameterSpec keySpecs;
     private final KeyStore store;
@@ -59,25 +52,11 @@ public class Ed25519Cryptopher implements Cryptopher {
     public Ed25519Cryptopher(KeyStore store) {
         this.keySpecs = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.ED_25519);
         this.store = store;
-
-        if (!store.getCurrentKey().isPresent()) {
-            List<KeyIdentifier> keys = store.list(KeyType.Regular).stream()
-                    .map(this::getKey)
-                    .filter(Key::isValid)
-                    .map(Key::getId)
-                    .collect(Collectors.toList());
-
-            if (keys.isEmpty()) {
-                keys.add(generateKey(KeyType.Regular));
-            }
-
-            store.setCurrentKey(keys.get(0));
-        }
     }
 
     private String generateId() {
         ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-        buffer.putLong(Instant.now().toEpochMilli() - 1546297200000L); // TS since 2019-01-01T00:00:00Z to keep IDs short
+        buffer.putLong(Instant.now().toEpochMilli());
         return Base64.encodeBase64URLSafeString(buffer.array()) + RandomStringUtils.randomAlphanumeric(1);
     }
 
@@ -85,7 +64,7 @@ public class Ed25519Cryptopher implements Cryptopher {
         return Base64.encodeBase64URLSafeString(key.getSeed());
     }
 
-    EdDSAParameterSpec getKeySpecs() {
+    private EdDSAParameterSpec getKeySpecs() {
         return keySpecs;
     }
 
@@ -108,11 +87,6 @@ public class Ed25519Cryptopher implements Cryptopher {
     @Override
     public List<KeyIdentifier> getKeys(KeyType type) {
         return store.list(type);
-    }
-
-    @Override
-    public Key getServerSigningKey() {
-        return store.get(store.getCurrentKey().orElseThrow(IllegalStateException::new));
     }
 
     @Override
@@ -158,9 +132,8 @@ public class Ed25519Cryptopher implements Cryptopher {
     }
 
     @Override
-    public Signature sign(byte[] data, KeyIdentifier keyId) {
+    public Signature sign(byte[] data, KeyIdentifier signingKeyId) {
         try {
-            KeyIdentifier signingKeyId = getServerSigningKey().getId();
             EdDSAEngine signEngine = new EdDSAEngine(MessageDigest.getInstance(getKeySpecs().getHashAlgorithm()));
             signEngine.initSign(getPrivateKey(signingKeyId));
             byte[] signRaw = signEngine.signOneShot(data);
@@ -195,36 +168,6 @@ public class Ed25519Cryptopher implements Cryptopher {
         }
 
         throw new ObjectNotFoundException("No keypair with matching public key " + pubKeyBase64);
-    }
-
-    @Override
-    public JsonObject getKeyDocument(String domain, List<KeyIdentifier> keyIds) {
-        List<Key> keys = new ArrayList<>();
-        for (KeyIdentifier keyId : keyIds) {
-            keys.add(getKey(keyId));
-        }
-
-        JsonObject verifyKeysDoc = new JsonObject();
-        JsonObject doc = new JsonObject();
-        doc.add("old_verify_keys", new JsonObject());
-        doc.addProperty("server_name", domain);
-        doc.addProperty("valid_until_ts", Instant.now().plusSeconds(60 * 60 * 24).toEpochMilli()); // 24h
-        doc.add("verify_keys", verifyKeysDoc);
-
-        for (Key key : keys) {
-            JsonObject verifyKeyDoc = GsonUtil.makeObj("key", getPublicKeyBase64(key.getId()));
-            verifyKeysDoc.add(key.getId().getAlgorithm() + ":" + key.getId().getSerial(), verifyKeyDoc);
-        }
-
-        JsonObject signDomains = new JsonObject();
-        for (Key key : keys) {
-            Signature sign = sign(doc, key.getId());
-            JsonObject signDomain = GsonUtil.makeObj(sign.getKey().getAlgorithm() + ":" + sign.getKey().getSerial(), sign.getSignature());
-            signDomains.add(domain, signDomain);
-        }
-
-        doc.add("signatures", signDomains);
-        return doc;
     }
 
 }
