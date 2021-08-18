@@ -1,0 +1,24 @@
+default:
+  image: openjdk:11
+
+before_script:
+  - export GRADLE_USER_HOME=`pwd`/.gradle
+
+cache:
+  paths:
+    - .gradle/wrapper
+    - .gradle/caches
+
+stages:
+  - test
+
+test-jdk-default:
+  stage: test
+  script:
+    - ./gradlew test
+
+test-jdk-8:
+  image: openjdk:8
+  stage: test
+  script:
+    - ./gradlew test
