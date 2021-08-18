@@ -253,11 +253,21 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
     @Override
     public DomainDao saveDomain(DomainDao dao) {
-        String sql = "INSERT INTO domains (network,host,properties) VALUES (?,?,?::jsonb) RETURNING lid";
+        if (Objects.isNull(dao.getLocalId())) {
+            return insertDomain(dao);
+        } else {
+            updateDomain(dao);
+            return dao;
+        }
+    }
+
+    public DomainDao insertDomain(DomainDao dao) {
+        String sql = "INSERT INTO domains (network,host,config,properties) VALUES (?,?,?::jsonb,?::jsonb) RETURNING lid";
         long lid = withStmtFunction(sql, stmt -> {
             stmt.setString(1, dao.getNetwork());
             stmt.setString(2, dao.getDomain());
             stmt.setString(3, GsonUtil.toJson(dao.getProperties()));
+            stmt.setString(4, GsonUtil.toJson(dao.getProperties()));
             try (ResultSet rSet = stmt.executeQuery()) {
                 if (!rSet.next()) {
                     throw new IllegalStateException("Inserted domain " + dao.getNetwork() + ":" + dao.getDomain() + " in stream but got no SID back");
@@ -267,6 +277,19 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
         });
         dao.setLocalId(lid);
         return dao;
+    }
+
+    public void updateDomain(DomainDao dao) {
+        String sql = "UPDATE domains SET config = ?::jsonb, properties = ?::jsonb WHERE lid = ?";
+        withStmtConsumer(sql, stmt -> {
+            stmt.setString(1, GsonUtil.toJson(dao.getConfig()));
+            stmt.setString(2, GsonUtil.toJson(dao.getProperties()));
+            stmt.setLong(3, dao.getLocalId());
+            int rc = stmt.executeUpdate();
+            if (rc != 1) {
+                throw new IllegalStateException("Domain # " + dao.getLocalId() + ": DB updated " + rc + " rows. 1 expected");
+            }
+        });
     }
 
     @Override
@@ -281,6 +304,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
                     dao.setLocalId(rSet.getLong("lid"));
                     dao.setNetwork(rSet.getString("network"));
                     dao.setDomain(rSet.getString("host"));
+                    dao.setConfig(GsonUtil.parseObj(rSet.getString("config")));
                     dao.setProperties(GsonUtil.parseObj(rSet.getString("properties")));
                     daos.add(dao);
                 }

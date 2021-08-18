@@ -25,8 +25,8 @@ import com.google.gson.JsonObject;
 import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.core.identity.User;
 import io.kamax.gridify.server.exception.ForbiddenException;
-import io.kamax.gridify.server.exception.NotImplementedException;
 import io.kamax.gridify.server.http.handler.Exchange;
+import io.kamax.gridify.server.network.matrix.core.MatrixDataClient;
 import io.kamax.gridify.server.network.matrix.core.base.UserSession;
 import io.kamax.gridify.server.util.GsonUtil;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -59,13 +59,15 @@ public class RegisterPostHandler extends ClientApiHandler {
 
     @Override
     protected void handle(Exchange exchange) {
-        if (!g.getIdentity().canRegister()) {
+        MatrixDataClient client = getClient(g, exchange);
+
+        if (!client.canRegister()) {
             throw new ForbiddenException("Registrations are not allowed");
         }
 
         String kind = StringUtils.defaultIfEmpty(exchange.getQueryParameter("kind"), "user");
         if (!StringUtils.equals("user", kind)) {
-            throw new NotImplementedException("Registration with a kind other than user");
+            throw new ForbiddenException("Registration with a kind other than user");
         }
 
         JsonObject req = exchange.parseJsonObject();
@@ -87,8 +89,9 @@ public class RegisterPostHandler extends ClientApiHandler {
 
         String password = GsonUtil.getStringOrNull(req, "password");
 
+        // FIXME do it on the vhost
         User user = g.register(username, password);
-        UserSession session = getClient(g, exchange).login(user);
+        UserSession session = client.login(user);
 
         JsonObject reply = new JsonObject();
         reply.addProperty("user_id", session.getUser());

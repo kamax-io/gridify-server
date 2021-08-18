@@ -28,6 +28,7 @@ public class DomainDao {
     private String network;
     private String domain;
     private JsonObject properties;
+    private JsonObject config;
 
     public Long getLocalId() {
         return localId;
@@ -59,6 +60,14 @@ public class DomainDao {
 
     public void setProperties(JsonObject properties) {
         this.properties = properties;
+    }
+
+    public JsonObject getConfig() {
+        return config;
+    }
+
+    public void setConfig(JsonObject config) {
+        this.config = config;
     }
 
 }

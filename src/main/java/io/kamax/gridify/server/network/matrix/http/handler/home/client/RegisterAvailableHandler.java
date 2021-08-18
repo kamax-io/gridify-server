@@ -21,14 +21,10 @@
 package io.kamax.gridify.server.network.matrix.http.handler.home.client;
 
 import io.kamax.gridify.server.GridifyServer;
-import io.kamax.gridify.server.core.GridType;
-import io.kamax.gridify.server.core.identity.GenericThreePid;
-import io.kamax.gridify.server.core.identity.User;
 import io.kamax.gridify.server.exception.ForbiddenException;
 import io.kamax.gridify.server.http.handler.Exchange;
+import io.kamax.gridify.server.network.matrix.core.MatrixDataClient;
 import io.kamax.gridify.server.util.GsonUtil;
-
-import java.util.Optional;
 
 public class RegisterAvailableHandler extends ClientApiHandler {
 
@@ -40,13 +36,13 @@ public class RegisterAvailableHandler extends ClientApiHandler {
 
     @Override
     protected void handle(Exchange exchange) {
-        if (!g.getIdentity().canRegister()) {
-            throw new ForbiddenException("Registrations are not allowed");
-        }
+        MatrixDataClient client = getClient(g, exchange);
 
         String username = exchange.getQueryParameter("username");
-        Optional<User> u = g.getIdentity().findUser(new GenericThreePid(GridType.id().local().username(), username));
-        if (u.isPresent()) {
+        if (!client.canRegister()) {
+            throw new ForbiddenException("Registrations are not allowed");
+        }
+        if (!client.canRegister(username)) {
             throw new IllegalArgumentException("Not available, not allowed, who knows?");
         }
 

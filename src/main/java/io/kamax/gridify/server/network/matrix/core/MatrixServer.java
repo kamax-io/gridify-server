@@ -24,18 +24,26 @@ import com.google.gson.JsonObject;
 import io.kamax.gridify.server.core.event.EventStreamer;
 import io.kamax.gridify.server.core.signal.SignalBus;
 import io.kamax.gridify.server.network.matrix.core.crypto.MatrixDomainCryptopher;
+import io.kamax.gridify.server.network.matrix.core.domain.MatrixDomainConfig;
 import io.kamax.gridify.server.network.matrix.core.federation.FederationPusher;
 import io.kamax.gridify.server.network.matrix.core.room.RoomDirectory;
 import io.kamax.gridify.server.network.matrix.core.room.RoomManager;
 
 import java.util.Queue;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public interface MatrixServer {
 
     String getDomain();
 
     Set<String> getRoomVersions();
+
+    MatrixDomainConfig getConfig();
+
+    void updateConfig(Consumer<MatrixDomainConfig> c);
+
+    MatrixCore core();
 
     MatrixDomainCryptopher crypto();
 

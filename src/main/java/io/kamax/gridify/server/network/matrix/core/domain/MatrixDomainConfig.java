@@ -18,26 +18,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.gridify.server.network.matrix.core;
+package io.kamax.gridify.server.network.matrix.core.domain;
 
-import com.google.gson.JsonObject;
-import io.kamax.gridify.server.core.identity.User;
-import io.kamax.gridify.server.network.matrix.core.base.UserSession;
+public class MatrixDomainConfig {
 
-public interface MatrixDataClient {
+    public static class Registration {
 
-    boolean canRegister();
+        private boolean enabled = false;
 
-    boolean canRegister(String username);
+        public boolean isEnabled() {
+            return enabled;
+        }
 
-    UserSession withToken(String token);
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
 
-    User register(String username, String password);
+    }
 
-    UserSession login(User u);
+    private Registration registration = new Registration();
 
-    UserSession login(String username, String password);
-
-    UserSession login(JsonObject credentials);
+    public Registration getRegistration() {
+        return registration;
+    }
 
 }

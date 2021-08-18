@@ -28,6 +28,7 @@ import io.kamax.gridify.server.core.event.EventStreamer;
 import io.kamax.gridify.server.core.signal.SignalBus;
 import io.kamax.gridify.server.core.store.DataStore;
 import io.kamax.gridify.server.core.store.DomainDao;
+import io.kamax.gridify.server.exception.NotImplementedException;
 import io.kamax.gridify.server.network.matrix.core.MatrixCore;
 import io.kamax.gridify.server.network.matrix.core.MatrixServer;
 import io.kamax.gridify.server.network.matrix.core.domain.MatrixDomain;
@@ -66,8 +67,13 @@ public class BaseMatrixCore implements MatrixCore {
         List<DomainDao> domainDaos = g.getStore().listDomains("matrix");
         for (DomainDao dao : domainDaos) {
             MatrixDomain domain = MatrixDomain.fromDao(dao);
-            vHosts.put(domain.getHost(), new BaseMatrixServer(g, domain));
+            vHosts.put(domain.getHost(), new BaseMatrixServer(this, domain));
         }
+    }
+
+    @Override
+    public GridifyServer gridify() {
+        return g;
     }
 
     @Override
@@ -120,7 +126,7 @@ public class BaseMatrixCore implements MatrixCore {
         DomainDao dao = store().saveDomain(domain.toDao());
         domain.setLid(dao.getLocalId());
 
-        vHosts.put(domain.getHost(), new BaseMatrixServer(g, domain));
+        vHosts.put(domain.getHost(), new BaseMatrixServer(this, domain));
         return domain;
     }
 
@@ -131,7 +137,7 @@ public class BaseMatrixCore implements MatrixCore {
 
     @Override
     public void removeDomain(String domain) {
-
+        throw new NotImplementedException();
     }
 
     @Override

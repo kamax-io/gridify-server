@@ -21,6 +21,7 @@
 package io.kamax.gridify.server.network.matrix.core;
 
 import com.google.gson.JsonObject;
+import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.core.crypto.Cryptopher;
 import io.kamax.gridify.server.core.event.EventStreamer;
 import io.kamax.gridify.server.core.signal.SignalBus;
@@ -34,6 +35,8 @@ import io.kamax.gridify.server.network.matrix.core.room.RoomManager;
 import java.util.Queue;
 
 public interface MatrixCore {
+
+    GridifyServer gridify();
 
     SignalBus bus();
 

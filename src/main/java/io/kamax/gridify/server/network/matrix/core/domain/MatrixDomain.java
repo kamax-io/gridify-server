@@ -27,6 +27,7 @@ import io.kamax.gridify.server.core.crypto.RegularKeyIdentifier;
 import io.kamax.gridify.server.core.store.DomainDao;
 import io.kamax.gridify.server.util.GsonUtil;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MatrixDomain {
@@ -36,6 +37,7 @@ public class MatrixDomain {
 
         domain.setLid(dao.getLocalId());
         domain.setHost(dao.getDomain());
+        domain.setCfg(GsonUtil.fromJson(dao.getConfig(), MatrixDomainConfig.class));
         GsonUtil.findString(dao.getProperties(), "signing_key").ifPresent(v -> {
             domain.setSigningKey(RegularKeyIdentifier.parse(v));
         });
@@ -49,7 +51,8 @@ public class MatrixDomain {
     private long lid;
     private String host;
     private KeyIdentifier signingKey;
-    private List<KeyIdentifier> oldSigningKeys;
+    private List<KeyIdentifier> oldSigningKeys = new ArrayList<>();
+    private MatrixDomainConfig cfg = new MatrixDomainConfig();
 
     public long getLid() {
         return lid;
@@ -83,6 +86,14 @@ public class MatrixDomain {
         this.oldSigningKeys = oldSigningKeys;
     }
 
+    public MatrixDomainConfig getCfg() {
+        return cfg;
+    }
+
+    public void setCfg(MatrixDomainConfig cfg) {
+        this.cfg = cfg;
+    }
+
     public DomainDao toDao() {
         JsonArray oldKeys = new JsonArray();
         oldSigningKeys.forEach(k -> oldKeys.add(k.getId()));
@@ -94,6 +105,7 @@ public class MatrixDomain {
         dao.setNetwork("matrix");
         dao.setDomain(host);
         dao.setProperties(properties);
+        dao.setConfig(GsonUtil.makeObj(cfg));
         return dao;
     }
 

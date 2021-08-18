@@ -29,6 +29,7 @@ import io.kamax.gridify.server.core.channel.TimelineChunk;
 import io.kamax.gridify.server.core.channel.TimelineDirection;
 import io.kamax.gridify.server.core.channel.event.ChannelEvent;
 import io.kamax.gridify.server.core.channel.state.ChannelEventAuthorization;
+import io.kamax.gridify.server.core.identity.User;
 import io.kamax.gridify.server.core.signal.AppStopping;
 import io.kamax.gridify.server.core.signal.ChannelMessageProcessed;
 import io.kamax.gridify.server.core.signal.SignalTopic;
@@ -60,12 +61,14 @@ public class UserSession {
 
     private final MatrixServer g;
     private final String vHost;
+    private final User u;
     private final String userId;
     private final String accessToken;
 
-    public UserSession(MatrixServer g, String vHost, String userId, String accessToken) {
+    public UserSession(MatrixServer g, String vHost, User u, String userId, String accessToken) {
         this.g = g;
         this.vHost = vHost;
+        this.u = u;
         this.userId = userId;
         this.accessToken = accessToken;
     }
@@ -369,37 +372,63 @@ public class UserSession {
         requestEvent.getUnsigned().addProperty("transaction_id", txnId);
         g.getCommandResponseQueue(userId).add(requestEvent.toJson());
 
-        // We process the command
-        String body = GsonUtil.getStringOrNull(cmdMessage, "body");
-        if (StringUtils.equals(commandInLinePrefix, body)) {
-            body = "Available commands:\n" +
-                    "\tfederation enable\n" +
-                    "\tfederation disable";
-        } else {
-            String subCmb = StringUtils.substringAfter(body, commandInLinePrefix + " ");
-            if (StringUtils.isBlank(subCmb)) {
-                throw new IllegalArgumentException("Invalid command: " + body);
-            }
+        String cmd = GsonUtil.getStringOrNull(cmdMessage, "body");
+        String body = "Processing command...";
+        try {
+            if (u.getLid() != 1) {
+                body = "ERROR: You are not admin of this server";
+            } else {
+                // We process the command
+                if (StringUtils.equals(commandInLinePrefix, cmd)) {
+                    body = "Available commands:\n" +
+                            "\tmatrix domain HOST|this registration {enable,disable}\n" +
+                            "\tmatrix federation {enable,disable}\n";
+                } else {
+                    String subCmb = StringUtils.substringAfter(cmd, commandInLinePrefix + " ");
+                    if (StringUtils.isBlank(subCmb)) {
+                        throw new IllegalArgumentException("Invalid command: " + cmd);
+                    }
 
-            if (StringUtils.equals("federation enable", subCmb)) {
-                g.getFedPusher().setEnabled(true);
-                body = "OK";
-            }
-
-            if (StringUtils.equals("federation disable", subCmb)) {
-                g.getFedPusher().setEnabled(false);
-                body = "OK";
-            }
-
-            if (StringUtils.equals("state", subCmb)) {
-                RoomState state = g.roomMgr().get(roomId).getView().getState();
-                body = "";
-                for (ChannelEvent ev : state.getEvents()) {
-                    body += GsonUtil.getPrettyForLog(ev.getData()) + "\n";
+                    if (StringUtils.startsWith(subCmb, "matrix domain ")) {
+                        subCmb = StringUtils.replace(subCmb, "matrix domain ", "", 1);
+                        String[] subCmbArgs = StringUtils.split(subCmb, " ");
+                        if (subCmbArgs.length < 3) {
+                            body = "ERROR: missing args";
+                        } else {
+                            if (StringUtils.equals(subCmbArgs[0], "this")) {
+                                subCmbArgs[0] = vHost;
+                            }
+                            if (!StringUtils.equals(subCmbArgs[1], "registration")) {
+                                body = "ERROR: invalid argument: " + subCmbArgs[1];
+                            } else {
+                                boolean enable = StringUtils.equals(subCmbArgs[2], "enable");
+                                g.core().forDomain(subCmbArgs[0]).updateConfig(cfg -> {
+                                    cfg.getRegistration().setEnabled(enable);
+                                });
+                                body = "OK - registration " + (enable ? "enabled" : "disabled") + " on domain " + subCmbArgs[0];
+                            }
+                        }
+                    } else if (StringUtils.equals("matrix federation enable", subCmb)) {
+                        g.getFedPusher().setEnabled(true);
+                        body = "OK";
+                    } else if (StringUtils.equals("matrix federation disable", subCmb)) {
+                        g.getFedPusher().setEnabled(false);
+                        body = "OK";
+                    } else if (StringUtils.equals("state", subCmb)) {
+                        RoomState state = g.roomMgr().get(roomId).getView().getState();
+                        body = "";
+                        for (ChannelEvent ev : state.getEvents()) {
+                            body += GsonUtil.getPretty().toJson(ev.getData()) + "\n";
+                        }
+                    } else {
+                        body = "Unknown command";
+                    }
                 }
             }
+        } catch (RuntimeException e) {
+            log.error("Could not process command [{}]", cmd, e);
+            body = "Unexpected error when processing command. See server log for more info";
         }
-
 
         String responseEventId = "!" + commandInLinePrefix + "~command~" + uuid + "~response";
         JsonObject content = new JsonObject();
