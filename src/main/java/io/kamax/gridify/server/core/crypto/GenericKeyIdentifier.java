@@ -26,27 +26,20 @@ import java.util.Objects;
 
 public class GenericKeyIdentifier implements KeyIdentifier {
 
-    private final KeyType type;
     private final String algo;
     private final String serial;
 
     public GenericKeyIdentifier(KeyIdentifier id) {
-        this(id.getType(), id.getAlgorithm(), id.getSerial());
+        this(id.getAlgorithm(), id.getSerial());
     }
 
-    public GenericKeyIdentifier(KeyType type, String algo, String serial) {
+    public GenericKeyIdentifier(String algo, String serial) {
         if (StringUtils.isAnyBlank(algo, serial)) {
             throw new IllegalArgumentException("Algorithm and/or Serial cannot be blank");
         }
 
-        this.type = Objects.requireNonNull(type);
         this.algo = algo;
         this.serial = serial;
-    }
-
-    @Override
-    public KeyType getType() {
-        return type;
     }
 
     @Override
@@ -64,14 +57,13 @@ public class GenericKeyIdentifier implements KeyIdentifier {
         if (this == o) return true;
         if (!(o instanceof GenericKeyIdentifier)) return false;
         GenericKeyIdentifier that = (GenericKeyIdentifier) o;
-        return type == that.type &&
-                algo.equals(that.algo) &&
+        return algo.equals(that.algo) &&
                 serial.equals(that.serial);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, algo, serial);
+        return Objects.hash(algo, serial);
     }
 
 }

@@ -34,7 +34,7 @@ public class RegularKeyIdentifier extends GenericKeyIdentifier {
     }
 
     public RegularKeyIdentifier(String algo, String serial) {
-        super(KeyType.Regular, algo, serial);
+        super(algo, serial);
     }
 
 }

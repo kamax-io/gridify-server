@@ -24,11 +24,13 @@ public class GenericKey implements Key {
 
     private final KeyIdentifier id;
     private final boolean isValid;
+    private final String purpose;
     private final String privKey;
 
-    public GenericKey(KeyIdentifier id, boolean isValid, String privKey) {
+    public GenericKey(KeyIdentifier id, boolean isValid, String purpose, String privKey) {
         this.id = new GenericKeyIdentifier(id);
         this.isValid = isValid;
+        this.purpose = purpose;
         this.privKey = privKey;
     }
 
@@ -41,6 +43,11 @@ public class GenericKey implements Key {
     @Override
     public boolean isValid() {
         return isValid;
+    }
+
+    @Override
+    public String getPurpose() {
+        return purpose;
     }
 
     @Override

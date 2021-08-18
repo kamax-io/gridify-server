@@ -26,13 +26,6 @@ package io.kamax.gridify.server.core.crypto;
 public interface KeyIdentifier {
 
     /**
-     * Type of key.
-     *
-     * @return The type of the key
-     */
-    KeyType getType();
-
-    /**
      * Algorithm of the key. Typically <code>ed25519</code>.
      *
      * @return The algorithm of the key

@@ -27,9 +27,9 @@ import java.util.List;
 
 public interface Cryptopher {
 
-    KeyIdentifier generateKey(KeyType type);
+    KeyIdentifier generateKey(String purpose);
 
-    List<KeyIdentifier> getKeys(KeyType type);
+    List<KeyIdentifier> getKeys();
 
     Key getKey(KeyIdentifier id);
 
@@ -37,7 +37,7 @@ public interface Cryptopher {
 
     String getPublicKeyBase64(KeyIdentifier id);
 
-    boolean isValid(KeyType type, String publicKeyBase64);
+    boolean isValid(String publicKeyBase64);
 
     Signature sign(JsonObject obj, KeyIdentifier keyId);
 

@@ -22,8 +22,6 @@ package io.kamax.gridify.server.core.identity;
 
 import io.kamax.gridify.server.config.IdentityConfig;
 import io.kamax.gridify.server.core.crypto.Cryptopher;
-import io.kamax.gridify.server.core.crypto.KeyIdentifier;
-import io.kamax.gridify.server.core.crypto.KeyType;
 import io.kamax.gridify.server.core.store.DataStore;
 import io.kamax.gridify.server.core.store.UserDao;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
@@ -52,8 +50,6 @@ public class IdentityManager {
     }
 
     public User createUser() {
-        KeyIdentifier key = crypto.generateKey(KeyType.Regular);
-        String pubKey = crypto.getPublicKeyBase64(key);
         String id = UUID.randomUUID().toString().replace("-", "");
         long lid = store.addUser(id);
         return new User(lid, id, store, crypto);

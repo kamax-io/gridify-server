@@ -20,7 +20,10 @@
 
 package io.kamax.gridify.server.core.store.crypto;
 
-import io.kamax.gridify.server.core.crypto.*;
+import io.kamax.gridify.server.core.crypto.GenericKey;
+import io.kamax.gridify.server.core.crypto.GenericKeyIdentifier;
+import io.kamax.gridify.server.core.crypto.Key;
+import io.kamax.gridify.server.core.crypto.KeyIdentifier;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
 
 import java.util.ArrayList;
@@ -31,44 +34,37 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class MemoryKeyStore implements KeyStore {
 
-    private final Map<KeyType, Map<String, Map<String, FileKeyJson>>> keys = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, FileKeyJson>> keys = new ConcurrentHashMap<>();
 
-    private Map<String, FileKeyJson> getMap(KeyType type, String algo) {
-        return keys.computeIfAbsent(type, k -> new ConcurrentHashMap<>()).computeIfAbsent(algo, k -> new ConcurrentHashMap<>());
+    private Map<String, FileKeyJson> getMap(String algo) {
+        return keys.computeIfAbsent(algo, k -> new ConcurrentHashMap<>());
     }
 
     @Override
     public boolean has(KeyIdentifier id) {
-        return getMap(id.getType(), id.getAlgorithm()).containsKey(id.getSerial());
+        return getMap(id.getAlgorithm()).containsKey(id.getSerial());
     }
 
     @Override
     public List<KeyIdentifier> list() {
         List<KeyIdentifier> keyIds = new ArrayList<>();
-        keys.forEach((key, value) -> value.forEach((key1, value1) -> value1.forEach((key2, value2) -> keyIds.add(new GenericKeyIdentifier(key, key1, key2)))));
-        return keyIds;
-    }
-
-    @Override
-    public List<KeyIdentifier> list(KeyType type) {
-        List<KeyIdentifier> keyIds = new ArrayList<>();
-        keys.computeIfAbsent(type, t -> new ConcurrentHashMap<>()).forEach((key, value) -> value.forEach((key1, value1) -> keyIds.add(new GenericKeyIdentifier(type, key, key1))));
+        keys.forEach((key, value) -> value.forEach((key1, value1) -> keyIds.add(new GenericKeyIdentifier(key, key1))));
         return keyIds;
     }
 
     @Override
     public Key get(KeyIdentifier id) throws ObjectNotFoundException {
-        FileKeyJson data = getMap(id.getType(), id.getAlgorithm()).get(id.getSerial());
+        FileKeyJson data = getMap(id.getAlgorithm()).get(id.getSerial());
         if (Objects.isNull(data)) {
-            throw new ObjectNotFoundException("Key", id.getType() + ":" + id.getAlgorithm() + ":" + id.getSerial());
+            throw new ObjectNotFoundException("Key", id.getId());
         }
 
-        return new GenericKey(new GenericKeyIdentifier(id), data.isValid(), data.getKey());
+        return new GenericKey(new GenericKeyIdentifier(id), data.isValid(), data.getPurpose(), data.getKey());
     }
 
     private void set(Key key) {
         FileKeyJson data = FileKeyJson.get(key);
-        getMap(key.getId().getType(), key.getId().getAlgorithm()).put(key.getId().getSerial(), data);
+        getMap(key.getId().getAlgorithm()).put(key.getId().getSerial(), data);
     }
 
     @Override
@@ -83,19 +79,19 @@ public class MemoryKeyStore implements KeyStore {
     @Override
     public void update(Key key) throws ObjectNotFoundException {
         if (!has(key.getId())) {
-            throw new ObjectNotFoundException("Key", key.getId().getType() + ":" + key.getId().getAlgorithm() + ":" + key.getId().getSerial());
+            throw new ObjectNotFoundException("Key", key.getId().getId());
         }
 
         set(key);
     }
 
     @Override
-    public void delete(KeyIdentifier id) throws ObjectNotFoundException {
-        if (!has(id)) {
-            throw new ObjectNotFoundException("Key", id.getType() + ":" + id.getAlgorithm() + ":" + id.getSerial());
+    public void delete(KeyIdentifier keyId) throws ObjectNotFoundException {
+        if (!has(keyId)) {
+            throw new ObjectNotFoundException("Key", keyId.getId());
         }
 
-        keys.computeIfAbsent(id.getType(), k -> new ConcurrentHashMap<>()).computeIfAbsent(id.getAlgorithm(), k -> new ConcurrentHashMap<>()).remove(id.getSerial());
+        keys.computeIfAbsent(keyId.getAlgorithm(), k -> new ConcurrentHashMap<>()).remove(keyId.getSerial());
     }
 
 }

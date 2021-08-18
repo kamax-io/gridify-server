@@ -23,7 +23,6 @@ package io.kamax.gridify.server.core.identity;
 import io.kamax.gridify.server.core.auth.Credentials;
 import io.kamax.gridify.server.core.crypto.Cryptopher;
 import io.kamax.gridify.server.core.crypto.KeyIdentifier;
-import io.kamax.gridify.server.core.crypto.KeyType;
 import io.kamax.gridify.server.core.store.DataStore;
 import io.kamax.gridify.server.network.grid.core.UserID;
 import org.slf4j.Logger;
@@ -64,7 +63,7 @@ public class User {
     }
 
     public KeyIdentifier generateKey() {
-        KeyIdentifier keyId = keyring.generateKey(KeyType.Regular);
+        KeyIdentifier keyId = keyring.generateKey("Key of user [" + id + "]");
         String pubKeyId = keyring.getPublicKeyBase64(keyId);
         ThreePid tpid = new GenericThreePid("g.id.key.ed25519", pubKeyId);
         ThreePid tpidGrid = new GenericThreePid("g.id.net.grid", new UserID(pubKeyId).full());

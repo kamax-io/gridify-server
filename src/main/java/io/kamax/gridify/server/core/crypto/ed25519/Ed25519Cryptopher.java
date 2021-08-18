@@ -69,24 +69,24 @@ public class Ed25519Cryptopher implements Cryptopher {
     }
 
     @Override
-    public KeyIdentifier generateKey(KeyType type) {
+    public KeyIdentifier generateKey(String purpose) {
         KeyIdentifier id;
         do {
-            id = new GenericKeyIdentifier(type, KeyAlgorithm.Ed25519, generateId());
+            id = new GenericKeyIdentifier(KeyAlgorithm.Ed25519, generateId());
         } while (store.has(id));
 
         KeyPair pair = (new KeyPairGenerator()).generateKeyPair();
         String keyEncoded = getPrivateKeyBase64((EdDSAPrivateKey) pair.getPrivate());
 
-        Key key = new GenericKey(id, true, keyEncoded);
+        Key key = new GenericKey(id, true, purpose, keyEncoded);
         store.add(key);
 
         return id;
     }
 
     @Override
-    public List<KeyIdentifier> getKeys(KeyType type) {
-        return store.list(type);
+    public List<KeyIdentifier> getKeys() {
+        return store.list();
     }
 
     @Override
@@ -111,7 +111,7 @@ public class Ed25519Cryptopher implements Cryptopher {
     @Override
     public void disableKey(KeyIdentifier id) {
         Key key = store.get(id);
-        key = new GenericKey(id, false, key.getPrivateKeyBase64());
+        key = new GenericKey(id, false, "", key.getPrivateKeyBase64()); //FIXME
         store.update(key);
     }
 
@@ -121,9 +121,9 @@ public class Ed25519Cryptopher implements Cryptopher {
     }
 
     @Override
-    public boolean isValid(KeyType type, String publicKeyBase64) {
+    public boolean isValid(String publicKeyBase64) {
         // TODO caching?
-        return getKeys(type).stream().anyMatch(id -> StringUtils.equals(getPublicKeyBase64(id), publicKeyBase64));
+        return getKeys().stream().anyMatch(id -> StringUtils.equals(getPublicKeyBase64(id), publicKeyBase64));
     }
 
     @Override

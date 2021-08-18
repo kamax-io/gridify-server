@@ -28,12 +28,14 @@ public class FileKeyJson {
         FileKeyJson json = new FileKeyJson();
         json.setVersion("0");
         json.setKey(key.getPrivateKeyBase64());
+        json.setPurpose(key.getPurpose());
         json.setValid(key.isValid());
         return json;
     }
 
     private String version;
     private boolean isValid;
+    private String purpose;
     private String key;
 
     public String getVersion() {
@@ -50,6 +52,14 @@ public class FileKeyJson {
 
     public void setValid(boolean valid) {
         isValid = valid;
+    }
+
+    public String getPurpose() {
+        return purpose;
+    }
+
+    public void setPurpose(String purpose) {
+        this.purpose = purpose;
     }
 
     public String getKey() {

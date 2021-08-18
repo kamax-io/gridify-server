@@ -22,7 +22,6 @@ package io.kamax.gridify.server.core.store.crypto;
 
 import io.kamax.gridify.server.core.crypto.Key;
 import io.kamax.gridify.server.core.crypto.KeyIdentifier;
-import io.kamax.gridify.server.core.crypto.KeyType;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
 
 import java.util.List;
@@ -46,14 +45,6 @@ public interface KeyStore {
      * @return The list of key identifiers
      */
     List<KeyIdentifier> list();
-
-    /**
-     * List all keys of a given type within the store
-     *
-     * @param type The type to filter on
-     * @return The list of keys identifiers matching the given type
-     */
-    List<KeyIdentifier> list(KeyType type);
 
     /**
      * Get the key that relates to the given identifier

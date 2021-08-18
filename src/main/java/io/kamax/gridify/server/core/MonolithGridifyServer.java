@@ -34,7 +34,10 @@ import io.kamax.gridify.server.core.auth.Credentials;
 import io.kamax.gridify.server.core.auth.UIAuthSession;
 import io.kamax.gridify.server.core.auth.UIAuthStage;
 import io.kamax.gridify.server.core.auth.multi.MultiStoreAuthService;
-import io.kamax.gridify.server.core.crypto.*;
+import io.kamax.gridify.server.core.crypto.Cryptopher;
+import io.kamax.gridify.server.core.crypto.KeyIdentifier;
+import io.kamax.gridify.server.core.crypto.PublicKey;
+import io.kamax.gridify.server.core.crypto.RegularKeyIdentifier;
 import io.kamax.gridify.server.core.crypto.ed25519.Ed25519Cryptopher;
 import io.kamax.gridify.server.core.event.EventStreamer;
 import io.kamax.gridify.server.core.identity.GenericThreePid;
@@ -134,7 +137,7 @@ public class MonolithGridifyServer implements GridifyServer {
         serverId = store.getConfigString("core.server.id");
 
         if (!store.hasConfig("core.crypto.publicKey")) {
-            KeyIdentifier id = crypto.generateKey(KeyType.Regular);
+            KeyIdentifier id = crypto.generateKey("Server main key");
             String hash = crypto.getPublicKeyBase64(id);
             store.setConfig("core.crypto.publicKey", PublicKey.get(id, hash));
         }

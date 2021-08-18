@@ -20,7 +20,10 @@
 
 package io.kamax.gridify.server.core.store.crypto;
 
-import io.kamax.gridify.server.core.crypto.*;
+import io.kamax.gridify.server.core.crypto.GenericKey;
+import io.kamax.gridify.server.core.crypto.GenericKeyIdentifier;
+import io.kamax.gridify.server.core.crypto.Key;
+import io.kamax.gridify.server.core.crypto.KeyIdentifier;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
 import io.kamax.gridify.server.util.GsonUtil;
 import org.apache.commons.io.FileUtils;
@@ -63,12 +66,8 @@ public class FileKeyStore implements KeyStore {
         }
     }
 
-    private String toDirName(KeyType type) {
-        return type.name().toLowerCase();
-    }
-
     private Path ensureDirExists(KeyIdentifier id) {
-        File b = Paths.get(base, toDirName(id.getType()), id.getAlgorithm()).toFile();
+        File b = Paths.get(base, id.getAlgorithm()).toFile();
 
         if (b.exists()) {
             if (!b.isDirectory()) {
@@ -87,25 +86,14 @@ public class FileKeyStore implements KeyStore {
 
     @Override
     public boolean has(KeyIdentifier id) {
-        return Paths.get(base, toDirName(id.getType()), id.getAlgorithm(), id.getSerial()).toFile().isFile();
+        return Paths.get(base, id.getAlgorithm(), id.getSerial()).toFile().isFile();
     }
 
     @Override
     public List<KeyIdentifier> list() {
         List<KeyIdentifier> keyIds = new ArrayList<>();
 
-        for (KeyType type : KeyType.values()) {
-            keyIds.addAll(list(type));
-        }
-
-        return keyIds;
-    }
-
-    @Override
-    public List<KeyIdentifier> list(KeyType type) {
-        List<KeyIdentifier> keyIds = new ArrayList<>();
-
-        File algoDir = Paths.get(base, toDirName(type)).toFile();
+        File algoDir = Paths.get(base).toFile();
         File[] algos = algoDir.listFiles();
         if (Objects.isNull(algos)) {
             return keyIds;
@@ -118,7 +106,7 @@ public class FileKeyStore implements KeyStore {
             }
 
             for (File serial : serials) {
-                keyIds.add(new GenericKeyIdentifier(type, algo.getName(), serial.getName()));
+                keyIds.add(new GenericKeyIdentifier(algo.getName(), serial.getName()));
             }
         }
 
@@ -134,7 +122,7 @@ public class FileKeyStore implements KeyStore {
 
         try (FileInputStream keyIs = new FileInputStream(keyFile)) {
             FileKeyJson json = GsonUtil.get().fromJson(IOUtils.toString(keyIs, StandardCharsets.UTF_8), FileKeyJson.class);
-            return new GenericKey(id, json.isValid(), json.getKey());
+            return new GenericKey(id, json.isValid(), json.getPurpose(), json.getKey());
         } catch (IOException e) {
             throw new RuntimeException("Unable to read key " + id.getId(), e);
         }
@@ -149,7 +137,7 @@ public class FileKeyStore implements KeyStore {
 
         FileKeyJson json = FileKeyJson.get(key);
         try (FileOutputStream keyOs = new FileOutputStream(keyFile, false)) {
-            IOUtils.write(GsonUtil.get().toJson(json), keyOs, StandardCharsets.UTF_8);
+            IOUtils.write(GsonUtil.getPrettyForLog(json), keyOs, StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new RuntimeException("Unable to create key " + key.getId().getId(), e);
         }

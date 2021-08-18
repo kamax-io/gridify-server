@@ -24,7 +24,6 @@ import com.google.gson.JsonObject;
 import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.core.crypto.Cryptopher;
 import io.kamax.gridify.server.core.crypto.KeyIdentifier;
-import io.kamax.gridify.server.core.crypto.KeyType;
 import io.kamax.gridify.server.core.event.EventStreamer;
 import io.kamax.gridify.server.core.signal.SignalBus;
 import io.kamax.gridify.server.core.store.DataStore;
@@ -112,7 +111,7 @@ public class BaseMatrixCore implements MatrixCore {
             throw new IllegalStateException("Domain " + vHost + " is already registered");
         }
 
-        KeyIdentifier keyId = crypto().generateKey(KeyType.Regular);
+        KeyIdentifier keyId = crypto().generateKey("Key of Matrix domain [" + vHost + "]");
         MatrixDomain domain = new MatrixDomain();
         domain.setHost(vHost);
         domain.setSigningKey(keyId);

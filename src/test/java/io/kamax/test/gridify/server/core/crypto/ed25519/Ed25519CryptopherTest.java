@@ -59,7 +59,7 @@ public class Ed25519CryptopherTest {
     @BeforeClass
     public static void beforeClass() {
         KeyIdentifier keyId = new RegularKeyIdentifier(KeyAlgorithm.Ed25519, "1");
-        key = new Ed25519Key(keyId, TestData.SIGN_KEY_SEED);
+        key = new Ed25519Key(keyId, "Test key", TestData.SIGN_KEY_SEED);
         MemoryKeyStore keyStore = new MemoryKeyStore();
         keyStore.add(key);
         cryptopher = new Ed25519Cryptopher(keyStore);

@@ -28,14 +28,16 @@ import io.kamax.gridify.server.core.crypto.KeyIdentifier;
 public class Ed25519Key implements Key {
 
     private KeyIdentifier id;
+    private String purpose;
     private String privKey;
 
-    public Ed25519Key(KeyIdentifier id, String privKey) {
+    public Ed25519Key(KeyIdentifier id, String purpose, String privKey) {
         if (!KeyAlgorithm.Ed25519.equals(id.getAlgorithm())) {
             throw new IllegalArgumentException();
         }
 
         this.id = new GenericKeyIdentifier(id);
+        this.purpose = purpose;
         this.privKey = privKey;
     }
 
@@ -48,6 +50,11 @@ public class Ed25519Key implements Key {
     @Override
     public boolean isValid() {
         return true;
+    }
+
+    @Override
+    public String getPurpose() {
+        return purpose;
     }
 
     @Override

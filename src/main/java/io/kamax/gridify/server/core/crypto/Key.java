@@ -34,6 +34,8 @@ public interface Key {
      */
     boolean isValid();
 
+    String getPurpose();
+
     /**
      * Get the private key
      *
