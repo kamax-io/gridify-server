@@ -24,7 +24,7 @@ import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.core.SyncData;
 import io.kamax.gridify.server.core.SyncOptions;
 import io.kamax.gridify.server.core.UserSession;
-import io.kamax.gridify.server.http.handler.Exchange;
+import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.network.grid.ProtocolEventMapper;
 import io.kamax.gridify.server.network.grid.http.handler.matrix.SyncResponse;
 import io.kamax.gridify.server.network.matrix.http.handler.home.client.ClientApiHandler;

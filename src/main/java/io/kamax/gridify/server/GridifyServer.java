@@ -41,6 +41,8 @@ public interface GridifyServer {
 
     PublicKey getPublicKey();
 
+    boolean isSetup();
+
     void setup(JsonObject setupDoc);
 
     void start();

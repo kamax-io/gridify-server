@@ -20,7 +20,7 @@
 
 package io.kamax.gridify.server.network.matrix.http.handler;
 
-import io.kamax.gridify.server.http.handler.Exchange;
+import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.network.matrix.http.handler.home.client.ClientApiHandler;
 
 public class NotFoundHandler extends ClientApiHandler {

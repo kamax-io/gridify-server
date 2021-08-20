@@ -23,7 +23,7 @@ package io.kamax.gridify.server.network.grid.http.handler.grid.identity;
 import com.google.gson.JsonObject;
 import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.core.auth.UIAuthSession;
-import io.kamax.gridify.server.http.handler.Exchange;
+import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.network.grid.http.handler.grid.GridApiHandler;
 import io.kamax.gridify.server.network.grid.http.handler.grid.identity.json.UIAuthJson;
 import io.kamax.gridify.server.util.GsonUtil;

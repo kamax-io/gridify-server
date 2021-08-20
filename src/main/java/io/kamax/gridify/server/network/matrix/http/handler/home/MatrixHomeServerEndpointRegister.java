@@ -21,6 +21,7 @@
 package io.kamax.gridify.server.network.matrix.http.handler.home;
 
 import io.kamax.gridify.server.GridifyServer;
+import io.kamax.gridify.server.http.RootLogoHandler;
 import io.kamax.gridify.server.network.matrix.http.handler.home.server.*;
 import io.undertow.server.RoutingHandler;
 
@@ -30,6 +31,9 @@ public class MatrixHomeServerEndpointRegister {
         KeyServerHandler keySrvHandler = new KeyServerHandler(g);
 
         handler
+                .get("/", new RootLogoHandler(g))
+                .get("/static/**", new RootLogoHandler(g))
+
                 .get("/.well-known/matrix/server", new WellKnownHandler(g))
 
                 .get("/_matrix/federation/v1/version", new VersionHandler(g))

@@ -22,7 +22,7 @@ package io.kamax.gridify.server.network.matrix.http.handler.home.client.dummy;
 
 import com.google.gson.JsonArray;
 import io.kamax.gridify.server.GridifyServer;
-import io.kamax.gridify.server.http.handler.Exchange;
+import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.network.matrix.core.base.UserSession;
 import io.kamax.gridify.server.network.matrix.http.handler.home.client.AuthenticatedClientApiHandler;
 import io.kamax.gridify.server.util.GsonUtil;

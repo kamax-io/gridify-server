@@ -20,20 +20,28 @@
 
 package io.kamax.gridify.server.util;
 
+import io.kamax.gridify.server.GridifyServer;
+import io.kamax.gridify.server.network.matrix.http.handler.home.client.ClientApiHandler;
+import io.kamax.gridify.server.network.matrix.http.handler.home.server.ServerApiHandler;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class KxLog {
 
-    private static final String g = "io.kamax.gridify.server";
+    private static final String g = GridifyServer.class.getPackage().getName();
     private static final String gNetMx = g + ".network.matrix";
-    private static final String gNetMxC2sApi = gNetMx + ".http.handler.home.client.ClientApiHandler";
+    private static final String gNetMxC2sApi = ClientApiHandler.class.getCanonicalName();
+    private static final String gNetMxS2sApi = ServerApiHandler.class.getCanonicalName();
 
     public static Logger make(Class<?> c) {
         String name = c.getCanonicalName();
+        if (name.startsWith(gNetMxS2sApi)) {
+            name = StringUtils.replace(name, gNetMxS2sApi, "[Mx.S2S]", 1);
+        }
+
         if (name.startsWith(gNetMxC2sApi)) {
-            name = StringUtils.replace(name, gNetMxC2sApi, "[MxC2S]", 1);
+            name = StringUtils.replace(name, gNetMxC2sApi, "[Mx.C2S]", 1);
         }
 
         if (name.startsWith(gNetMx)) {

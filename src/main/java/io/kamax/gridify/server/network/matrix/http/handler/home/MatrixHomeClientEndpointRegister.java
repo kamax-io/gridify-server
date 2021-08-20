@@ -22,6 +22,7 @@ package io.kamax.gridify.server.network.matrix.http.handler.home;
 
 import com.google.gson.JsonArray;
 import io.kamax.gridify.server.GridifyServer;
+import io.kamax.gridify.server.http.RootLogoHandler;
 import io.kamax.gridify.server.network.grid.http.handler.matrix.home.client.SendRoomStateHandler;
 import io.kamax.gridify.server.network.matrix.http.HomeClientAPI;
 import io.kamax.gridify.server.network.matrix.http.HomeClientAPIr0;
@@ -42,6 +43,9 @@ public class MatrixHomeClientEndpointRegister {
         handler
                 // CORS support
                 .add("OPTIONS", HomeClientAPI.Base + "/**", new OptionsHandler())
+
+                .get("/", new RootLogoHandler(g))
+                .get("/static/**", new RootLogoHandler(g))
 
                 // Fundamental endpoints
                 .get(HomeClientAPI.Base + "/versions", new VersionsHandler())

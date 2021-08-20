@@ -21,7 +21,7 @@
 package io.kamax.gridify.server.network.grid.http.handler.grid;
 
 import io.kamax.gridify.server.exception.*;
-import io.kamax.gridify.server.http.handler.Exchange;
+import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.util.KxLog;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;

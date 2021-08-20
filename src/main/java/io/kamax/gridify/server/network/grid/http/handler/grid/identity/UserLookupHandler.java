@@ -26,7 +26,7 @@ import io.kamax.gridify.server.core.identity.GenericThreePid;
 import io.kamax.gridify.server.core.identity.ThreePid;
 import io.kamax.gridify.server.core.identity.User;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
-import io.kamax.gridify.server.http.handler.Exchange;
+import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.network.grid.http.handler.grid.GridApiHandler;
 import io.kamax.gridify.server.util.GsonUtil;
 

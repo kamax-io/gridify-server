@@ -22,7 +22,7 @@ package io.kamax.gridify.server.network.matrix.http.handler.home.server;
 
 import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.exception.*;
-import io.kamax.gridify.server.http.handler.Exchange;
+import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.network.matrix.core.MatrixDataServer;
 import io.kamax.gridify.server.network.matrix.core.MatrixException;
 import io.kamax.gridify.server.network.matrix.core.base.ServerSession;
@@ -129,9 +129,11 @@ public abstract class ServerApiHandler implements HttpHandler {
     protected ServerSession getAuthenticatedSession(GridifyServer g, Exchange ex) {
         HomeServerRequest request = new HomeServerRequest();
         String authHeader = ex.getHeader(Headers.AUTHORIZATION_STRING);
-        if (!StringUtils.startsWith(authHeader, "X-Matrix ")) {
+        String[] authHeaderSplit = StringUtils.split(authHeader, " ", 2); // TODO use regex
+        if (!StringUtils.equals(authHeaderSplit[0], "X-Matrix")) {
             throw new UnauthenticatedException(null); // FIXME
         }
+        authHeader = authHeaderSplit[1];
         for (String arg : StringUtils.split(authHeader, ",")) {
             if (StringUtils.startsWith(arg, "origin=")) {
                 request.getDoc().setOrigin(StringUtils.substringAfter(arg, "="));

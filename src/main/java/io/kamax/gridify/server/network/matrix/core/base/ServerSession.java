@@ -97,6 +97,7 @@ public class ServerSession {
     }
 
     public List<ChannelEventAuthorization> push(ServerTransaction txn) {
+        log.info("Txn {}/{} - {} PDU(s) and {} EDU(s)", remote, txn.getId(), txn.getPdus().size(), txn.getEdus().size());
         List<ChannelEventAuthorization> auths = new ArrayList<>();
         Map<String, List<JsonObject>> pdusPerRoom = new HashMap<>();
         for (JsonObject pdu : txn.getPdus()) {
@@ -114,6 +115,7 @@ public class ServerSession {
             Room r = roomOpt.get();
             List<ChannelEventAuthorization> auth = r.offer(remote, vHost, roomPdus.getValue());
             auths.addAll(auth);
+            log.debug("Txn {}/{} - Offered {} PDU(s) to {}", remote, txn.getTimestamp(), roomPdus.getValue().size(), r.getId());
         }
 
         return auths;

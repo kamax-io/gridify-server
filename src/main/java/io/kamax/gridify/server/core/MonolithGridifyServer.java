@@ -175,7 +175,14 @@ public class MonolithGridifyServer implements GridifyServer {
     }
 
     @Override
+    public boolean isSetup() {
+        return getIdentity().hasUsers();
+    }
+
+    @Override
     public void setup(JsonObject setupDoc) {
+        log.info("Setup started");
+
         String username = GsonUtil.getStringOrNull(setupDoc, "admin_username");
         if (StringUtils.isBlank(username)) {
             throw new IllegalArgumentException("Admin username is missing");
@@ -186,15 +193,23 @@ public class MonolithGridifyServer implements GridifyServer {
         }
 
         String domain = GsonUtil.getStringOrNull(setupDoc, "matrix_domain");
-        String host = GsonUtil.getStringOrNull(setupDoc, "matrix_host");
-        if (StringUtils.isNotBlank(domain)) {
-            if (StringUtils.isBlank(host)) host = domain;
-            log.info("Creating initial Matrix domain {} via host {}", domain, host);
-            mxCore.addDomain(domain, host);
+        if (StringUtils.isBlank(domain)) {
+            throw new IllegalArgumentException("Matrix domain cannot be empty/blank");
         }
+
+        String host = GsonUtil.getStringOrNull(setupDoc, "matrix_host");
+        if (StringUtils.isBlank(host)) {
+            log.info("Setup - Provided Matrix host is blank, will use domain as default");
+            host = domain;
+        }
+
+        log.info("Creating initial Matrix domain {} via host {}", domain, host);
+        mxCore.addDomain(domain, host);
 
         log.info("Creating initial admin account");
         register(username, pass);
+
+        log.info("Setup complete");
     }
 
     @Override

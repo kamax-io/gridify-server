@@ -2,7 +2,7 @@ package io.kamax.gridify.server.network.matrix.http.handler.home.server;
 
 import com.google.gson.JsonObject;
 import io.kamax.gridify.server.GridifyServer;
-import io.kamax.gridify.server.http.handler.Exchange;
+import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.network.matrix.core.base.ServerSession;
 import io.kamax.gridify.server.network.matrix.core.room.RoomJoinSeed;
 

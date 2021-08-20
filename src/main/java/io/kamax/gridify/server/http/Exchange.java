@@ -18,15 +18,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.gridify.server.http.handler;
+package io.kamax.gridify.server.http;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import io.kamax.gridify.server.exception.MissingTokenException;
 import io.kamax.gridify.server.util.GsonUtil;
 import io.kamax.gridify.server.util.KxLog;
+import io.undertow.Handlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HttpString;
+import io.undertow.util.QueryParameterUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -123,8 +125,33 @@ public class Exchange {
         return requireHeader("Host");
     }
 
-    public Optional<String> getContentType() {
+    public Optional<String> findContentType() {
         return Optional.ofNullable(exchange.getRequestHeaders().getFirst("Content-Type"));
+    }
+
+    public String getContentType() {
+        return findContentType().orElse("application/octet-stream");
+    }
+
+    public boolean matchesContentType(String type) {
+        return StringUtils.startsWith(getContentType(), type);
+    }
+
+    public JsonObject parseForm() {
+        JsonObject body = new JsonObject();
+        Map<String, Deque<String>> parms = QueryParameterUtils.parseQueryString(getBodyUtf8(), StandardCharsets.UTF_8.name());
+        for (Map.Entry<String, Deque<String>> entry : parms.entrySet()) {
+            if (entry.getValue().size() <= 0) {
+                continue;
+            }
+
+            if (entry.getValue().size() > 1) {
+                body.add(entry.getKey(), GsonUtil.asArray(entry.getValue()));
+            } else {
+                body.addProperty(entry.getKey(), entry.getValue().peekFirst());
+            }
+        }
+        return body;
     }
 
     public void writeBodyAsUtf8(String body) {
@@ -215,6 +242,14 @@ public class Exchange {
 
     public HttpServerExchange getUnderlying() {
         return exchange;
+    }
+
+    public void redirect(String location) {
+        try {
+            Handlers.redirect(location).handleRequest(exchange);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

@@ -24,7 +24,7 @@ import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.core.ServerSession;
 import io.kamax.gridify.server.core.channel.event.BareMemberEvent;
 import io.kamax.gridify.server.core.channel.structure.ApprovalExchange;
-import io.kamax.gridify.server.http.handler.Exchange;
+import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.network.grid.http.handler.grid.GridApiHandler;
 
 public class DoApproveJoin extends GridApiHandler {

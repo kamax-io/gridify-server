@@ -26,7 +26,7 @@ import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.core.UserSession;
 import io.kamax.gridify.server.core.channel.ChannelLookup;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
-import io.kamax.gridify.server.http.handler.Exchange;
+import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.network.grid.ProtocolEventMapper;
 import io.kamax.gridify.server.network.grid.core.ChannelAlias;
 import io.kamax.gridify.server.network.matrix.http.handler.home.client.ClientApiHandler;

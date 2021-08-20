@@ -23,10 +23,13 @@ package io.kamax.gridify.server.network.matrix.http.json;
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class ServerTransaction {
 
+    private transient String id;
     @SerializedName("origin")
     private String origin;
     @SerializedName("origin_server_ts")
@@ -35,6 +38,14 @@ public class ServerTransaction {
     private List<JsonObject> pdus;
     @SerializedName("edus")
     private List<JsonObject> edus;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
 
     public String getOrigin() {
         return origin;
@@ -53,6 +64,10 @@ public class ServerTransaction {
     }
 
     public List<JsonObject> getPdus() {
+        if (Objects.isNull(pdus)) {
+            pdus = new ArrayList<>();
+        }
+
         return pdus;
     }
 
@@ -61,6 +76,10 @@ public class ServerTransaction {
     }
 
     public List<JsonObject> getEdus() {
+        if (Objects.isNull(edus)) {
+            edus = new ArrayList<>();
+        }
+
         return edus;
     }
 

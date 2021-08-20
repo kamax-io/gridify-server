@@ -23,7 +23,7 @@ package io.kamax.gridify.server.network.matrix.http.handler.home.server;
 import com.google.gson.JsonObject;
 import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.core.channel.state.ChannelEventAuthorization;
-import io.kamax.gridify.server.http.handler.Exchange;
+import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.network.matrix.core.base.ServerSession;
 import io.kamax.gridify.server.network.matrix.http.json.ServerTransaction;
 import io.kamax.gridify.server.util.KxLog;
@@ -43,9 +43,10 @@ public class TransactionSendHandler extends AuthenticatedServerApiHandler {
     @Override
     protected void handle(ServerSession session, Exchange ex) {
         String txnId = ex.getQueryParameter("txnId");
+
         ServerTransaction txn = ex.parseJsonTo(ServerTransaction.class);
-        List<ChannelEventAuthorization> auths = session.push(txn);
-        log.debug("Processed Server {} Transaction {}", session.getDomain(), txnId);
+        txn.setId(txnId);
+        List<ChannelEventAuthorization> auths = session.push(txn); // TODO deal with it
 
         ex.respond(new JsonObject());
     }

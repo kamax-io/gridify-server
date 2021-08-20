@@ -25,7 +25,7 @@ import io.kamax.gridify.server.core.GridType;
 import io.kamax.gridify.server.core.identity.GenericThreePid;
 import io.kamax.gridify.server.core.identity.User;
 import io.kamax.gridify.server.exception.ForbiddenException;
-import io.kamax.gridify.server.http.handler.Exchange;
+import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.network.matrix.http.handler.home.client.ClientApiHandler;
 import io.kamax.gridify.server.util.GsonUtil;
 

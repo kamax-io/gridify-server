@@ -22,7 +22,7 @@ package io.kamax.gridify.server.network.matrix.http.handler.home.client;
 
 import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.exception.ForbiddenException;
-import io.kamax.gridify.server.http.handler.Exchange;
+import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.network.matrix.core.MatrixDataClient;
 import io.kamax.gridify.server.util.GsonUtil;
 

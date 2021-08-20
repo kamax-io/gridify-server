@@ -24,7 +24,7 @@ import com.google.gson.JsonObject;
 import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.core.UserSession;
 import io.kamax.gridify.server.exception.UnauthenticatedException;
-import io.kamax.gridify.server.http.handler.Exchange;
+import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.network.grid.ProtocolMapper;
 import io.kamax.gridify.server.network.matrix.http.handler.home.client.ClientApiHandler;
 import io.kamax.gridify.server.network.matrix.http.json.UIAuthJson;

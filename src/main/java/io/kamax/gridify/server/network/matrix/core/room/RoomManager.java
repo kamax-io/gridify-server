@@ -29,10 +29,7 @@ import io.kamax.gridify.server.exception.ForbiddenException;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
 import io.kamax.gridify.server.network.matrix.core.UserID;
 import io.kamax.gridify.server.network.matrix.core.crypto.MatrixDomainCryptopher;
-import io.kamax.gridify.server.network.matrix.core.event.BareCreateEvent;
-import io.kamax.gridify.server.network.matrix.core.event.BareEvent;
-import io.kamax.gridify.server.network.matrix.core.event.BareMemberEvent;
-import io.kamax.gridify.server.network.matrix.core.event.RoomEventType;
+import io.kamax.gridify.server.network.matrix.core.event.*;
 import io.kamax.gridify.server.network.matrix.core.federation.HomeServerLink;
 import io.kamax.gridify.server.network.matrix.core.federation.RoomJoinTemplate;
 import io.kamax.gridify.server.network.matrix.core.room.algo.RoomAlgo;
@@ -44,6 +41,7 @@ import org.slf4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class RoomManager {
 
@@ -248,6 +246,11 @@ public class RoomManager {
     }
 
     public void queueForDiscovery(List<JsonObject> events) {
+        log.info("Rooms queued for discovery: {}", events.stream()
+                .map(e -> GsonUtil.findString(e, EventKey.RoomId))
+                .filter(Optional::isPresent)
+                .map(Optional::get).collect(Collectors.toSet())
+        );
         // TODO add room discovery
     }
 
