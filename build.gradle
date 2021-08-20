@@ -56,7 +56,6 @@ String sourceVersion() {
     return out.toString().replace(System.lineSeparator(), '')
 }
 
-apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'idea'
@@ -67,17 +66,23 @@ mainClassName = 'io.kamax.gridify.server.MonolithHttpGridifyServerApplication'
 sourceCompatibility = '1.8'
 targetCompatibility = '1.8'
 
-def appName = 'gridifyd'
+def appName = 'gridify'
+def execName = "${appName}d"
+def packName = "${appName}-server"
+def appDirName = "${appName}/server"
 def appPublisher = 'kamax'
 
-def confFileName = "${appName}.sample.yaml"
-def distDir = "${project.buildDir}/dist"
+def confFileName = "config.sample.yaml"
+def distDir = "${project.buildDir}/distributions"
+def distName = "${execName}-${buildVersion()}"
+def distTarFile = "${distName}.tar"
+def distTar = "${distDir}/${distTarFile}"
 
-def debBinPath = "/usr/lib/${appName}"
-def debConfPath = "/etc/${appName}"
-def debDataPath = "/var/lib/${appName}"
+def debBinPath = "/usr/lib/${appDirName}"
+def debConfPath = "/etc/${appDirName}"
+def debDataPath = "/var/lib/${appDirName}"
 def debSystemdPath = "/etc/systemd/system"
-def debConfFileName = confFileName
+def debConfFileName = "config.yaml"
 def debStartScriptFilename = appName
 def debBuildBasePath = "${project.buildDir}/tmp/debian"
 def debBuildDebianPath = "${debBuildBasePath}/DEBIAN"
@@ -87,7 +92,7 @@ def debBuildDataPath = "${debBuildBasePath}${debDataPath}"
 def debBuildSystemdPath = "${debBuildBasePath}${debSystemdPath}"
 
 def dockerBuildPath = "${project.buildDir}/tmp/docker"
-def dockerImageName = "${appPublisher}/${appName}"
+def dockerImageName = "${appPublisher}/${packName}"
 def dockerImageTag = "${dockerImageName}:${version}"
 
 buildscript {
@@ -149,11 +154,10 @@ dependencies {
 
     // ----------- Identity stores
     // LDAP connector
-    compile 'org.apache.directory.api:api-all:1.0.0'
-    testCompile 'com.unboundid:unboundid-ldapsdk:4.0.11'
+    implementation 'org.apache.directory.api:api-all:1.0.0'
+    testImplementation 'com.unboundid:unboundid-ldapsdk:4.0.11'
 
-    testCompile 'junit:junit:4.12'
-
+    testImplementation 'junit:junit:4.12'
 }
 
 // For reproducible builds
@@ -166,7 +170,9 @@ tasks.withType(AbstractArchiveTask) {
 jar {
     manifest {
         attributes(
-                'Implementation-Version': buildVersion()
+                'Implementation-Title': appName,
+                'Implementation-Version': buildVersion(),
+                'Implementation-Vendor': appPublisher
         )
     }
 }
@@ -176,7 +182,7 @@ shadowJar {
     version = null
 }
 
-task debBuild(dependsOn: build) {
+task debBuild() {
     doLast {
         String debVersion = buildVersion()
         println "Version for package: ${debVersion}"
@@ -189,12 +195,12 @@ task debBuild(dependsOn: build) {
         mkdir debBuildSystemdPath
 
         copy {
-            from "${project.buildDir}/libs/${appName}.jar"
+            from "${project.buildDir}/libs/${execName}.jar"
             into debBuildBinPath
         }
 
         copy {
-            from "${project.file("src/main/script/" + debStartScriptFilename)}"
+            from "${project.file("build/scriptsShadow/" + execName)}"
             into debBuildBinPath
         }
 
@@ -249,21 +255,20 @@ task debBuild(dependsOn: build) {
                     'dpkg-deb',
                     '-b',
                     debBuildBasePath,
-                    "${project.buildDir}/dist"
+                    "${project.buildDir}/distributions"
             )
         }
     }
 }
 
 task dockerBuild(type: Exec) {
-    commandLine 'docker', 'build', '-t', dockerImageTag, dockerBuildPath
+    commandLine 'docker', 'build', '--build-arg', "DIST_FILE=${distName}", '-t', dockerImageTag, dockerBuildPath
 
     doFirst {
         copy {
             from "${projectDir}/src/main/docker/Dockerfile",
-                    "${projectDir}/src/main/docker/start.sh",
-                    "${project.buildDir}/libs/${appName}.jar",
-                    "${project.buildDir}/scriptsShadow/${appName}"
+                    "${projectDir}/src/main/docker/entrypoint",
+                    distTarFile
             into dockerBuildPath
         }
     }

@@ -1,9 +1,9 @@
 Package: gridify-server
 Maintainer: Kamax.io <foss@kamax.io>
-Homepage: https://gitlab.com/kamax-io/gridify/server
-Description: Unified communications server for Matrix and Grid protocol
+Homepage: https://gitlab.com/kamax-io/software/gridify/server
+Description: Unified communications server for the Matrix and Grid protocols
 Architecture: all
 Section: net
 Priority: optional
-Depends: openjdk-8-jre | openjdk-8-jre-headless | openjdk-8-jdk | openjdk-8-jdk-headless
+Depends: default-jdk (>= 1.8) | default-jdk-headless (>= 1.8)
 Version: 0

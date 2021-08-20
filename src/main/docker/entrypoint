@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+generate() {
+  if [ -z "$CONF_FILE_PATH" ]; then
+    echo "Config file is not set"
+    exit 1
+  fi
+
+  if [ -f "$CONF_FILE_PATH" ]; then
+    if [ "$1" != "--force" ] && [ "$1" != "-f" ]; then
+      echo "File already exists. Use --force to overwrite"
+      exit 1
+    fi
+    rm "$CONF_FILE_PATH"
+  fi
+
+  echo "Generating config file $CONF_FILE_PATH"
+  if [[ -n "$DATA_DIR_PATH" ]]; then
+      echo "Setting Data path to $DATA_DIR_PATH"
+      echo "storage:" >> "$CONF_FILE_PATH"
+      echo "  data: '$DATA_DIR_PATH'" >> "$CONF_FILE_PATH"
+  fi
+
+  if [[ -n "$DATABASE_CONNECTION" ]]; then
+      echo "Setting Database configuration"
+      echo "  database:" >> "$CONF_FILE_PATH"
+      echo "    type: '$DATABASE_TYPE'" >> "$CONF_FILE_PATH"
+      echo "    connection: '$DATABASE_CONNECTION'" >> "$CONF_FILE_PATH"
+      echo >> "$CONF_FILE_PATH"
+  fi
+
+  echo "Configuration done!"
+}
+
+case "$1" in
+  "generate")
+    generate "$2"
+    exit 0
+    ;;
+
+  "shell")
+    /bin/bash
+    ;;
+
+  *)
+    if [ ! -f "$CONF_FILE_PATH" ]; then
+      generate
+    fi
+    /app/bin/gridifyd -c "$CONF_FILE_PATH"
+    ;;
+esac
+
+exit 0

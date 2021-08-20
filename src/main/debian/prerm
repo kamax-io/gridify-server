@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Stop running instance if needed
 systemctl stop gridify.service
@@ -7,4 +7,4 @@ systemctl stop gridify.service
 systemctl disable gridify.service
 
 # remove symlink
-rm /usr/bin/gridifydd
+rm /usr/bin/gridifyd

@@ -1,10 +1,10 @@
-#!/bin/bash -e
+#!/usr/bin/env bash -e
 
 # Add service account
-useradd -r gridify || true
+useradd -r gridifyd || true
 
 # Set permissions for data directory
-chown -R gridify:gridify %DEB_DATA_DIR%
+chown -R gridifyd:gridifyd %DEB_DATA_DIR%
 
 # Create symlink to gridify run script
 ln -sfT /usr/lib/gridify/gridifyd /usr/bin/gridifyd

@@ -1,23 +1,11 @@
 # Sample configuration file explaining the minimum required keys to be set to run Gridifyd
 #
-# For more info, see https://gitlab.com/kamax-io/gridify/server#gridify-server
+# For more info, see https://gitlab.com/kamax-io/software/gridify/server#gridify-server
 #
 # Please follow the Getting Started guide if this is your first time using/configuring the Gridify Server
 #
-#  -- https://gitlab.com/kamax-io/gridify/server/blob/master/docs/getting-started.md#getting-started
+#  -- https://gitlab.com/kamax-io/software/gridify/server/blob/master/docs/getting-started.md#getting-started
 #
-
-#
-# The domain (DNS or IP) to use to build IDs - We recommend setting your base domain (example.org) and use
-# Well-known discovery to specify whatever URL you want to host the Gridify Server at.
-#
-# Later releases will support Virtual hosting and multi-domain hosting on a single server, including across
-# networks (Public Internet via DNS, Tor, cjdns, etc.) all in a seamless way.
-#
-# A single domain is currently supported to offer a migration path from Matrix while the spec concerning ID to Alias
-# mapping is finished.
-#
-domain: ''
 
 storage:
 
