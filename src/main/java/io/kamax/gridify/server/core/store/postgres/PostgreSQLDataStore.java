@@ -212,7 +212,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
             return Optional.empty();
         }
 
-        ChannelDao dao = new ChannelDao(rSet.getLong("lid"), rSet.getString("network"), rSet.getString("id"), rSet.getString("version"));
+        ChannelDao dao = makeChannel(rSet);
         return Optional.of(dao);
     }
 
@@ -245,8 +245,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
                 }
 
                 String data = rSet.getString(1);
-                JsonElement el = GsonUtil.parse(data);
-                return el;
+                return GsonUtil.parse(data);
             }
         });
     }
@@ -262,12 +261,13 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
     }
 
     public DomainDao insertDomain(DomainDao dao) {
-        String sql = "INSERT INTO domains (network,host,config,properties) VALUES (?,?,?::jsonb,?::jsonb) RETURNING lid";
+        String sql = "INSERT INTO domains (network,domain,host,config,properties) VALUES (?,?,?,?::jsonb,?::jsonb) RETURNING lid";
         long lid = withStmtFunction(sql, stmt -> {
             stmt.setString(1, dao.getNetwork());
             stmt.setString(2, dao.getDomain());
-            stmt.setString(3, GsonUtil.toJson(dao.getProperties()));
+            stmt.setString(3, dao.getHost());
             stmt.setString(4, GsonUtil.toJson(dao.getProperties()));
+            stmt.setString(5, GsonUtil.toJson(dao.getProperties()));
             try (ResultSet rSet = stmt.executeQuery()) {
                 if (!rSet.next()) {
                     throw new IllegalStateException("Inserted domain " + dao.getNetwork() + ":" + dao.getDomain() + " in stream but got no SID back");
@@ -280,11 +280,12 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
     }
 
     public void updateDomain(DomainDao dao) {
-        String sql = "UPDATE domains SET config = ?::jsonb, properties = ?::jsonb WHERE lid = ?";
+        String sql = "UPDATE domains SET host = ?, config = ?::jsonb, properties = ?::jsonb WHERE lid = ?";
         withStmtConsumer(sql, stmt -> {
-            stmt.setString(1, GsonUtil.toJson(dao.getConfig()));
-            stmt.setString(2, GsonUtil.toJson(dao.getProperties()));
-            stmt.setLong(3, dao.getLocalId());
+            stmt.setString(1, dao.getHost());
+            stmt.setString(2, GsonUtil.toJson(dao.getConfig()));
+            stmt.setString(3, GsonUtil.toJson(dao.getProperties()));
+            stmt.setLong(4, dao.getLocalId());
             int rc = stmt.executeUpdate();
             if (rc != 1) {
                 throw new IllegalStateException("Domain # " + dao.getLocalId() + ": DB updated " + rc + " rows. 1 expected");
@@ -303,7 +304,8 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
                     DomainDao dao = new DomainDao();
                     dao.setLocalId(rSet.getLong("lid"));
                     dao.setNetwork(rSet.getString("network"));
-                    dao.setDomain(rSet.getString("host"));
+                    dao.setDomain(rSet.getString("domain"));
+                    dao.setHost(rSet.getString("host"));
                     dao.setConfig(GsonUtil.parseObj(rSet.getString("config")));
                     dao.setProperties(GsonUtil.parseObj(rSet.getString("properties")));
                     daos.add(dao);

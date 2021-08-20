@@ -71,7 +71,7 @@ public class ServerSession {
         Room r = core.roomMgr().get(roomId);
         String roomVersion = r.getVersion();
         if (!roomVersions.contains(roomVersion)) {
-            throw new IncompatibleRoomVersionException();
+            throw new IncompatibleRoomVersionException(roomVersion);
         }
         JsonObject template = r.makeJoinTemplate(userId);
         log.debug("Built join template for User {} in Room {} : {}", userId, roomId, GsonUtil.getPrettyForLog(template));

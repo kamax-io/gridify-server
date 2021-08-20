@@ -139,7 +139,7 @@ dependencies {
     implementation 'org.apache.httpcomponents:httpclient:4.5.4'
 
     // HTTP server
-    implementation 'io.undertow:undertow-core:2.0.16.Final'
+    implementation 'io.undertow:undertow-core:2.2.10.Final'
 
     // Crypto (BCrypt for password, TLS/SSL, etc.)
     implementation 'org.bouncycastle:bcprov-jdk14:1.60'

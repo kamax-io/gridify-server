@@ -52,11 +52,9 @@ public interface MatrixCore {
 
     boolean isLocal(String host);
 
-    MatrixDomain addDomain(String domain);
+    MatrixDomain addDomain(String domain, String host);
 
     MatrixServer forDomain(String domain);
-
-    void removeDomain(String domain);
 
     MatrixServer vHost(String host);
 

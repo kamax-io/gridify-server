@@ -20,6 +20,7 @@
 
 package io.kamax.gridify.server.network.matrix.core.room.algo;
 
+import io.kamax.gridify.server.network.matrix.core.IncompatibleRoomVersionException;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
@@ -27,6 +28,10 @@ import java.util.*;
 public class RoomAlgos {
 
     private static final ServiceLoader<RoomAlgoLoader> svcLoader = ServiceLoader.load(RoomAlgoLoader.class);
+
+    public static String blankVersion() {
+        return "1";
+    }
 
     public static String defaultVersion() {
         return RoomAlgoV6.Version;
@@ -42,7 +47,7 @@ public class RoomAlgos {
 
     public static RoomAlgo get(String version) throws NoSuchElementException {
         if (StringUtils.isBlank(version)) {
-            version = defaultVersion();
+            version = blankVersion();
         }
 
         for (RoomAlgoLoader roomAlgoLoader : svcLoader) {
@@ -52,7 +57,7 @@ public class RoomAlgos {
             }
         }
 
-        throw new NoSuchElementException("Room version " + version);
+        throw new IncompatibleRoomVersionException(version);
     }
 
 }

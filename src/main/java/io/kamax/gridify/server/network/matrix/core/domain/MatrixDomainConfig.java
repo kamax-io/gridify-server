@@ -20,7 +20,61 @@
 
 package io.kamax.gridify.server.network.matrix.core.domain;
 
+import com.google.gson.JsonObject;
+
+import java.util.Objects;
+
 public class MatrixDomainConfig {
+
+    public static class API {
+
+        public static class Federation {
+
+            public static class Version {
+
+                JsonObject overwrite;
+
+                public JsonObject getOverwrite() {
+                    return overwrite;
+                }
+
+                public void setOverwrite(JsonObject overwrite) {
+                    this.overwrite = overwrite;
+                }
+
+            }
+
+            private Version version;
+
+            public Version getVersion() {
+                if (Objects.isNull(version)) {
+                    version = new Version();
+                }
+
+                return version;
+            }
+
+            public void setVersion(Version version) {
+                this.version = version;
+            }
+
+        }
+
+        private Federation federation;
+
+        public Federation getFederation() {
+            if (Objects.isNull(federation)) {
+                federation = new Federation();
+            }
+
+            return federation;
+        }
+
+        public void setFederation(Federation federation) {
+            this.federation = federation;
+        }
+
+    }
 
     public static class Registration {
 
@@ -36,9 +90,21 @@ public class MatrixDomainConfig {
 
     }
 
-    private Registration registration = new Registration();
+    private API api;
+    private Registration registration;
+
+    public API getApi() {
+        if (Objects.isNull(api)) {
+            api = new API();
+        }
+
+        return api;
+    }
 
     public Registration getRegistration() {
+        if (Objects.isNull(registration)) {
+            registration = new Registration();
+        }
         return registration;
     }
 

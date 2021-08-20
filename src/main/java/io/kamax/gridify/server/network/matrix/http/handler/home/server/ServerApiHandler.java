@@ -44,6 +44,8 @@ public abstract class ServerApiHandler implements HttpHandler {
 
     private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
+    protected GridifyServer g;
+
     @Override
     public void handleRequest(HttpServerExchange exchange) {
         exchange.startBlocking();
@@ -105,8 +107,6 @@ public abstract class ServerApiHandler implements HttpHandler {
 
             // TODO refactor the common code from the various API handlers into a single class
             if (log.isInfoEnabled()) {
-                String protocol = exchange.getConnection().getTransportProtocol().toUpperCase();
-                String vhost = exchange.getHostName();
                 String remotePeer = exchange.getConnection().getPeerAddress(InetSocketAddress.class).getAddress().getHostAddress();
                 String method = exchange.getRequestMethod().toString();
                 String path = exchange.getRequestURI();
@@ -114,9 +114,9 @@ public abstract class ServerApiHandler implements HttpHandler {
                 long writtenByes = exchange.getResponseBytesSent();
 
                 if (StringUtils.isEmpty(ex.getError())) {
-                    log.info("Request - {} - {} - {} - {} {} - {} - {}", protocol, vhost, remotePeer, method, path, statusCode, writtenByes);
+                    log.info("{} - {} {} - {} - {}", remotePeer, method, path, statusCode, writtenByes);
                 } else {
-                    log.info("Request - {} - {} - {} - {} {} - {} - {} - {}", protocol, vhost, remotePeer, method, path, statusCode, writtenByes, ex.getError());
+                    log.info("{} - {} {} - {} - {} - {}", remotePeer, method, path, statusCode, writtenByes, ex.getError());
                 }
             }
         }

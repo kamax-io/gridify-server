@@ -22,8 +22,8 @@ package io.kamax.gridify.server.network.matrix.core;
 
 public class IncompatibleRoomVersionException extends BadRequestException {
 
-    public IncompatibleRoomVersionException() {
-        super("M_INCOMPATIBLE_ROOM_VERSION", "Room version is not supported");
+    public IncompatibleRoomVersionException(String v) {
+        super("M_INCOMPATIBLE_ROOM_VERSION", "Room version " + v + " is not supported");
     }
 
 }

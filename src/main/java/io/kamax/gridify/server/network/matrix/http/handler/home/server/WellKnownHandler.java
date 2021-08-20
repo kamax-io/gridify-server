@@ -3,30 +3,39 @@ package io.kamax.gridify.server.network.matrix.http.handler.home.server;
 import com.google.gson.JsonObject;
 import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.http.handler.Exchange;
-import io.kamax.gridify.server.util.KxLog;
-import org.slf4j.Logger;
-
-import java.lang.invoke.MethodHandles;
+import io.kamax.gridify.server.network.matrix.core.MatrixServer;
+import io.undertow.util.Headers;
+import org.apache.commons.lang.StringUtils;
 
 public class WellKnownHandler extends ServerApiHandler {
 
-    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
-
     public WellKnownHandler(GridifyServer g) {
-        // nope
+        this.g = g;
     }
 
     @Override
     protected void handle(Exchange ex) {
-        String host = ex.requireHost();
-
+        MatrixServer srv = g.overMatrix().forDomain(ex.requireHost());
+        String host = srv.id().getHost();
         // Check if we have a port in it
         int i = host.lastIndexOf(":");
         // Check if this is an IPv6 address
         int j = host.lastIndexOf("]");
         if (j > i || i == -1) {
             // No port, add it
-            host += ":443";
+            String port = ex.getHeader(Headers.X_FORWARDED_PORT_STRING);
+            if (StringUtils.isBlank(port)) {
+                String proto = ex.getHeader(Headers.X_FORWARDED_PROTO_STRING);
+                if (StringUtils.isBlank(proto)) {
+                    host += ":8448";
+                } else if (StringUtils.equals("https", proto)) {
+                    host += ":443";
+                } else {
+                    host += ":80";
+                }
+            } else {
+                host += ":" + port;
+            }
         }
 
         JsonObject body = new JsonObject();

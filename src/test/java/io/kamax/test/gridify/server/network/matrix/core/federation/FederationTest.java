@@ -86,7 +86,7 @@ public class FederationTest {
         mg1 = new MonolithHttpGridifyServer(cfg1);
         g1 = mg1.start();
         mx1 = g1.overMatrix();
-        mx1.addDomain(dn1);
+        mx1.addDomain(dn1, dn1);
         n1 = "jane";
         a1 = "@" + n1 + ":" + dn1;
         mx1.getFedPusher().setAsync(false);
@@ -98,7 +98,7 @@ public class FederationTest {
         mg2 = new MonolithHttpGridifyServer(cfg2);
         g2 = mg2.start();
         mx2 = g2.overMatrix();
-        mx2.addDomain(dn2);
+        mx2.addDomain(dn2, dn2);
         n2 = "john";
         a2 = "@" + n2 + ":" + dn2;
         mx2.getFedPusher().setAsync(false);

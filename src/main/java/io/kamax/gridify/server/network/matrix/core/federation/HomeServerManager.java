@@ -49,7 +49,7 @@ public class HomeServerManager {
     }
 
     public HomeServerLink getLink(String origin, String domain) {
-        return new HomeServerLink(g.overMatrix().vHost(origin), domain, networkClient);
+        return new HomeServerLink(g.overMatrix().forDomain(origin), domain, networkClient);
     }
 
 }

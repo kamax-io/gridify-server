@@ -27,6 +27,7 @@ public class DomainDao {
     private Long localId;
     private String network;
     private String domain;
+    private String host;
     private JsonObject properties;
     private JsonObject config;
 
@@ -34,7 +35,7 @@ public class DomainDao {
         return localId;
     }
 
-    public void setLocalId(long localId) {
+    public void setLocalId(Long localId) {
         this.localId = localId;
     }
 
@@ -52,6 +53,14 @@ public class DomainDao {
 
     public void setDomain(String domain) {
         this.domain = domain;
+    }
+
+    public String getHost() {
+        return host;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
     }
 
     public JsonObject getProperties() {

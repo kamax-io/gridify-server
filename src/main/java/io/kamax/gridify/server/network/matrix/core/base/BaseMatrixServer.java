@@ -24,17 +24,13 @@ import com.google.gson.JsonObject;
 import io.kamax.gridify.server.core.GridType;
 import io.kamax.gridify.server.core.auth.UIAuthSession;
 import io.kamax.gridify.server.core.crypto.Key;
-import io.kamax.gridify.server.core.crypto.RegularKeyIdentifier;
 import io.kamax.gridify.server.core.crypto.Signature;
 import io.kamax.gridify.server.core.event.EventStreamer;
 import io.kamax.gridify.server.core.identity.GenericThreePid;
 import io.kamax.gridify.server.core.identity.User;
 import io.kamax.gridify.server.core.signal.SignalBus;
 import io.kamax.gridify.server.core.store.DomainDao;
-import io.kamax.gridify.server.network.matrix.core.MatrixCore;
-import io.kamax.gridify.server.network.matrix.core.MatrixDataClient;
-import io.kamax.gridify.server.network.matrix.core.MatrixDataServer;
-import io.kamax.gridify.server.network.matrix.core.MatrixServer;
+import io.kamax.gridify.server.network.matrix.core.*;
 import io.kamax.gridify.server.network.matrix.core.crypto.MatrixDomainCryptopher;
 import io.kamax.gridify.server.network.matrix.core.domain.MatrixDomain;
 import io.kamax.gridify.server.network.matrix.core.domain.MatrixDomainConfig;
@@ -60,8 +56,24 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
     }
 
     @Override
+    public MatrixDomain id() {
+        return domain;
+    }
+
+    @Override
     public String getDomain() {
-        return domain.getHost();
+        return domain.getDomain();
+    }
+
+    @Override
+    public MatrixServerImplementation getImplementation() {
+        JsonObject impl = getConfig().getApi().getFederation().getVersion().getOverwrite();
+        if (Objects.isNull(impl)) {
+            impl = new JsonObject();
+            impl.addProperty("name", "gridify-server");
+            impl.addProperty("version", "0.0.0");
+        }
+        return GsonUtil.fromJson(impl, MatrixServerImplementation.class);
     }
 
     @Override
@@ -72,6 +84,14 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
     @Override
     public MatrixDomainConfig getConfig() {
         return domain.getCfg();
+    }
+
+    @Override
+    public void setConfig(MatrixDomainConfig cfg) {
+        DomainDao dao = domain.toDao();
+        dao.setConfig(GsonUtil.makeObj(cfg));
+        g.store().saveDomain(dao);
+        domain.setCfg(cfg);
     }
 
     @Override
@@ -95,7 +115,7 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
 
             @Override
             public String getDomain() {
-                return domain.getHost();
+                return domain.getDomain();
             }
 
             @Override
@@ -169,14 +189,14 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
     @Override
     public UserSession withToken(String token) {
         User u = g.gridify().validateSessionToken(token);
-        String userId = u.findNetworkId("matrix").orElseGet(() -> "@" + u.getUsername() + ":" + domain.getHost());
-        return new UserSession(this, domain.getHost(), u, userId, token);
+        String userId = u.findNetworkId("matrix").orElseGet(() -> "@" + u.getUsername() + ":" + domain.getDomain());
+        return new UserSession(this, domain.getDomain(), u, userId, token);
     }
 
     @Override
     public User register(String username, String password) {
         User u = g.gridify().register(username, password);
-        u.addThreePid(new GenericThreePid(GridType.id().make("net.matrix"), "@" + username + ":" + domain.getHost()));
+        u.addThreePid(new GenericThreePid(GridType.id().make("net.matrix"), "@" + username + ":" + domain.getDomain()));
         return u;
     }
 
@@ -228,12 +248,12 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
     @Override
     public JsonObject getKeyDocument(String keyId) {
         List<Key> keys = new ArrayList<>();
-        keys.add(g.crypto().getKey(RegularKeyIdentifier.parse(keyId)));
+        keys.add(g.crypto().getKey(domain.getSigningKey()));
 
         JsonObject verifyKeysDoc = new JsonObject();
         JsonObject doc = new JsonObject();
         doc.add("old_verify_keys", new JsonObject());
-        doc.addProperty("server_name", domain.getHost());
+        doc.addProperty("server_name", domain.getDomain());
         doc.addProperty("valid_until_ts", Instant.now().plusSeconds(60 * 60 * 24).toEpochMilli()); // 24h
         doc.add("verify_keys", verifyKeysDoc);
 
@@ -246,7 +266,7 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
         for (Key key : keys) {
             Signature sign = g.crypto().sign(doc, key.getId());
             JsonObject signDomain = GsonUtil.makeObj(sign.getKey().getAlgorithm() + ":" + sign.getKey().getSerial(), sign.getSignature());
-            signDomains.add(domain.getHost(), signDomain);
+            signDomains.add(domain.getDomain(), signDomain);
         }
 
         doc.add("signatures", signDomains);
@@ -255,7 +275,7 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
 
     @Override
     public ServerSession forRequest(HomeServerRequest mxReq) {
-        return new ServerSession(g, domain.getHost(), mxReq.getDoc().getOrigin());
+        return new ServerSession(g, domain.getDomain(), mxReq.getDoc().getOrigin());
     }
 
 }

@@ -103,8 +103,6 @@ public abstract class ClientApiHandler implements HttpHandler {
 
             // TODO refactor the common code from the various API handlers into a single class
             if (log.isInfoEnabled()) {
-                String protocol = exchange.getConnection().getTransportProtocol().toUpperCase();
-                String vhost = exchange.getHostName();
                 String remotePeer = exchange.getConnection().getPeerAddress(InetSocketAddress.class).getAddress().getHostAddress();
                 String method = exchange.getRequestMethod().toString();
                 String path = exchange.getRequestURI();
@@ -112,9 +110,9 @@ public abstract class ClientApiHandler implements HttpHandler {
                 long writtenByes = exchange.getResponseBytesSent();
 
                 if (StringUtils.isEmpty(ex.getError())) {
-                    log.info("Request - {} - {} - {} - {} {} - {} - {}", protocol, vhost, remotePeer, method, path, statusCode, writtenByes);
+                    log.info("{} - {} {} - {} - {}", remotePeer, method, path, statusCode, writtenByes);
                 } else {
-                    log.info("Request - {} - {} - {} - {} {} - {} - {} - {}", protocol, vhost, remotePeer, method, path, statusCode, writtenByes, ex.getError());
+                    log.info("{} - {} {} - {} - {} - {}", remotePeer, method, path, statusCode, writtenByes, ex.getError());
                 }
             }
         }

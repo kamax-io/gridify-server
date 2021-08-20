@@ -32,6 +32,8 @@ public class MatrixHomeServerEndpointRegister {
         handler
                 .get("/.well-known/matrix/server", new WellKnownHandler(g))
 
+                .get("/_matrix/federation/v1/version", new VersionHandler(g))
+
                 .get("/_matrix/key/v2/server", keySrvHandler)
                 .get("/_matrix/key/v2/server/{keyId}", keySrvHandler)
 

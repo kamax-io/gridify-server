@@ -36,7 +36,8 @@ public class MatrixDomain {
         MatrixDomain domain = new MatrixDomain();
 
         domain.setLid(dao.getLocalId());
-        domain.setHost(dao.getDomain());
+        domain.setDomain(dao.getDomain());
+        domain.setHost(dao.getHost());
         domain.setCfg(GsonUtil.fromJson(dao.getConfig(), MatrixDomainConfig.class));
         GsonUtil.findString(dao.getProperties(), "signing_key").ifPresent(v -> {
             domain.setSigningKey(RegularKeyIdentifier.parse(v));
@@ -48,18 +49,27 @@ public class MatrixDomain {
         return domain;
     }
 
-    private long lid;
+    private Long lid;
+    private String domain;
     private String host;
     private KeyIdentifier signingKey;
     private List<KeyIdentifier> oldSigningKeys = new ArrayList<>();
     private MatrixDomainConfig cfg = new MatrixDomainConfig();
 
-    public long getLid() {
+    public Long getLid() {
         return lid;
     }
 
     public void setLid(long lid) {
         this.lid = lid;
+    }
+
+    public String getDomain() {
+        return domain;
+    }
+
+    public void setDomain(String domain) {
+        this.domain = domain;
     }
 
     public String getHost() {
@@ -103,7 +113,8 @@ public class MatrixDomain {
         DomainDao dao = new DomainDao();
         dao.setLocalId(lid);
         dao.setNetwork("matrix");
-        dao.setDomain(host);
+        dao.setDomain(domain);
+        dao.setHost(host);
         dao.setProperties(properties);
         dao.setConfig(GsonUtil.makeObj(cfg));
         return dao;

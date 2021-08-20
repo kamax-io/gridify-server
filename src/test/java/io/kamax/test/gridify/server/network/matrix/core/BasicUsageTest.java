@@ -45,7 +45,7 @@ public class BasicUsageTest {
     public void roomCreate() {
         GridifyConfig cfg = GridifyConfig.inMemory();
         GridifyServer g = new MonolithGridifyServer(cfg);
-        g.overMatrix().addDomain("localhost");
+        g.overMatrix().addDomain("localhost", "localhost");
         g.start();
         MatrixDataClient client = g.overMatrix().vHost("localhost").asClient();
 

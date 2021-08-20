@@ -65,10 +65,10 @@ public class RoomManager {
     }
 
     public Room createRoom(MatrixDomainCryptopher crypto, String creator, JsonObject options) {
-        String algoVersion = GsonUtil.getStringOrNull(options, "room_version");
-        if (StringUtils.isBlank(algoVersion)) {
-            algoVersion = g.getConfig().getRoom().getCreation().getVersion();
-        }
+        String algoVersionDefault = RoomAlgos.defaultVersion();
+        String algoVersionCfg = g.getConfig().getRoom().getCreation().getVersion();
+        String algoVersionOption = GsonUtil.getStringOrNull(options, "room_version");
+        String algoVersion = StringUtils.defaultIfBlank(algoVersionOption, StringUtils.defaultIfBlank(algoVersionCfg, algoVersionDefault));
         RoomAlgo algo = RoomAlgos.get(algoVersion);
 
         ChannelDao dao = new ChannelDao("matrix", algo.generateRoomId(crypto.getDomain()), algo.getVersion());
@@ -91,7 +91,7 @@ public class RoomManager {
         BareCreateEvent createEv = GsonUtil.fromJson(createDoc, BareCreateEvent.class);
 
         // We retrieve the room version and its corresponding algo
-        String roomVersion = StringUtils.defaultIfBlank(createEv.getContent().getVersion(), "1");
+        String roomVersion = StringUtils.defaultIfBlank(createEv.getContent().getVersion(), RoomAlgos.blankVersion());
         RoomAlgo algo = RoomAlgos.get(roomVersion);
 
         // We ensure the create event is valid for the given algo
@@ -154,7 +154,8 @@ public class RoomManager {
                 joinTemplate.setUserId(user.full());
 
                 // We use the correct algo to build a complete join event
-                RoomAlgo algo = RoomAlgos.get(joinTemplate.getRoomVersion());
+                String roomVersion = StringUtils.defaultIfBlank(joinTemplate.getRoomVersion(), RoomAlgos.blankVersion());
+                RoomAlgo algo = RoomAlgos.get(roomVersion);
                 JsonObject joinEvent = algo.buildJoinEvent(joinTemplate);
                 JsonObject joinEventSignedOff = algo.signEvent(joinEvent, g.overMatrix().vHost(user.network()).asServer().getCrypto());
 

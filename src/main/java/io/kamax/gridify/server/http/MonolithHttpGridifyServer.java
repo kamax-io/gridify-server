@@ -54,11 +54,9 @@ import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
@@ -71,11 +69,27 @@ public class MonolithHttpGridifyServer {
         System.setProperty("org.jboss.logging.provider", "slf4j");
     }
 
-    private static final Logger log = KxLog.make(MonolithHttpGridifyServer.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private GridifyConfig cfg;
     private MonolithGridifyServer g;
-    private Undertow u;
+
+    /* FIXME ASAP
+     * Undertow bug - root handlers are not kept for each listener
+     *
+     * Over HTTP, the handler is the root handler, set at the very beginning
+     * -- https://github.com/undertow-io/undertow/blob/master/core/src/main/java/io/undertow/Undertow.java#L182-L183
+     *
+     * But over HTTPS, the handler is the handler of the listener
+     * -- https://github.com/undertow-io/undertow/blob/master/core/src/main/java/io/undertow/Undertow.java#L203-L204
+     *
+     * Git blame shows that there was a specific attempt to ensure we could use a distinct root handler for each listener,
+     * but was lost at some point in a commit, as per git blame:
+     * -- https://github.com/undertow-io/undertow/blame/870ec1482601f6b30c04e136d8fe9c9d698565a5/core/src/main/java/io/undertow/Undertow.java#L183
+     *
+     * Must use one Undertow instance per listener until fixed.
+     */
+    private List<Undertow> u = new ArrayList<>();
 
     public MonolithHttpGridifyServer(GridifyConfig cfg) {
         init(cfg);
@@ -194,31 +208,34 @@ public class MonolithHttpGridifyServer {
     private void build() {
         if (cfg.getListeners().isEmpty()) {
             log.info("No listener configured, adding default");
-            GridifyConfig.Listener l = new GridifyConfig.Listener();
-            l.setAddress("0.0.0.0");
-            l.setPort(9009);
-            cfg.getListeners().add(l);
-        }
 
-        for (GridifyConfig.Listener l : cfg.getListeners()) {
-            if (Objects.isNull(l.getNetwork())) {
-                log.info("Absent network configuration on listener {}:{}, adding default", l.getAddress(), l.getPort());
-                l.setNetwork(new ArrayList<>());
-                //l.addNetwork(GridifyConfig.NetworkListener.build("grid", "data", "client"));
-                //l.addNetwork(GridifyConfig.NetworkListener.build("grid", "data", "server"));
-                //l.addNetwork(GridifyConfig.NetworkListener.build("grid", "identity", "client"));
-                //l.addNetwork(GridifyConfig.NetworkListener.build("grid", "identity", "server"));
-                l.addNetwork(GridifyConfig.NetworkListener.build("matrix", "home", "client"));
-                l.addNetwork(GridifyConfig.NetworkListener.build("matrix", "home", "server"));
-                //l.addNetwork(GridifyConfig.NetworkListener.build("matrix", "identity", "client"));
-                //l.addNetwork(GridifyConfig.NetworkListener.build("matrix", "identity", "server"));
-            }
+            // TODO Add health endpoint on 9009
+            // TODO Add cluster endpoint on 9119
+            // FIXME Add admin endpoint on 9229
+
+            GridifyConfig.Listener clients = new GridifyConfig.Listener();
+            clients.setAddress("0.0.0.0");
+            clients.setPort(9339);
+            //clients.addNetwork(GridifyConfig.NetworkListener.build("grid", "identity", "client"));
+            //clients.addNetwork(GridifyConfig.NetworkListener.build("grid", "data", "client"));
+            //clients.addNetwork(GridifyConfig.NetworkListener.build("matrix", "identity", "client"));
+            clients.addNetwork(GridifyConfig.NetworkListener.build("matrix", "home", "client"));
+            cfg.getListeners().add(clients);
+
+            GridifyConfig.Listener servers = new GridifyConfig.Listener();
+            servers.setAddress("0.0.0.0");
+            servers.setPort(9449);
+            //servers.addNetwork(GridifyConfig.NetworkListener.build("grid", "identity", "server"));
+            //servers.addNetwork(GridifyConfig.NetworkListener.build("grid", "data", "server"));
+            //servers.addNetwork(GridifyConfig.NetworkListener.build("matrix", "identity", "server"));
+            servers.addNetwork(GridifyConfig.NetworkListener.build("matrix", "home", "server"));
+            cfg.getListeners().add(servers);
         }
 
         g = new MonolithGridifyServer(cfg);
 
-        Undertow.Builder b = Undertow.builder();
         for (GridifyConfig.Listener cfg : cfg.getListeners()) {
+            Undertow.Builder b = Undertow.builder();
             log.info("Creating HTTP listener on {}:{}", cfg.getAddress(), cfg.getPort());
             RoutingHandler handler = Handlers.routing();
 
@@ -301,7 +318,7 @@ public class MonolithHttpGridifyServer {
                     if (!g.getIdentity().hasUsers()) {
                         new RedirectHandler("/admin/firstRunWizard").handleRequest(exchange);
                     } else {
-                        log.info("Serving homepage");
+                        log.debug("Serving homepage");
                         try (InputStream elIs = getClass().getResourceAsStream("/html/index.html")) {
                             String data = IOUtils.toString(Objects.requireNonNull(elIs), StandardCharsets.UTF_8);
                             exchange.getResponseHeaders().put(HttpString.tryFromString("Content-Type"), "text/html");
@@ -322,16 +339,18 @@ public class MonolithHttpGridifyServer {
                 b.addHttpListener(cfg.getPort(), cfg.getAddress())
                         .setHandler(handler);
             }
+            Undertow uListener = b.build();
+            u.add(uListener);
         }
 
-        u = b.build();
+
     }
 
     public GridifyServer start() {
         build();
 
         g.start();
-        u.start();
+        u.forEach(Undertow::start);
 
         return g;
     }
@@ -346,7 +365,7 @@ public class MonolithHttpGridifyServer {
                         protected void compute() {
                             // Protect against early exception and then null pointer
                             if (Objects.nonNull(u)) {
-                                u.stop();
+                                u.forEach(Undertow::stop);
                             }
                         }
                     }, new RecursiveAction() {

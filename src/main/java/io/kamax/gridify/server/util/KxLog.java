@@ -28,9 +28,14 @@ public class KxLog {
 
     private static final String g = "io.kamax.gridify.server";
     private static final String gNetMx = g + ".network.matrix";
+    private static final String gNetMxC2sApi = gNetMx + ".http.handler.home.client.ClientApiHandler";
 
     public static Logger make(Class<?> c) {
         String name = c.getCanonicalName();
+        if (name.startsWith(gNetMxC2sApi)) {
+            name = StringUtils.replace(name, gNetMxC2sApi, "[MxC2S]", 1);
+        }
+
         if (name.startsWith(gNetMx)) {
             name = StringUtils.replace(name, gNetMx, "[g.net.mx]", 1);
         }

@@ -418,11 +418,11 @@ public class RoomAlgoV6 implements RoomAlgo {
                     return auth.deny("Sender cannot send in a room they are not joined");
                 }
 
-                if (RoomMembership.Ban.equals(targetMs) && canDoMembership(senderPl, RoomMembership.Ban, pls)) {
+                if (RoomMembership.Ban.equals(targetMs) && !canDoMembership(senderPl, RoomMembership.Ban, pls)) {
                     return auth.deny("Sender does not have the required Power Level to remove a ban");
                 }
 
-                if (canDoMembership(senderPl, RoomMembership.Kick, pls)) {
+                if (!canDoMembership(senderPl, RoomMembership.Kick, pls)) {
                     return auth.deny("Sender does not have the required Power Level to kick");
                 }
 
@@ -436,7 +436,7 @@ public class RoomAlgoV6 implements RoomAlgo {
                     return auth.deny("Sender cannot send in a room they are not joined");
                 }
 
-                if (canDoMembership(senderPl, RoomMembership.Ban, pls)) {
+                if (!canDoMembership(senderPl, RoomMembership.Ban, pls)) {
                     return auth.deny("Sender does not have the required Power Level to ban");
                 }
 

@@ -18,31 +18,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.gridify.server.network.matrix.core.room.algo;
+package io.kamax.gridify.server.network.matrix.core;
 
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
+public class MatrixServerImplementation {
 
-public class BuiltinRoomAlgoLoader implements RoomAlgoLoader {
+    private String name;
+    private String version;
 
-    @Override
-    public Optional<RoomAlgo> apply(String s) {
-        if (getVersions().contains(s)) {
-            return Optional.of(new RoomAlgoV6());
-        }
-
-        return Optional.empty();
+    public String getName() {
+        return name;
     }
 
-    @Override
-    public Set<String> getVersions() {
-        Set<String> versions = new HashSet<>();
-        versions.add("4");
-        versions.add("5");
-        versions.add("6");
-        versions.add("7");
-        return versions;
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
     }
 
 }

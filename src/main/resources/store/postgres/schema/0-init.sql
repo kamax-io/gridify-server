@@ -33,6 +33,7 @@ CREATE TABLE domains
 (
     lid bigserial NOT NULL,
     network text NOT NULL,
+    domain text NOT NULL,
     host text NOT NULL,
     config jsonb,
     properties jsonb,

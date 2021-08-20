@@ -141,6 +141,7 @@ public class HomeServerLink {
         for (String version : versions) {
             builder.addParameter("ver", version);
         }
+        builder.addParameter("ver", "1");
 
         HomeServerRequest request = build(domain, "GET", builder);
 

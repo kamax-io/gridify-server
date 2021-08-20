@@ -185,13 +185,16 @@ public class MonolithGridifyServer implements GridifyServer {
             throw new IllegalArgumentException("Admin password cannot be empty/blank");
         }
 
+        String domain = GsonUtil.getStringOrNull(setupDoc, "matrix_domain");
+        String host = GsonUtil.getStringOrNull(setupDoc, "matrix_host");
+        if (StringUtils.isNotBlank(domain)) {
+            if (StringUtils.isBlank(host)) host = domain;
+            log.info("Creating initial Matrix domain {} via host {}", domain, host);
+            mxCore.addDomain(domain, host);
+        }
+
         log.info("Creating initial admin account");
         register(username, pass);
-
-        String domain = GsonUtil.getStringOrNull(setupDoc, "matrix_domain");
-        if (StringUtils.isNotBlank(domain)) {
-            mxCore.addDomain(domain);
-        }
     }
 
     @Override

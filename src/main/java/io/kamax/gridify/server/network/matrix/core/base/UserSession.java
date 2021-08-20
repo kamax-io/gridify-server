@@ -21,6 +21,7 @@
 package io.kamax.gridify.server.network.matrix.core.base;
 
 import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
 import io.kamax.gridify.server.core.SyncData;
 import io.kamax.gridify.server.core.SyncOptions;
 import io.kamax.gridify.server.core.channel.ChannelDao;
@@ -37,6 +38,8 @@ import io.kamax.gridify.server.core.signal.SyncRefreshSignal;
 import io.kamax.gridify.server.exception.ForbiddenException;
 import io.kamax.gridify.server.exception.NotImplementedException;
 import io.kamax.gridify.server.network.matrix.core.MatrixServer;
+import io.kamax.gridify.server.network.matrix.core.domain.MatrixDomain;
+import io.kamax.gridify.server.network.matrix.core.domain.MatrixDomainConfig;
 import io.kamax.gridify.server.network.matrix.core.event.*;
 import io.kamax.gridify.server.network.matrix.core.room.*;
 import io.kamax.gridify.server.network.matrix.http.json.RoomEvent;
@@ -283,7 +286,6 @@ public class UserSession {
                 }
 
                 long waitTime = Math.max(options.getTimeout(), 0L);
-                log.debug("Timeout: " + waitTime);
                 if (waitTime > 0) {
                     try {
                         synchronized (this) {
@@ -296,7 +298,6 @@ public class UserSession {
                 }
             } while (end.isAfter(Instant.now()));
 
-            log.debug("Position after sync loop: {}", data.getPosition());
             return buildSync(data);
         } finally {
             g.getBus().getMain().unsubscribe(this);
@@ -389,24 +390,51 @@ public class UserSession {
                         throw new IllegalArgumentException("Invalid command: " + cmd);
                     }
 
-                    if (StringUtils.startsWith(subCmb, "matrix domain ")) {
+                    if (StringUtils.startsWith(subCmb, "matrix add domain ")) {
+                        subCmb = StringUtils.replace(subCmb, "matrix add domain ", "", 1);
+                        String[] subCmbArgs = StringUtils.split(subCmb, " ");
+                        if (subCmbArgs.length < 2) {
+                            body = "ERROR: Missing args";
+                        } else {
+                            MatrixDomain dom = g.core().addDomain(subCmbArgs[0], subCmbArgs[1]);
+                            body = "OK - Added new Matrix domain " + dom.getDomain() + " served over " + dom.getHost();
+                        }
+                    } else if (StringUtils.startsWith(subCmb, "matrix domain ")) {
                         subCmb = StringUtils.replace(subCmb, "matrix domain ", "", 1);
                         String[] subCmbArgs = StringUtils.split(subCmb, " ");
-                        if (subCmbArgs.length < 3) {
-                            body = "ERROR: missing args";
-                        } else {
-                            if (StringUtils.equals(subCmbArgs[0], "this")) {
-                                subCmbArgs[0] = vHost;
-                            }
-                            if (!StringUtils.equals(subCmbArgs[1], "registration")) {
-                                body = "ERROR: invalid argument: " + subCmbArgs[1];
+                        if (StringUtils.equals(subCmbArgs[0], "this")) {
+                            subCmbArgs[0] = vHost;
+                        }
+                        if (StringUtils.equals(subCmbArgs[1], "registration")) {
+                            boolean enable = StringUtils.equals(subCmbArgs[2], "enable");
+                            g.core().forDomain(subCmbArgs[0]).updateConfig(cfg -> {
+                                cfg.getRegistration().setEnabled(enable);
+                            });
+                            body = "OK - registration " + (enable ? "enabled" : "disabled") + " on domain " + subCmbArgs[0];
+                        } else if (StringUtils.equals(subCmbArgs[1], "config")) {
+                            if (StringUtils.equals(subCmbArgs[2], "get")) {
+                                body = GsonUtil.toJson(g.core().forDomain(subCmbArgs[0]).getConfig());
+                            } else if (StringUtils.equals(subCmbArgs[2], "set")) {
+                                if (subCmbArgs.length < 4 || StringUtils.isBlank(subCmbArgs[3])) {
+                                    body = "WARN - No config provided, no change";
+                                } else {
+                                    try {
+                                        StringBuilder json = new StringBuilder();
+                                        for (int i = 3; i < subCmbArgs.length; i++) {
+                                            json.append(subCmbArgs[i]);
+                                        }
+                                        MatrixDomainConfig cfg = GsonUtil.parse(json.toString(), MatrixDomainConfig.class);
+                                        g.core().forDomain(subCmbArgs[0]).setConfig(cfg);
+                                        body = "OK - Configuration for domain " + subCmbArgs[0] + " has been updated";
+                                    } catch (JsonSyntaxException e) {
+                                        body = "ERROR - Invalid JSON: " + e.getMessage();
+                                    }
+                                }
                             } else {
-                                boolean enable = StringUtils.equals(subCmbArgs[2], "enable");
-                                g.core().forDomain(subCmbArgs[0]).updateConfig(cfg -> {
-                                    cfg.getRegistration().setEnabled(enable);
-                                });
-                                body = "OK - registration " + (enable ? "enabled" : "disabled") + " on domain " + subCmbArgs[0];
+                                body = "ERROR - unsupported config operation: " + subCmbArgs[2];
                             }
+                        } else {
+                            body = "ERROR: invalid argument: " + subCmbArgs[1];
                         }
                     } else if (StringUtils.equals("matrix federation enable", subCmb)) {
                         g.getFedPusher().setEnabled(true);
