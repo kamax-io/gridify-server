@@ -1,31 +1,31 @@
 # Database
 ## PostgreSQL
 ### Setup
-On Debian, after having installed the PostgreSQL server:
+After having installed the PostgreSQL server:
 ```bash
 su - postgres
-createuser --pwprompt gridify-server
+createuser --pwprompt gridifyd
 psql
 ```
 At the SQL prompt:
 ```sql
-CREATE DATABASE "gridify-server"
+CREATE DATABASE "gridifyd"
  ENCODING 'UTF8'
  LC_COLLATE='C'
  LC_CTYPE='C'
  template=template0
- OWNER gridify-server;
+ OWNER gridifyd;
 ```
 And quit the prompt with:
 ```
-\q
+exit;
 ```
 
-In your `gridify.yaml` config file (if needed, so your install instruction), assuming a local DB:
+In your `config.yaml` file (if needed, so your install instruction), assuming a local DB:
 ```yaml
 storage:
   database:
     type: 'postgresql'
-    connection: '//localhost/gridify?user=gridify&password=gridify'
+    connection: '//localhost/gridifyd?user=gridifyd&password=CHANGE-ME'
 ```
 Change the password to what was provided to the `createuser` command

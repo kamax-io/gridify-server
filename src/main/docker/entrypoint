@@ -1,4 +1,23 @@
 #!/usr/bin/env bash
+#
+# Gridify Server
+# Copyright (C) 2021 Kamax Sarl
+#
+# https://www.kamax.io/
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 
 generate() {
   if [ -z "$CONF_FILE_PATH" ]; then
@@ -32,22 +51,30 @@ generate() {
   echo "Configuration done!"
 }
 
-case "$1" in
+ENTRY_COMMAND="$1"
+shift # We remove the first argument
+
+case "$ENTRY_COMMAND" in
   "generate")
-    generate "$2"
+    generate "$@"
     exit 0
-    ;;
+  ;;
+
+  "gcli")
+    /app/gcli "$@"
+    exit $?
+  ;;
 
   "shell")
     /bin/bash
-    ;;
+  ;;
 
   *)
     if [ ! -f "$CONF_FILE_PATH" ]; then
       generate
     fi
     /app/bin/gridifyd -c "$CONF_FILE_PATH"
-    ;;
+  ;;
 esac
 
 exit 0

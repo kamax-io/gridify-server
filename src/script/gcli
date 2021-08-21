@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+#
+# Gridify Server
+# Copyright (C) 2021 Kamax Sarl
+#
+# https://www.kamax.io/
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+SETUP_JSON_CREDS="/tmp/gcli-setupJson.creds"
+
+help() {
+cat <<EOF
+gcli - commandline client for gridifyd
+
+Commands:
+  setup     Perform the initial setup of the gridify server
+EOF
+}
+
+setupJsonCreds() {
+cat > "$SETUP_JSON_CREDS" <<EOF
+  {
+    "admin_username":"$ADMIN_USERNAME",
+    "admin_password":"$ADMIN_PASSWORD",
+    "matrix_domain":"$MATRIX_DOMAIN",
+    "matrix_host":"$MATRIX_HOST"
+  }
+EOF
+}
+
+if [ -z "$1" ]; then
+  help
+  exit 1
+fi
+
+case "$1" in
+  "setup")
+    setupJsonCreds
+    SETUP_OUTPUT=$( \
+      curl -sS -X POST http://localhost:9229/_gridify/admin/v0/do/setup \
+        -H 'Content-Type: application/json' \
+        -d "@$SETUP_JSON_CREDS"
+    )
+    RC="$?"
+    rm "$SETUP_JSON_CREDS" 2> /dev/null
+    if [ $RC -gt 0 ]; then
+      echo "Error while sending the setup data to the gridify server"
+      exit $RC
+    fi
+
+    SUCCESS=$(echo $SETUP_OUTPUT | jq '.success')
+    if [ "$SUCCESS" != "true" ]; then
+      _setupError=$(echo $SETUP_OUTPUT | jq '.error')
+      echo "Setup failed: $_setupError"
+      exit 1
+    fi
+    echo "Setup successful!"
+    exit 0
+  ;;
+
+  *)
+    help
+  ;;
+esac
+
+exit 0

@@ -266,9 +266,10 @@ task dockerBuild(type: Exec) {
 
     doFirst {
         copy {
-            from "${projectDir}/src/main/docker/Dockerfile",
+            from distTar,
+                    "${projectDir}/src/main/docker/Dockerfile",
                     "${projectDir}/src/main/docker/entrypoint",
-                    distTarFile
+                    "${projectDir}/src/script/gcli"
             into dockerBuildPath
         }
     }
