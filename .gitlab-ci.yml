@@ -11,14 +11,22 @@ cache:
 
 stages:
   - test
+  - build
+  - dist
+  - publish
 
 test-jdk-default:
   stage: test
-  script:
-    - ./gradlew test
+  script: ./gradlew test
 
 test-jdk-8:
   image: openjdk:8
   stage: test
-  script:
-    - ./gradlew test
+  script: ./gradlew test
+
+build-core:
+  stage: test
+  script: ./gradlew build
+  artifacts:
+    paths:
+      - build/distributions
