@@ -57,7 +57,6 @@ String sourceVersion() {
 }
 
 apply plugin: 'application'
-apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'idea'
 
 group = 'io.kamax.gridify'
@@ -94,16 +93,6 @@ def debBuildSystemdPath = "${debBuildBasePath}${debSystemdPath}"
 def dockerBuildPath = "${project.buildDir}/tmp/docker"
 def dockerImageName = "${appPublisher}/${packName}"
 def dockerImageTag = "${dockerImageName}:${version}"
-
-buildscript {
-    repositories {
-        jcenter()
-    }
-
-    dependencies {
-        classpath 'com.github.jengelman.gradle.plugins:shadow:5.0.0'
-    }
-}
 
 repositories {
     jcenter()
@@ -170,16 +159,11 @@ tasks.withType(AbstractArchiveTask) {
 jar {
     manifest {
         attributes(
-                'Implementation-Title': appName,
+                'Implementation-Title': execName,
                 'Implementation-Version': buildVersion(),
                 'Implementation-Vendor': appPublisher
         )
     }
-}
-
-shadowJar {
-    getArchiveClassifier().set(null)
-    version = null
 }
 
 task debBuild() {

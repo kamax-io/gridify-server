@@ -136,8 +136,8 @@ server {
     listen [::] 8448 ssl;
     
     # The Let's Encrypt certificates path when using certbot
-    ssl_certificate /etc/letsencrypt/live/svc.dev.peach.nekone.eu/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/svc.dev.peach.nekone.eu/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/gridify.example.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/gridify.example.org/privkey.pem;
     
     # Service domain, used in Well-known and DNS SRV records
     server_name gridify.example.org;
