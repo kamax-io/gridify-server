@@ -37,4 +37,5 @@ build-core:
   script: ./gradlew build
   artifacts:
     paths:
-      - build/distributions
+      - build/distributions/*.zip
+      - build/distributions/*.tar
