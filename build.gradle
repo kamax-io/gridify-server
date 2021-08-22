@@ -72,7 +72,7 @@ def appDirName = "${appName}/server"
 def appPublisher = 'kamax'
 
 def confFileName = "config.sample.yaml"
-def distDir = "${project.buildDir}/distributions"
+def distDir = "${project.buildDir}/${distsDirName}"
 def distName = "${execName}-${buildVersion()}"
 def distTarFile = "${distName}.tar"
 def distTar = "${distDir}/${distTarFile}"
@@ -93,6 +93,7 @@ def debBuildSystemdPath = "${debBuildBasePath}${debSystemdPath}"
 def dockerBuildPath = "${project.buildDir}/tmp/docker"
 def dockerImageName = "${appPublisher}/${packName}"
 def dockerImageTag = "${dockerImageName}:${version}"
+def dockerImageTagLatestDev = "${dockerImageName}:latest-dev"
 
 repositories {
     jcenter()
@@ -245,16 +246,32 @@ task debBuild() {
     }
 }
 
-task dockerBuild(type: Exec) {
-    commandLine 'docker', 'build', '--build-arg', "DIST_FILE=${distName}", '-t', dockerImageTag, dockerBuildPath
+task dockerBuildImage(type: Exec) {
+    commandLine 'docker', 'build', '-t', dockerImageTag, dockerBuildPath
 
     doFirst {
         copy {
-            from distTar,
-                    "${projectDir}/src/main/docker/Dockerfile",
-                    "${projectDir}/src/main/docker/entrypoint",
-                    "${projectDir}/src/script/gcli"
+            from tarTree("${distDir}/${distName}.tar")
+            into layout.buildDirectory.dir("tmp/docker")
+        }
+        ant.move(
+                file: "${dockerBuildPath}/${distName}",
+                toFile: "${dockerBuildPath}/app"
+        )
+        copy {
+            from "${projectDir}/src/script/gcli"
+            into "${dockerBuildPath}/app/bin"
+        }
+        copy {
+            from "${projectDir}/src/main/docker/Dockerfile",
+                    "${projectDir}/src/main/docker/entrypoint"
             into dockerBuildPath
         }
     }
 }
+
+task dockerTagImage(type: Exec, dependsOn: 'dockerBuildImage') {
+    commandLine 'docker', 'tag', dockerImageTag, dockerImageTagLatestDev
+}
+
+task dockerBuild(dependsOn: 'dockerTagImage')

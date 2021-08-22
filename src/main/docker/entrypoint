@@ -61,19 +61,19 @@ case "$ENTRY_COMMAND" in
   ;;
 
   "gcli")
-    /app/gcli "$@"
+    exec gcli "$@"
     exit $?
   ;;
 
   "shell")
-    /bin/bash
+    bash
   ;;
 
   *)
     if [ ! -f "$CONF_FILE_PATH" ]; then
       generate
     fi
-    /app/bin/gridifyd -c "$CONF_FILE_PATH"
+    exec gridifyd -c "$CONF_FILE_PATH"
   ;;
 esac
 

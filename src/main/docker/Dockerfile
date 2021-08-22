@@ -33,15 +33,10 @@ ENV CONF_FILE_PATH="/app/config/config.yaml"
 ENV DATA_DIR_PATH="/app/data"
 ENV DATABASE_TYPE="postgresql"
 ENV DATABASE_CONNECTION="//db/gridifyd?user=gridifyd&password=gridifyd"
+ENV PATH=/app/bin:$PATH
 
 WORKDIR "/app"
 ENTRYPOINT [ "/app/entrypoint" ]
 
-ARG DIST_FILE
-ADD $DIST_FILE.tar /app
-RUN mv $DIST_FILE/* . && rmdir $DIST_FILE
-
+copy app .
 COPY entrypoint .
-COPY gcli .
-
-RUN ln -s /app/gcli /usr/local/bin/gcli
