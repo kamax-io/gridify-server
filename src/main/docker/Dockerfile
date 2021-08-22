@@ -43,3 +43,5 @@ RUN mv $DIST_FILE/* . && rmdir $DIST_FILE
 
 COPY entrypoint .
 COPY gcli .
+
+RUN ln -s /app/gcli /usr/local/bin/gcli
