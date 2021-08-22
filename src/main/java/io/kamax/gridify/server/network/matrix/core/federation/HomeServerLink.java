@@ -22,11 +22,13 @@ package io.kamax.gridify.server.network.matrix.core.federation;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import io.kamax.gridify.server.core.channel.event.ChannelEvent;
 import io.kamax.gridify.server.core.crypto.Signature;
 import io.kamax.gridify.server.exception.ForbiddenException;
 import io.kamax.gridify.server.network.matrix.core.MatrixServer;
 import io.kamax.gridify.server.network.matrix.core.RemoteServerException;
 import io.kamax.gridify.server.network.matrix.core.crypto.CryptoJson;
+import io.kamax.gridify.server.network.matrix.core.room.RoomInviteRequest;
 import io.kamax.gridify.server.network.matrix.core.room.RoomJoinSeed;
 import io.kamax.gridify.server.network.matrix.core.room.RoomLookup;
 import io.kamax.gridify.server.util.GsonUtil;
@@ -37,6 +39,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class HomeServerLink {
 
@@ -215,6 +218,31 @@ public class HomeServerLink {
         if (response.getCode() != 200) {
             throw new RemoteServerException(domain, response.getBody());
         }
+    }
+
+    public JsonObject inviteUser(RoomInviteRequest request) {
+        List<JsonObject> stateDocs = request.getStrippedState().getEvents().stream()
+                .map(ChannelEvent::getData)
+                .collect(Collectors.toList());
+
+        URI path = URI.create("/_matrix/federation/v2/invite/" + request.getRoomId() + "/" + request.getEventId());
+        JsonObject body = new JsonObject();
+        body.add("event", request.getDoc());
+        body.add("invite_room_state", GsonUtil.asArray(stateDocs));
+        body.addProperty("room_version", request.getRoomVersion());
+        HomeServerRequest req = build(domain, "PUT", new URIBuilder(path), body);
+        HomeServerResponse response = client.doRequest(req);
+        JsonObject resBody = response.getBody();
+        if (response.getCode() == 403) {
+            throw new ForbiddenException(
+                    GsonUtil.findString(resBody, "error")
+                            .orElseGet(() -> GsonUtil.getPrettyForLog(resBody))
+            );
+        }
+        if (response.getCode() != 200) {
+            throw new RemoteServerException(domain, response.getBody());
+        }
+        return GsonUtil.getObj(resBody, "event");
     }
 
 }

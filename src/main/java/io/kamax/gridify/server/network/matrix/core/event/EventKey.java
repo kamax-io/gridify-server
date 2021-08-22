@@ -22,6 +22,12 @@ package io.kamax.gridify.server.network.matrix.core.event;
 
 public class EventKey {
 
+    public static class UnsignedKeys {
+
+        public static final String TransactionId = "transaction_id";
+
+    }
+
     public static final String AuthEvents = "auth_events";
     public static final String EventId = "event_id";
     public static final String RoomId = "room_id";

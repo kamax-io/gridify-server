@@ -23,6 +23,7 @@ package io.kamax.gridify.server.network.matrix.core;
 import com.google.gson.JsonObject;
 import io.kamax.gridify.server.core.event.EventStreamer;
 import io.kamax.gridify.server.core.signal.SignalBus;
+import io.kamax.gridify.server.network.matrix.core.base.ServerSession;
 import io.kamax.gridify.server.network.matrix.core.crypto.MatrixDomainCryptopher;
 import io.kamax.gridify.server.network.matrix.core.domain.MatrixDomain;
 import io.kamax.gridify.server.network.matrix.core.domain.MatrixDomainConfig;
@@ -69,6 +70,8 @@ public interface MatrixServer {
     MatrixDataClient asClient();
 
     MatrixDataServer asServer();
+
+    ServerSession asServer(String remoteDomain);
 
     boolean isStopping();
 

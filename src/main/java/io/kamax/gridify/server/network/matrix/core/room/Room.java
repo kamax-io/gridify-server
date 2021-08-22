@@ -97,6 +97,10 @@ public class Room {
         return id;
     }
 
+    public RoomAlgo getAlgo() {
+        return algo;
+    }
+
     public String getVersion() {
         return algo.getVersion();
     }

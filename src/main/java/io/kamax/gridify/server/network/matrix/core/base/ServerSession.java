@@ -26,14 +26,19 @@ import io.kamax.gridify.server.core.channel.state.ChannelEventAuthorization;
 import io.kamax.gridify.server.exception.ForbiddenException;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
 import io.kamax.gridify.server.network.matrix.core.IncompatibleRoomVersionException;
-import io.kamax.gridify.server.network.matrix.core.MatrixCore;
+import io.kamax.gridify.server.network.matrix.core.MatrixServer;
+import io.kamax.gridify.server.network.matrix.core.UserID;
+import io.kamax.gridify.server.network.matrix.core.crypto.CryptoJson;
 import io.kamax.gridify.server.network.matrix.core.event.BareGenericEvent;
+import io.kamax.gridify.server.network.matrix.core.event.BareMemberEvent;
 import io.kamax.gridify.server.network.matrix.core.federation.RoomJoinTemplate;
 import io.kamax.gridify.server.network.matrix.core.room.*;
+import io.kamax.gridify.server.network.matrix.core.room.algo.RoomAlgo;
+import io.kamax.gridify.server.network.matrix.core.room.algo.RoomAlgos;
 import io.kamax.gridify.server.network.matrix.http.json.ServerTransaction;
 import io.kamax.gridify.server.util.GsonUtil;
 import io.kamax.gridify.server.util.KxLog;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
 import java.lang.invoke.MethodHandles;
@@ -43,13 +48,13 @@ public class ServerSession {
 
     private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
-    private final MatrixCore core;
+    private final MatrixServer srv;
 
     private final String vHost;
     private final String remote;
 
-    public ServerSession(MatrixCore core, String vHost, String remote) {
-        this.core = core;
+    public ServerSession(MatrixServer srv, String vHost, String remote) {
+        this.srv = srv;
         this.vHost = vHost;
         this.remote = remote;
     }
@@ -64,11 +69,11 @@ public class ServerSession {
 
     public Optional<RoomLookup> lookupRoomAlias(String roomAlias) {
         RoomAlias alias = RoomAlias.parse(roomAlias);
-        return core.roomDir().lookup(remote, alias, false);
+        return srv.roomDir().lookup(remote, alias, false);
     }
 
     public RoomJoinTemplate makeJoin(String roomId, String userId, Set<String> roomVersions) {
-        Room r = core.roomMgr().get(roomId);
+        Room r = srv.roomMgr().get(roomId);
         String roomVersion = r.getVersion();
         if (!roomVersions.contains(roomVersion)) {
             throw new IncompatibleRoomVersionException(roomVersion);
@@ -79,7 +84,7 @@ public class ServerSession {
     }
 
     public RoomJoinSeed sendJoin(String roomId, String remoteUserId, JsonObject eventDoc) {
-        Room r = core.roomMgr().get(roomId);
+        Room r = srv.roomMgr().get(roomId);
         ChannelEventAuthorization auth = r.offer(remote, vHost, eventDoc);
         if (!auth.isAuthorized()) {
             throw new ForbiddenException(auth.getReason());
@@ -96,6 +101,31 @@ public class ServerSession {
         return seed;
     }
 
+    public JsonObject inviteUser(RoomInviteRequest request) {
+        RoomAlgo algo = RoomAlgos.get(request.getRoomVersion());
+        BareMemberEvent inviteEvent = algo.getMemberEvent(request.getDoc());
+        if (!RoomMembership.Invite.match(inviteEvent.getContent().getMembership())) {
+            throw new IllegalArgumentException("Event is not an invite");
+        }
+
+        String eventRoomId = inviteEvent.getRoomId();
+        if (!StringUtils.equals(request.getRoomId(), eventRoomId)) {
+            throw new IllegalArgumentException("Room ID in request and in event do not match");
+        }
+
+        UserID inviter = UserID.parse(inviteEvent.getSender());
+        if (!StringUtils.equals(inviter.network(), remote)) {
+            throw new IllegalArgumentException(remote + " is not authoritative for user " + inviter.full());
+        }
+
+        UserID invitee = UserID.parse(inviteEvent.getStateKey());
+        if (!StringUtils.equals(vHost, invitee.network())) {
+            throw new IllegalArgumentException("Not authoritative for domain " + invitee.network());
+        }
+
+        return CryptoJson.signUnsafe(request.getDoc(), srv.crypto());
+    }
+
     public List<ChannelEventAuthorization> push(ServerTransaction txn) {
         log.info("Txn {}/{} - {} PDU(s) and {} EDU(s)", remote, txn.getId(), txn.getPdus().size(), txn.getEdus().size());
         List<ChannelEventAuthorization> auths = new ArrayList<>();
@@ -106,9 +136,9 @@ public class ServerSession {
         }
 
         for (Map.Entry<String, List<JsonObject>> roomPdus : pdusPerRoom.entrySet()) {
-            Optional<Room> roomOpt = core.roomMgr().find(roomPdus.getKey());
+            Optional<Room> roomOpt = srv.roomMgr().find(roomPdus.getKey());
             if (!roomOpt.isPresent()) {
-                core.roomMgr().queueForDiscovery(roomPdus.getValue());
+                srv.roomMgr().queueForDiscovery(roomPdus.getValue());
                 continue;
             }
 
@@ -122,7 +152,7 @@ public class ServerSession {
     }
 
     public List<ChannelEvent> getEventsTree(String roomId, List<String> latestEventIds, List<String> earliestEventIds, long limit, long minDepth) {
-        Optional<Room> rOpt = core.roomMgr().find(roomId);
+        Optional<Room> rOpt = srv.roomMgr().find(roomId);
         if (!rOpt.isPresent()) {
             throw new ObjectNotFoundException("Room", roomId);
         }
@@ -157,7 +187,7 @@ public class ServerSession {
             throw new IllegalArgumentException("Limit must be greater than 0");
         }
 
-        Optional<Room> rOpt = core.roomMgr().find(roomId);
+        Optional<Room> rOpt = srv.roomMgr().find(roomId);
         if (!rOpt.isPresent()) {
             throw new ObjectNotFoundException("Room", roomId);
         }
@@ -198,8 +228,8 @@ public class ServerSession {
             throw new IllegalArgumentException("Event ID not provided");
         }
 
-        Room r = core.roomMgr().get(roomId);
-        RoomState state = core.roomMgr().get(roomId).getFullState(eventId);
+        Room r = srv.roomMgr().get(roomId);
+        RoomState state = r.getFullState(eventId);
         List<ChannelEvent> authChain = r.getAuthChain(state);
 
         EventState evState = new EventState();
@@ -213,7 +243,7 @@ public class ServerSession {
     }
 
     public JsonObject getEvent(String eventId) {
-        List<ChannelEvent> events = core.store().findEvents("matrix", eventId);
+        List<ChannelEvent> events = srv.core().store().findEvents("matrix", eventId);
 
         for (ChannelEvent event : events) {
             if (event.getMeta().isPresent()) {

@@ -643,4 +643,10 @@ public class RoomAlgoV6 implements RoomAlgo {
         return toRedact;
     }
 
+    @Override
+    public BareMemberEvent getMemberEvent(JsonObject doc) {
+        // FIXME check fields
+        return GsonUtil.fromJson(doc, BareMemberEvent.class);
+    }
+
 }

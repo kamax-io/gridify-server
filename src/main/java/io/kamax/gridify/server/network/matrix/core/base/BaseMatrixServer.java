@@ -172,6 +172,11 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
     }
 
     @Override
+    public ServerSession asServer(String remoteDomain) {
+        return new ServerSession(this, domain.getDomain(), remoteDomain);
+    }
+
+    @Override
     public boolean isStopping() {
         return g.gridify().isStopping();
     }
@@ -275,7 +280,7 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
 
     @Override
     public ServerSession forRequest(HomeServerRequest mxReq) {
-        return new ServerSession(g, domain.getDomain(), mxReq.getDoc().getOrigin());
+        return new ServerSession(this, domain.getDomain(), mxReq.getDoc().getOrigin());
     }
 
 }

@@ -36,11 +36,12 @@ import io.kamax.gridify.server.core.signal.ChannelMessageProcessed;
 import io.kamax.gridify.server.core.signal.SignalTopic;
 import io.kamax.gridify.server.core.signal.SyncRefreshSignal;
 import io.kamax.gridify.server.exception.ForbiddenException;
-import io.kamax.gridify.server.exception.NotImplementedException;
 import io.kamax.gridify.server.network.matrix.core.MatrixServer;
+import io.kamax.gridify.server.network.matrix.core.UserID;
 import io.kamax.gridify.server.network.matrix.core.domain.MatrixDomain;
 import io.kamax.gridify.server.network.matrix.core.domain.MatrixDomainConfig;
 import io.kamax.gridify.server.network.matrix.core.event.*;
+import io.kamax.gridify.server.network.matrix.core.federation.HomeServerLink;
 import io.kamax.gridify.server.network.matrix.core.room.*;
 import io.kamax.gridify.server.network.matrix.http.json.RoomEvent;
 import io.kamax.gridify.server.network.matrix.http.json.SyncResponse;
@@ -211,8 +212,6 @@ public class UserSession {
     }
 
     public SyncResponse sync(SyncOptions options) {
-
-
         if (StringUtils.isEmpty(options.getToken())) {
             return syncInitial();
         }
@@ -320,14 +319,48 @@ public class UserSession {
 
     public void leaveRoom(String roomId) {
         BareMemberEvent bareEvent = BareMemberEvent.leave(userId);
-        g.roomMgr().get(roomId).offer(bareEvent, g.crypto());
+        send(roomId, bareEvent);
     }
 
-    public void inviteToRoom(String roomId, String userId) {
-        BareMemberEvent inviteEvent = BareMemberEvent.makeFor(userId, RoomMembership.Invite);
-        inviteEvent.setSender(userId);
-        inviteEvent.setRoomId(roomId);
-        throw new NotImplementedException();
+    public void inviteToRoom(String roomId, String inviteeId) {
+        UserID invitee = UserID.parse(inviteeId);
+
+        BareMemberEvent bareInviteEvent = BareMemberEvent.makeFor(inviteeId, RoomMembership.Invite);
+        bareInviteEvent.setOrigin(vHost);
+        bareInviteEvent.setSender(userId);
+
+        Room r = getRoom(roomId);
+        // FIXME populate() and finalize() should be on RoomView, as Room HEAD could have mutated between the next two calls
+        RoomView view = r.getView();
+        JsonObject inviteEvent = r.finalize(g.crypto(), r.populate(bareInviteEvent.getJson()));
+
+        // Check if the user is authorized to perform the invite before anything
+        ChannelEventAuthorization auth = r.getAlgo().authorize(view.getState(), inviteEvent);
+        if (!auth.isAuthorized()) {
+            throw new ForbiddenException(auth.getReason());
+        }
+
+        // If the invited user is not from the same domain as the user inviting, the invite handshake is required
+        // Else skip and directly offer the event to the room
+        if (!getDomain().contentEquals(invitee.network())) {
+            RoomInviteRequest request = new RoomInviteRequest()
+                    .setRoomId(roomId)
+                    .setRoomVersion(r.getVersion())
+                    .setEventId(auth.getEventId())
+                    .setStrippedState(RoomState.empty())
+                    .setDoc(inviteEvent);
+
+            if (g.core().isLocal(invitee.network())) {
+                // The user is managed by one of the virtual domains, we perform the handshake locally
+                inviteEvent = g.core().forDomain(invitee.network()).asServer(getDomain()).inviteUser(request);
+            } else {
+                // The user is managed by a remote server, we perform the handshake remotely
+                HomeServerLink remoteHs = g.core().hsMgr().getLink(vHost, invitee.network());
+                inviteEvent = remoteHs.inviteUser(request);
+            }
+        }
+
+        r.offer(vHost, vHost, inviteEvent);
     }
 
     public String send(String roomId, BareEvent<?> event) {
@@ -484,7 +517,7 @@ public class UserSession {
 
         BareGenericEvent event = new BareGenericEvent();
         event.setType(type);
-        event.getUnsigned().addProperty("transaction_id", txnId);
+        event.getUnsigned().addProperty(EventKey.UnsignedKeys.TransactionId, txnId);
         event.setContent(content);
         return send(roomId, event);
     }

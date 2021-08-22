@@ -24,6 +24,7 @@ import com.google.gson.JsonObject;
 import io.kamax.gridify.server.core.channel.state.ChannelEventAuthorization;
 import io.kamax.gridify.server.network.matrix.core.crypto.MatrixDomainCryptopher;
 import io.kamax.gridify.server.network.matrix.core.event.BareEvent;
+import io.kamax.gridify.server.network.matrix.core.event.BareMemberEvent;
 import io.kamax.gridify.server.network.matrix.core.event.BarePowerEvent;
 import io.kamax.gridify.server.network.matrix.core.federation.RoomJoinTemplate;
 import io.kamax.gridify.server.network.matrix.core.room.RoomID;
@@ -88,5 +89,7 @@ public interface RoomAlgo {
     JsonObject signEvent(JsonObject doc, MatrixDomainCryptopher crypto);
 
     JsonObject redact(JsonObject doc);
+
+    BareMemberEvent getMemberEvent(JsonObject doc);
 
 }
