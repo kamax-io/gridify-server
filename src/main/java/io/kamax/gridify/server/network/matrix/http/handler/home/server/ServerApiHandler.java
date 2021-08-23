@@ -129,6 +129,9 @@ public abstract class ServerApiHandler implements HttpHandler {
     protected ServerSession getAuthenticatedSession(GridifyServer g, Exchange ex) {
         HomeServerRequest request = new HomeServerRequest();
         String authHeader = ex.getHeader(Headers.AUTHORIZATION_STRING);
+        if (StringUtils.isBlank(authHeader)) {
+            throw new MissingTokenException("Authorization header is blank");
+        }
         String[] authHeaderSplit = StringUtils.split(authHeader, " ", 2); // TODO use regex
         if (!StringUtils.equals(authHeaderSplit[0], "X-Matrix")) {
             throw new UnauthenticatedException(null); // FIXME
