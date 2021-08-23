@@ -25,6 +25,7 @@ import io.kamax.gridify.server.core.signal.ChannelMessageProcessed;
 import io.kamax.gridify.server.core.signal.SignalBus;
 import io.kamax.gridify.server.core.signal.SignalTopic;
 import io.kamax.gridify.server.core.store.DataStore;
+import io.kamax.gridify.server.exception.InternalServerError;
 import io.kamax.gridify.server.network.matrix.core.event.BareCanonicalAliasEvent;
 import io.kamax.gridify.server.network.matrix.core.event.BareGenericEvent;
 import io.kamax.gridify.server.network.matrix.core.event.RoomEventType;
@@ -32,9 +33,14 @@ import io.kamax.gridify.server.network.matrix.core.federation.HomeServerManager;
 import io.kamax.gridify.server.util.GsonUtil;
 import io.kamax.gridify.server.util.KxLog;
 import net.engio.mbassy.listener.Handler;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.lang.invoke.MethodHandles;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -97,6 +103,24 @@ public class RoomDirectory {
     }
 
     public Optional<RoomLookup> lookup(String origin, RoomAlias alias, boolean recursive) {
+        try {
+            String overwritePath = g.getConfig().getStorage().getData() +
+                    "/matrix/room-directory/alias/" +
+                    alias.noSigill() +
+                    ".overwrite";
+            String raw = IOUtils.toString(new FileInputStream(overwritePath), StandardCharsets.UTF_8);
+            try {
+                RoomLookup overwrite = GsonUtil.parse(raw, RoomLookup.class);
+                return Optional.of(new RoomLookup(alias.full(), overwrite.getId(), overwrite.getServers()));
+            } catch (IllegalArgumentException e) {
+                throw new InternalServerError("Room alias " + alias.full() + " overwrite content is invalid", e);
+            }
+        } catch (FileNotFoundException e) {
+            log.debug("No overwrite for room alias {}", alias.full());
+        } catch (IOException e) {
+            throw new InternalServerError("Unable to read room alias " + alias.full() + " overwrite", e);
+        }
+
         if (g.overMatrix().isLocal((alias.network()))) {
             log.info("Looking for our own alias {}", alias);
             return store.lookupChannelAlias("matrix", alias.full())

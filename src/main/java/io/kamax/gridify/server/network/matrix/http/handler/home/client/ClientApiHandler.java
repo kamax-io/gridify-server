@@ -123,6 +123,7 @@ public abstract class ClientApiHandler implements HttpHandler {
     }
 
     protected UserSession getSession(GridifyServer g, Exchange ex) {
+        // FIXME we should detect if anonymous or not
         return getClient(g, ex).withToken(ex.getAccessToken());
     }
 

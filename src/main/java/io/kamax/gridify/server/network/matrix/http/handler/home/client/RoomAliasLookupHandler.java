@@ -23,24 +23,35 @@ package io.kamax.gridify.server.network.matrix.http.handler.home.client;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import io.kamax.gridify.server.GridifyServer;
+import io.kamax.gridify.server.exception.MissingTokenException;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
 import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.network.matrix.core.base.UserSession;
+import io.kamax.gridify.server.network.matrix.core.room.RoomAlias;
 import io.kamax.gridify.server.network.matrix.core.room.RoomLookup;
 import io.kamax.gridify.server.util.GsonUtil;
 
-public class RoomAliasLookupHandler extends AuthenticatedClientApiHandler {
+public class RoomAliasLookupHandler extends ClientApiHandler {
+
+    private final GridifyServer g;
 
     public RoomAliasLookupHandler(GridifyServer g) {
-        super(g);
+        this.g = g;
     }
 
     @Override
-    protected void handle(UserSession session, Exchange ex) {
+    protected void handle(Exchange ex) {
         String rAlias = ex.getPathVariable("roomAlias");
 
-        RoomLookup lookup = session.lookupRoomAlias(rAlias)
-                .orElseThrow(() -> new ObjectNotFoundException("Room alias", rAlias));
+        RoomLookup lookup;
+        try {
+            UserSession session = getSession(g, ex);
+            lookup = session.lookupRoomAlias(rAlias)
+                    .orElseThrow(() -> new ObjectNotFoundException("Room alias", rAlias));
+        } catch (MissingTokenException e) { // FIXME we should detect correctly that this is an anonymous request
+            lookup = g.overMatrix().roomDir().lookup("", RoomAlias.parse(rAlias), false)
+                    .orElseThrow(() -> new ObjectNotFoundException("Room alias", rAlias));
+        }
 
         JsonArray servers = GsonUtil.asArrayObj(lookup.getServers());
         JsonObject response = new JsonObject();

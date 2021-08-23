@@ -174,7 +174,7 @@ public class GsonUtil {
         try {
             return parse(s).getAsJsonObject();
         } catch (IllegalStateException e) {
-            throw new IllegalArgumentException("Not an object");
+            throw new IllegalArgumentException("Not an object", e);
         }
     }
 

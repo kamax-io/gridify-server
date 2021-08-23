@@ -35,7 +35,7 @@ public class EntityAlias {
         this.local = Objects.requireNonNull(local).toLowerCase();
         this.delimiter = Objects.requireNonNull(delimiter);
         this.network = Objects.requireNonNull(network).toLowerCase();
-        full = sigill() + local() + delimiter() + network();
+        full = sigill() + noSigill();
     }
 
     public String sigill() {
@@ -56,6 +56,10 @@ public class EntityAlias {
 
     public String full() {
         return full;
+    }
+
+    public String noSigill() {
+        return local() + delimiter() + network();
     }
 
 }
