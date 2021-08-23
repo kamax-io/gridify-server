@@ -34,7 +34,9 @@ public class MatrixHomeServerEndpointRegister {
                 .get("/", new RootLogoHandler(g))
                 .get("/static/**", new RootLogoHandler(g))
 
-                .get("/.well-known/matrix/server", new WellKnownHandler(g))
+                // TODO Caching may make server inaccessible for a long time if wrong values are returned
+                // Research if really wanted and if yes, how to do it better
+                //.get("/.well-known/matrix/server", new WellKnownHandler(g))
 
                 .get("/_matrix/federation/v1/version", new VersionHandler(g))
 
