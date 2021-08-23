@@ -22,6 +22,7 @@ package io.kamax.gridify.server;
 
 import io.kamax.gridify.server.config.GridifyConfig;
 import io.kamax.gridify.server.http.MonolithHttpGridifyServer;
+import io.kamax.gridify.server.util.KxLog;
 import io.kamax.gridify.server.util.YamlConfigLoader;
 import org.apache.commons.lang3.StringUtils;
 
@@ -48,6 +49,9 @@ public class MonolithHttpGridifyServerApplication {
                     String cfgFile = argsIt.next();
                     cfg = YamlConfigLoader.loadFromFile(cfgFile);
                     System.out.println("Loaded configuration from " + cfgFile);
+                } else if (StringUtils.equals("--log-level", arg)) {
+                    String level = argsIt.next();
+                    System.setProperty("org.slf4j.simpleLogger.log." + KxLog.logPrefix, level);
                 } else {
                     System.out.println("Invalid argument: " + arg);
                     System.exit(1);

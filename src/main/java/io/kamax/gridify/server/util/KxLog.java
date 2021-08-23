@@ -29,6 +29,8 @@ import org.slf4j.LoggerFactory;
 
 public class KxLog {
 
+    public static final String logPrefix = "[g]";
+
     private static final String g = GridifyServer.class.getPackage().getName();
     private static final String gNetMx = g + ".network.matrix";
     private static final String gNetMxC2sApi = ClientApiHandler.class.getCanonicalName();
@@ -37,19 +39,19 @@ public class KxLog {
     public static Logger make(Class<?> c) {
         String name = c.getCanonicalName();
         if (name.startsWith(gNetMxS2sApi)) {
-            name = StringUtils.replace(name, gNetMxS2sApi, "[Mx.S2S]", 1);
+            name = StringUtils.replace(name, gNetMxS2sApi, logPrefix + ".[Mx.S2S]", 1);
         }
 
         if (name.startsWith(gNetMxC2sApi)) {
-            name = StringUtils.replace(name, gNetMxC2sApi, "[Mx.C2S]", 1);
+            name = StringUtils.replace(name, gNetMxC2sApi, logPrefix + ".[Mx.C2S]", 1);
         }
 
         if (name.startsWith(gNetMx)) {
-            name = StringUtils.replace(name, gNetMx, "[g.net.mx]", 1);
+            name = StringUtils.replace(name, gNetMx, logPrefix + ".net.mx", 1);
         }
 
         if (name.startsWith(g)) {
-            name = StringUtils.replace(name, g, "[g]", 1);
+            name = StringUtils.replace(name, g, logPrefix, 1);
         }
 
         return LoggerFactory.getLogger(name);
