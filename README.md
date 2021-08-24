@@ -21,7 +21,7 @@ Consultancy Services**](https://www.kamax.io/page/services/) provided by Kamax S
 - Open an issue on the repositories mirrored on [Gitlab](https://gitlab.com/kamax-io/software/gridify/server) and
   [Github](https://github.com/kamax-io/gridify-server)
 - Drop us [an Email](https://www.kamax.io/page/contact/)
-- Say hi in the project room [ **COMING SOON** ]
+- Say hi in the project room via `#gridify-server:kamax.io`
 
 ## Development Status 🔄
 
