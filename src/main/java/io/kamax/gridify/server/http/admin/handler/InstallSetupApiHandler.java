@@ -23,6 +23,7 @@ package io.kamax.gridify.server.http.admin.handler;
 import com.google.gson.JsonObject;
 import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.http.Exchange;
+import org.apache.http.HttpStatus;
 
 public class InstallSetupApiHandler extends InstallSetupHandler {
 
@@ -39,8 +40,15 @@ public class InstallSetupApiHandler extends InstallSetupHandler {
             body = ex.parseJsonObject();
         }
 
-        handle(body);
-        ex.respondJsonObject("success", true);
+        try {
+            handle(body);
+            ex.respondJsonObject("success", true);
+        } catch (IllegalStateException e) {
+            JsonObject resBody = new JsonObject();
+            resBody.addProperty("success", false);
+            resBody.addProperty("message", e.getMessage());
+            ex.respond(HttpStatus.SC_CONFLICT, resBody);
+        }
     }
 
 }

@@ -23,6 +23,7 @@ package io.kamax.gridify.server;
 import com.google.gson.JsonObject;
 import io.kamax.gridify.server.config.GridifyConfig;
 import io.kamax.gridify.server.core.UserSession;
+import io.kamax.gridify.server.core.admin.AdminCore;
 import io.kamax.gridify.server.core.auth.AuthService;
 import io.kamax.gridify.server.core.auth.UIAuthSession;
 import io.kamax.gridify.server.core.crypto.Cryptopher;
@@ -77,12 +78,15 @@ public interface GridifyServer {
 
     User login(UIAuthSession auth, String stage);
 
+    @Deprecated
+    default UserSession withToken(String token) {
+        return overGrid().vHost("").forData().asClient().withToken(token);
+    }
+
     GridCore overGrid();
 
     MatrixCore overMatrix();
 
-    default UserSession withToken(String token) {
-        return overGrid().vHost("").forData().asClient().withToken(token);
-    }
+    AdminCore overAdmin();
 
 }

@@ -20,19 +20,55 @@
 
 package io.kamax.gridify.server.http.admin;
 
+import com.google.gson.JsonObject;
 import io.kamax.gridify.server.GridifyServer;
+import io.kamax.gridify.server.exception.UnauthenticatedException;
 import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.http.RootLogoHandler;
 import io.kamax.gridify.server.http.admin.handler.AdminHandler;
 import io.kamax.gridify.server.http.admin.handler.HomepageHandler;
 import io.kamax.gridify.server.http.admin.handler.InstallSetupApiHandler;
 import io.kamax.gridify.server.http.admin.handler.InstallSetupWizardHandler;
+import io.kamax.gridify.server.network.matrix.http.json.UIAuthJson;
+import io.kamax.gridify.server.util.GsonUtil;
 import io.undertow.server.RoutingHandler;
 import io.undertow.server.handlers.RedirectHandler;
 
 public class AdminHandlerRegister {
 
     public static void register(GridifyServer g, RoutingHandler r) {
+        r.add("OPTIONS", "/_gridify/admin/**", new AdminHandler(g) {
+            @Override
+            protected void handle(Exchange ex) {
+                // no-op
+            }
+        });
+        r.get("/_gridify/admin/v0/status", new AdminHandler(g) {
+            @Override
+            protected void handle(Exchange ex) {
+                JsonObject body = new JsonObject();
+                body.addProperty("isSetup", g.isSetup());
+                ex.respond(body);
+            }
+        });
+        r.post("/_gridify/admin/v0/login", new AdminHandler(g) {
+            @Override
+            protected void handle(Exchange ex) {
+                JsonObject reqBody = ex.parseJsonObject();
+                String username = GsonUtil.getStringOrNull(reqBody, "username");
+                String password = GsonUtil.getStringOrNull(reqBody, "password");
+                try {
+                    String token = g.overAdmin().login(username, password);
+                    ex.respondJsonObject("token", token);
+                } catch (UnauthenticatedException e) {
+                    UIAuthJson session = UIAuthJson.from(e.getSession());
+                    JsonObject body = GsonUtil.makeObj(session);
+                    body.addProperty("errcode", "G_UNAUTHORIZED");
+                    body.addProperty("error", e.getMessage());
+                    ex.respond(401, body);
+                }
+            }
+        });
         r.post("/_gridify/admin/v0/do/setup", new InstallSetupApiHandler(g));
         r.post("/admin/firstRunWizard", new InstallSetupWizardHandler(g));
         r.get("/admin/", new HomepageHandler(g));

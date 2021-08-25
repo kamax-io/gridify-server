@@ -182,6 +182,11 @@ public class BaseMatrixServer implements MatrixServer, MatrixDataClient, MatrixD
     }
 
     @Override
+    public boolean isAdmin(User u) {
+        return u.getLid() == 1;
+    }
+
+    @Override
     public boolean canRegister() {
         return getConfig().getRegistration().isEnabled();
     }

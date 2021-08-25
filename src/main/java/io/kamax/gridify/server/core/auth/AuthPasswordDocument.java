@@ -21,6 +21,7 @@
 package io.kamax.gridify.server.core.auth;
 
 import com.google.gson.JsonObject;
+import io.kamax.gridify.server.core.GridType;
 import io.kamax.gridify.server.util.GsonUtil;
 import org.apache.commons.lang3.StringUtils;
 
@@ -28,15 +29,19 @@ public class AuthPasswordDocument {
 
     public static AuthPasswordDocument from(JsonObject docRaw) {
         AuthPasswordDocument doc = GsonUtil.fromJson(docRaw, AuthPasswordDocument.class);
-        if (!StringUtils.equals("m.login.password", doc.getType())) {
-            throw new IllegalArgumentException("Document is not of password type");
+        if (StringUtils.equals(GridType.of("auth.id.password"), doc.getType())) {
+            return doc;
         }
 
-        // We try to find a user ID
-        if ("m.id.user".equals(doc.getIdentifier().getType())) {
-            doc.getIdentifier().setValue(GsonUtil.findString(GsonUtil.getObj(docRaw, "identifier"), "user").orElse(""));
+        if (StringUtils.equals("m.login.password", doc.getType())) {
+            // We try to find a user ID
+            if ("m.id.user".equals(doc.getIdentifier().getType())) {
+                doc.getIdentifier().setValue(GsonUtil.findString(GsonUtil.getObj(docRaw, "identifier"), "user").orElse(""));
+            }
+            return doc;
         }
-        return doc;
+
+        throw new IllegalArgumentException("Document is not of password type");
     }
 
     public static class Identifier {

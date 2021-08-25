@@ -29,6 +29,8 @@ import com.google.gson.JsonObject;
 import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.codec.GridHash;
 import io.kamax.gridify.server.config.GridifyConfig;
+import io.kamax.gridify.server.core.admin.AdminCore;
+import io.kamax.gridify.server.core.admin.DefaultAdminCore;
 import io.kamax.gridify.server.core.auth.AuthService;
 import io.kamax.gridify.server.core.auth.Credentials;
 import io.kamax.gridify.server.core.auth.UIAuthSession;
@@ -91,6 +93,7 @@ public class MonolithGridifyServer implements GridifyServer {
 
     private final EventStreamer streamer;
 
+    private final AdminCore admCore;
     private final MatrixCore mxCore;
     private final GridCore gCore;
 
@@ -159,6 +162,7 @@ public class MonolithGridifyServer implements GridifyServer {
         authSvc = new MultiStoreAuthService(this);
         streamer = new EventStreamer(store);
 
+        admCore = new DefaultAdminCore(this);
         mxCore = new BaseMatrixCore(this);
         gCore = new SimpleGridServer(this, serverId); // FIXME give a proper domain
     }
@@ -324,6 +328,11 @@ public class MonolithGridifyServer implements GridifyServer {
     @Override
     public MatrixCore overMatrix() {
         return mxCore;
+    }
+
+    @Override
+    public AdminCore overAdmin() {
+        return admCore;
     }
 
     @Override
