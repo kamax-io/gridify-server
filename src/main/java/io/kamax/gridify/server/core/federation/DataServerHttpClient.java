@@ -22,6 +22,7 @@ package io.kamax.gridify.server.core.federation;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import io.kamax.gridify.server.App;
 import io.kamax.gridify.server.core.channel.ChannelLookup;
 import io.kamax.gridify.server.core.channel.event.BareMemberEvent;
 import io.kamax.gridify.server.core.channel.event.ChannelEvent;
@@ -93,7 +94,7 @@ public class DataServerHttpClient implements DataServerClient {
                             .build())
                     .setMaxConnPerRoute(Integer.MAX_VALUE) // FIXME make configurable
                     .setMaxConnTotal(Integer.MAX_VALUE) // FIXME make configurable
-                    .setUserAgent("gridify" + "/" + "0.0.0") // FIXME use build properties
+                    .setUserAgent(App.getUserAgent()) // FIXME use build properties
                     .build();
         } catch (KeyStoreException | NoSuchAlgorithmException | KeyManagementException e) {
             throw new RuntimeException(e);

@@ -33,6 +33,7 @@ import io.kamax.gridify.server.exception.ObjectNotFoundException;
 import io.kamax.gridify.server.util.GsonUtil;
 import io.kamax.gridify.server.util.KxLog;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -84,6 +85,17 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
         // FIXME Temporary solution until we can directly list from the jar
         List<String> schemaUpdates = new ArrayList<>();
+
+        try (InputStream elIs = PostgreSQLDataStore.class.getResourceAsStream("/store/postgres/schema")) {
+            List<String> schemas = IOUtils.readLines(Objects.requireNonNull(elIs), StandardCharsets.UTF_8);
+            log.debug("Schemas auto-discovery:");
+            schemas.forEach(s -> {
+                if (StringUtils.isNotBlank(s)) log.debug(s);
+            });
+        } catch (IOException e) {
+            log.warn("Schema autodiscovery failed");
+        }
+
         schemaUpdates.add("0-init.sql");
         withConnConsumer(conn -> {
             Statement stmt = conn.createStatement();

@@ -21,6 +21,7 @@
 package io.kamax.gridify.server.network.matrix.core.federation;
 
 import com.google.gson.JsonObject;
+import io.kamax.gridify.server.App;
 import io.kamax.gridify.server.core.federation.Address;
 import io.kamax.gridify.server.network.matrix.core.RemoteServerException;
 import io.kamax.gridify.server.util.GsonUtil;
@@ -88,7 +89,7 @@ public class HomeServerHttpClient implements HomeServerClient {
                             .build())
                     .setMaxConnPerRoute(Integer.MAX_VALUE) // FIXME make configurable
                     .setMaxConnTotal(Integer.MAX_VALUE) // FIXME make configurable
-                    .setUserAgent("gridify" + "/" + "0.0.0") // FIXME use build properties
+                    .setUserAgent(App.getUserAgent()) // FIXME use build properties
                     .build();
         } catch (KeyStoreException | NoSuchAlgorithmException | KeyManagementException e) {
             throw new RuntimeException(e);

@@ -33,7 +33,7 @@ import java.util.Objects;
 public class MonolithHttpGridifyServerApplication {
 
     public static void main(String[] args) {
-        System.out.println("------------- Gridifyd starting -------------");
+        System.out.println("------------- " + App.getName() + " starting -------------");
 
         try {
             GridifyConfig cfg = null;
@@ -64,14 +64,15 @@ public class MonolithHttpGridifyServerApplication {
             }
 
             MonolithHttpGridifyServer g = new MonolithHttpGridifyServer(cfg);
+
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                System.out.println("------------- Gridifyd stopping -------------");
+                System.out.println("------------- " + App.getName() + " stopping -------------");
                 g.stop();
-                System.out.println("------------- Gridifyd stopped -------------");
+                System.out.println("------------- " + App.getName() + " stopped -------------");
             }));
 
             g.start();
-            System.out.println("------------- Gridifyd started -------------");
+            System.out.println("------------- " + App.getName() + " started -------------");
         } catch (Throwable t) {
             t.printStackTrace();
             System.exit(1);
