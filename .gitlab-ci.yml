@@ -35,7 +35,4 @@ test-jdk-8:
 build-core:
   stage: test
   script: ./gradlew build
-  artifacts:
-    paths:
-      - build/distributions/*.zip
-      - build/distributions/*.tar
+

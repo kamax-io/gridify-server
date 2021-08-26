@@ -409,7 +409,7 @@ public class UserSession {
         String cmd = GsonUtil.getStringOrNull(cmdMessage, "body");
         String body = "Processing command...";
         try {
-            if (u.getLid() != 1) {
+            if (!g.isAdmin(u)) {
                 body = "ERROR: You are not admin of this server";
             } else {
                 // We process the command
@@ -423,7 +423,19 @@ public class UserSession {
                         throw new IllegalArgumentException("Invalid command: " + cmd);
                     }
 
-                    if (StringUtils.startsWith(subCmb, "matrix add domain ")) {
+                    if (StringUtils.startsWith(subCmb, "matrix add room-alias")) {
+                        subCmb = StringUtils.replace(subCmb, "matrix add room-alias ", "", 1);
+                        String[] subCmbArgs = StringUtils.split(subCmb, " ");
+                        if (subCmbArgs.length < 3) {
+                            body = "ERROR: Missing args";
+                        } else {
+                            String aliasRoomAddr = subCmbArgs[0];
+                            String aliasRoomId = subCmbArgs[1];
+                            String aliaSsrv = subCmbArgs[2];
+
+                        }
+                        // TODO finish
+                    } else if (StringUtils.startsWith(subCmb, "matrix add domain ")) {
                         subCmb = StringUtils.replace(subCmb, "matrix add domain ", "", 1);
                         String[] subCmbArgs = StringUtils.split(subCmb, " ");
                         if (subCmbArgs.length < 2) {
