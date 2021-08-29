@@ -20,8 +20,10 @@
 
 package io.kamax.gridify.server.http.admin;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import io.kamax.gridify.server.GridifyServer;
+import io.kamax.gridify.server.exception.AlreadyExistsException;
 import io.kamax.gridify.server.exception.UnauthenticatedException;
 import io.kamax.gridify.server.http.Exchange;
 import io.kamax.gridify.server.http.RootLogoHandler;
@@ -29,10 +31,13 @@ import io.kamax.gridify.server.http.admin.handler.AdminHandler;
 import io.kamax.gridify.server.http.admin.handler.HomepageHandler;
 import io.kamax.gridify.server.http.admin.handler.InstallSetupApiHandler;
 import io.kamax.gridify.server.http.admin.handler.InstallSetupWizardHandler;
+import io.kamax.gridify.server.network.matrix.core.domain.MatrixDomain;
 import io.kamax.gridify.server.network.matrix.http.json.UIAuthJson;
 import io.kamax.gridify.server.util.GsonUtil;
 import io.undertow.server.RoutingHandler;
 import io.undertow.server.handlers.RedirectHandler;
+
+import java.util.List;
 
 public class AdminHandlerRegister {
 
@@ -70,6 +75,46 @@ public class AdminHandlerRegister {
             }
         });
         r.post("/_gridify/admin/v0/do/setup", new InstallSetupApiHandler(g));
+        r.get("/_gridify/admin/v0/networks/matrix/domains", new AdminHandler(g) {
+            @Override
+            protected void handle(Exchange ex) {
+                List<MatrixDomain> domains = g.overMatrix().getDomains();
+
+                JsonArray mxList = new JsonArray();
+                domains.forEach(mx -> {
+                    JsonObject mxJson = new JsonObject();
+                    mxJson.addProperty("domain", mx.getDomain());
+                    mxJson.addProperty("host", mx.getHost());
+                    mxJson.addProperty("keyId", mx.getSigningKey().getId());
+                    mxJson.addProperty("canRegister", mx.getCfg().getRegistration().isEnabled());
+                    mxList.add(mxJson);
+                });
+                ex.respond(GsonUtil.makeObj("domains", mxList));
+            }
+        });
+        r.post("/_gridify/admin/v0/do/create/network/matrix/domain", new AdminHandler(g) {
+            @Override
+            protected void handle(Exchange ex) {
+                JsonObject body = ex.parseJsonObject();
+                String domain = GsonUtil.getStringOrNull(body, "domain");
+                String host = GsonUtil.getStringOrNull(body, "host");
+
+                try {
+                    g.overMatrix().addDomain(domain, host);
+                } catch (AlreadyExistsException e) {
+                    ex.respond(400, "G_ALREADY_EXISTS", "Domain or host is already exist");
+                } catch (IllegalArgumentException e) {
+                    ex.respond(400, "G_INVALID_PARAM", e.getMessage());
+                }
+            }
+        });
+        r.delete("/_gridify/admin/v0/networks/matrix/domains/{id}", new AdminHandler(g) {
+            @Override
+            protected void handle(Exchange ex) {
+                String domain = ex.getPathVariable("id");
+                g.overMatrix().removeDomain(domain);
+            }
+        });
         r.post("/admin/firstRunWizard", new InstallSetupWizardHandler(g));
         r.get("/admin/", new HomepageHandler(g));
         r.get("/admin", new RedirectHandler("/admin/"));

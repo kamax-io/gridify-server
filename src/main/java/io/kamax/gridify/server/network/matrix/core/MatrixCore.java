@@ -32,6 +32,7 @@ import io.kamax.gridify.server.network.matrix.core.federation.HomeServerManager;
 import io.kamax.gridify.server.network.matrix.core.room.RoomDirectory;
 import io.kamax.gridify.server.network.matrix.core.room.RoomManager;
 
+import java.util.List;
 import java.util.Queue;
 
 public interface MatrixCore {
@@ -52,7 +53,11 @@ public interface MatrixCore {
 
     boolean isLocal(String host);
 
+    List<MatrixDomain> getDomains();
+
     MatrixDomain addDomain(String domain, String host);
+
+    void removeDomain(String domain);
 
     MatrixServer forDomain(String domain);
 

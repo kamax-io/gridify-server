@@ -28,6 +28,7 @@ import io.kamax.gridify.server.core.event.EventStreamer;
 import io.kamax.gridify.server.core.signal.SignalBus;
 import io.kamax.gridify.server.core.store.DataStore;
 import io.kamax.gridify.server.core.store.DomainDao;
+import io.kamax.gridify.server.exception.AlreadyExistsException;
 import io.kamax.gridify.server.network.matrix.core.MatrixCore;
 import io.kamax.gridify.server.network.matrix.core.MatrixServer;
 import io.kamax.gridify.server.network.matrix.core.domain.MatrixDomain;
@@ -36,11 +37,13 @@ import io.kamax.gridify.server.network.matrix.core.federation.HomeServerManager;
 import io.kamax.gridify.server.network.matrix.core.room.RoomDirectory;
 import io.kamax.gridify.server.network.matrix.core.room.RoomManager;
 import io.kamax.gridify.server.util.KxLog;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
 import java.lang.invoke.MethodHandles;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class BaseMatrixCore implements MatrixCore {
 
@@ -74,7 +77,9 @@ public class BaseMatrixCore implements MatrixCore {
         MatrixServer srv = new BaseMatrixServer(this, domain);
         domains.put(domain.getDomain(), srv);
         vHosts.put(domain.getDomain(), srv);
-        vHosts.put(domain.getHost(), srv);
+        if (StringUtils.isNotBlank(domain.getHost())) {
+            vHosts.put(domain.getHost(), srv);
+        }
         log.debug("Loaded Matrix domain {} served over {}", domain.getDomain(), domain.getHost());
         return domain;
     }
@@ -123,13 +128,26 @@ public class BaseMatrixCore implements MatrixCore {
 
     @Override
     public boolean isLocal(String host) {
-        return vHosts.containsKey(host);
+        return domains.containsKey(host) || vHosts.containsKey(host);
+    }
+
+    @Override
+    public List<MatrixDomain> getDomains() {
+        return domains.values().stream().map(MatrixServer::id).collect(Collectors.toList());
     }
 
     @Override
     public MatrixDomain addDomain(String domainName, String vHost) {
-        if (isLocal(vHost)) {
-            throw new IllegalStateException("Domain " + vHost + " is already registered");
+        if (StringUtils.isBlank(domainName)) {
+            throw new IllegalArgumentException("Domain name cannot be blank");
+        }
+
+        if (StringUtils.isBlank(vHost)) {
+            vHost = domainName;
+        }
+
+        if (isLocal(domainName) || isLocal(vHost)) {
+            throw new AlreadyExistsException();
         }
 
         KeyIdentifier keyId = crypto().generateKey("Key of Matrix domain [" + vHost + "]");
@@ -141,6 +159,18 @@ public class BaseMatrixCore implements MatrixCore {
 
         DomainDao dao = store().saveDomain(domain.toDao());
         return load(dao);
+    }
+
+    @Override
+    public void removeDomain(String domain) {
+        MatrixServer srv = forDomain(domain);
+
+        domains.remove(srv.id().getDomain());
+        vHosts.remove(srv.id().getDomain());
+        vHosts.remove(srv.id().getHost());
+
+        store().deleteDomain(srv.id().toDao());
+        crypto().disableKey(srv.id().getSigningKey());
     }
 
     @Override

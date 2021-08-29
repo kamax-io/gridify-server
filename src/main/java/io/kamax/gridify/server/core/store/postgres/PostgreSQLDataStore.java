@@ -272,6 +272,19 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
         }
     }
 
+    @Override
+    public void deleteDomain(DomainDao dao) {
+        String sql = "DELETE FROM domains WHERE network = ? AND domain = ?";
+        withStmtConsumer(sql, stmt -> {
+            stmt.setString(1, dao.getNetwork());
+            stmt.setString(2, dao.getDomain());
+            int rc = stmt.executeUpdate();
+            if (rc != 1) {
+                throw new IllegalStateException("Domain # " + dao.getLocalId() + ": DB deleted " + rc + " rows. 1 expected");
+            }
+        });
+    }
+
     public DomainDao insertDomain(DomainDao dao) {
         String sql = "INSERT INTO domains (network,domain,host,config,properties) VALUES (?,?,?,?::jsonb,?::jsonb) RETURNING lid";
         long lid = withStmtFunction(sql, stmt -> {

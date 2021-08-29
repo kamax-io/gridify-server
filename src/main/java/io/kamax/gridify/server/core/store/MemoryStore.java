@@ -138,6 +138,11 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
+    public void deleteDomain(DomainDao dao) {
+        domains.remove(dao.getLocalId());
+    }
+
+    @Override
     public List<DomainDao> listDomains(String network) {
         return domains.values().stream()
                 .filter(dao -> StringUtils.equals(network, dao.getNetwork()))

@@ -69,9 +69,11 @@ public interface DataStore {
         return GsonUtil.fromJson(getConfigObj(id), type);
     }
 
+    List<DomainDao> listDomains(String network);
+
     DomainDao saveDomain(DomainDao dao);
 
-    List<DomainDao> listDomains(String network);
+    void deleteDomain(DomainDao dao);
 
     List<ChannelDao> listChannels();
 
