@@ -27,8 +27,12 @@ public class Base64Codec {
 
     public static final Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
 
+    public static String encode(byte[] input) {
+        return encoder.encodeToString(input);
+    }
+
     public static String encode(String input) {
-        return encoder.encodeToString(input.getBytes(StandardCharsets.UTF_8));
+        return encode(input.getBytes(StandardCharsets.UTF_8));
     }
 
     public static String decode(String input) {

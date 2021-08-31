@@ -37,7 +37,6 @@ public class CryptoJson {
     public static Signature computeSignature(JsonObject event, MatrixDomainCryptopher crypto) {
         // We get the canonical version
         String eventCanonical = CanonicalJson.encode(event);
-        log.debug("Signing HS request: {}", eventCanonical);
         // We generate the signature for the event
         return crypto.sign(eventCanonical);
     }
