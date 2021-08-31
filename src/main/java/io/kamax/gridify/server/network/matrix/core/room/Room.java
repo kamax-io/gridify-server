@@ -30,6 +30,7 @@ import io.kamax.gridify.server.core.signal.SignalTopic;
 import io.kamax.gridify.server.core.store.ChannelStateDao;
 import io.kamax.gridify.server.exception.ForbiddenException;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
+import io.kamax.gridify.server.network.matrix.core.RemoteServerException;
 import io.kamax.gridify.server.network.matrix.core.crypto.MatrixDomainCryptopher;
 import io.kamax.gridify.server.network.matrix.core.event.BareEvent;
 import io.kamax.gridify.server.network.matrix.core.event.BareGenericEvent;
@@ -335,7 +336,11 @@ public class Room {
                 } catch (RemoteForbiddenException e) {
                     // The remote HS refused to send the auth chain, possibly being malicious
                     // Refusing the event offer
-                    throw new ForbiddenException("Refused to provide auth chain for Event " + event.getId() + " in room " + getId());
+                    return new ChannelEventAuthorization.Builder(event)
+                            .deny("Refused to provide auth chain for Event " + event.getId() + " in room " + getId());
+                } catch (RemoteServerException e) {
+                    return new ChannelEventAuthorization.Builder(event)
+                            .deny("Could not fetch auth chain from you for Event " + getId() + "/" + event.getId());
                 }
             }
 

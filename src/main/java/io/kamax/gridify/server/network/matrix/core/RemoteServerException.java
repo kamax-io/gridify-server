@@ -36,6 +36,10 @@ public class RemoteServerException extends RuntimeException {
         );
     }
 
+    public RemoteServerException(String domain, String responseBody) {
+        this(domain, "M_UNKNOWN", responseBody);
+    }
+
     public RemoteServerException(String domain, String code, String reason) {
         super("Remote server " + domain + " replied with an error: " + code + " - " + reason);
         this.code = code;

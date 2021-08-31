@@ -174,11 +174,12 @@ public class HomeServerHttpClient implements HomeServerClient {
         log.info("Calling [{}] {}", request.getDoc().getDestination(), req);
         try (CloseableHttpResponse res = client.execute(req)) {
             int resStatus = res.getStatusLine().getStatusCode();
-            JsonObject body = parse(res, JsonObject.class);
             if (resStatus == 200) {
                 log.debug("Got answer");
+                JsonObject body = parse(res, JsonObject.class);
                 return HomeServerResponse.make(resStatus, body);
             } else {
+                String body = EntityUtils.toString(res.getEntity());
                 log.debug("Unexpected response - SC: {} - Body: {}", resStatus, body);
                 throw new RemoteServerException(request.getDoc().getDestination(), body);
             }
