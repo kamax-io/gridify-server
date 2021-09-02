@@ -22,7 +22,6 @@ package io.kamax.gridify.server.network.matrix.core.federation;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import io.kamax.gridify.server.core.channel.event.ChannelEvent;
 import io.kamax.gridify.server.core.crypto.Signature;
 import io.kamax.gridify.server.exception.ForbiddenException;
 import io.kamax.gridify.server.network.matrix.core.MatrixServer;
@@ -39,7 +38,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Instant;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class HomeServerLink {
 
@@ -221,14 +219,10 @@ public class HomeServerLink {
     }
 
     public JsonObject inviteUser(RoomInviteRequest request) {
-        List<JsonObject> stateDocs = request.getStrippedState().getEvents().stream()
-                .map(ChannelEvent::getData)
-                .collect(Collectors.toList());
-
         URI path = URI.create("/_matrix/federation/v2/invite/" + request.getRoomId() + "/" + request.getEventId());
         JsonObject body = new JsonObject();
         body.add("event", request.getDoc());
-        body.add("invite_room_state", GsonUtil.asArray(stateDocs));
+        body.add("invite_room_state", GsonUtil.asArray(request.getStrippedState()));
         body.addProperty("room_version", request.getRoomVersion());
         HomeServerRequest req = build(domain, "PUT", new URIBuilder(path), body);
         HomeServerResponse response = client.doRequest(req);

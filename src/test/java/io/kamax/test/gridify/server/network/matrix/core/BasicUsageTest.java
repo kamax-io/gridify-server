@@ -25,21 +25,32 @@ import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.config.GridifyConfig;
 import io.kamax.gridify.server.core.MonolithGridifyServer;
 import io.kamax.gridify.server.core.SyncOptions;
+import io.kamax.gridify.server.core.channel.event.ChannelEvent;
 import io.kamax.gridify.server.core.identity.User;
+import io.kamax.gridify.server.core.store.ChannelStateDao;
 import io.kamax.gridify.server.network.matrix.core.MatrixDataClient;
 import io.kamax.gridify.server.network.matrix.core.base.UserSession;
+import io.kamax.gridify.server.network.matrix.core.event.RoomEventType;
 import io.kamax.gridify.server.network.matrix.core.room.Room;
 import io.kamax.gridify.server.network.matrix.core.room.RoomMembership;
 import io.kamax.gridify.server.network.matrix.http.json.SyncResponse;
+import io.kamax.gridify.server.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class BasicUsageTest {
+
+    @BeforeClass
+    public static void beforeClass() {
+        System.setProperty("org.slf4j.simpleLogger.log." + KxLog.logPrefix, "debug");
+    }
 
     @Test
     public void roomCreate() {
@@ -52,6 +63,11 @@ public class BasicUsageTest {
         User u = client.register("test", "test");
         UserSession session = client.login(u);
         Room r = session.createRoom(new JsonObject());
+        List<Long> extremityIds = g.getStore().getForwardExtremities(r.getLocalId());
+        assertEquals(1, extremityIds.size());
+        ChannelEvent head = g.getStore().getEvent(extremityIds.get(0));
+        ChannelStateDao state = g.getStore().getState(head.getLid());
+        assertEquals(3, state.getEvents().size());
 
         Optional<RoomMembership> membership = r.getView().getState().findMembership(u.getNetworkId("matrix"));
         assertTrue(membership.isPresent());
@@ -60,6 +76,10 @@ public class BasicUsageTest {
         SyncResponse data = session.sync(new SyncOptions().setToken("0").setTimeout(0));
         assertFalse(data.rooms.join.isEmpty());
         assertTrue(StringUtils.isNotBlank(data.nextBatch));
+
+        session.send(r.getId(), RoomEventType.Message.getId(), UUID.randomUUID().toString(), new JsonObject());
+        data = session.sync(new SyncOptions().setToken(data.nextBatch));
+        assertEquals(1, data.rooms.join.get(r.getId()).getTimeline().getEvents().size());
     }
 
 }

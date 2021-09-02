@@ -82,6 +82,10 @@ public class GsonUtil {
         return asArray(elements.stream().map(Object::toString).collect(Collectors.toList()));
     }
 
+    public static List<JsonObject> tryArrayAsList(JsonObject o, String key) {
+        return asList(findArray(o, key).orElseGet(JsonArray::new), JsonObject.class);
+    }
+
     public static <T> List<T> tryArrayAsList(JsonObject o, String key, Class<T> c) {
         return asList(findArray(o, key).orElseGet(JsonArray::new), c);
     }

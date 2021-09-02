@@ -20,6 +20,8 @@
 
 package io.kamax.gridify.server.core.store.postgres;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.time.Instant;
 
 public class ChannelEventMeta {
@@ -33,6 +35,7 @@ public class ChannelEventMeta {
     private Instant processedOn;
     private boolean present;
     private boolean valid;
+    private String validReason;
     private boolean allowed;
     private Long orderMajor;
     private Long orderMinor;
@@ -109,6 +112,14 @@ public class ChannelEventMeta {
 
     public void setValid(boolean valid) {
         this.valid = valid;
+    }
+
+    public String getValidReason() {
+        return validReason;
+    }
+
+    public void setValidReason(String validReason) {
+        this.validReason = StringUtils.isBlank(validReason) ? null : validReason;
     }
 
     public boolean isAllowed() {

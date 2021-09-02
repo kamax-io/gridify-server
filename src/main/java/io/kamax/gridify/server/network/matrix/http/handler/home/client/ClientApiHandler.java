@@ -52,7 +52,8 @@ public abstract class ClientApiHandler implements HttpHandler {
             Exchange ex = new Exchange(exchange);
             try {
                 // CORS headers as per spec
-                exchange.getResponseHeaders().put(HttpString.tryFromString("Access-Control-Allow-Origin"), "*");
+                String origin = StringUtils.defaultIfBlank(ex.getHeader("Origin"), "*");
+                exchange.getResponseHeaders().put(HttpString.tryFromString("Access-Control-Allow-Origin"), origin);
                 exchange.getResponseHeaders().put(HttpString.tryFromString("Access-Control-Allow-Methods"), "GET, POST, PUT, DELETE, OPTIONS");
                 exchange.getResponseHeaders().put(HttpString.tryFromString("Access-Control-Allow-Headers"), "Origin, X-Requested-With, Content-Type, Accept, Authorization");
 

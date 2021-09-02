@@ -22,12 +22,14 @@ package io.kamax.gridify.server.network.matrix.core.room;
 
 import com.google.gson.JsonObject;
 
+import java.util.List;
+
 public class RoomInviteRequest {
 
     String roomId;
     String roomVersion;
     String eventId;
-    RoomState strippedState;
+    List<JsonObject> strippedState;
     JsonObject doc;
 
     public String getRoomId() {
@@ -60,11 +62,11 @@ public class RoomInviteRequest {
         return this;
     }
 
-    public RoomState getStrippedState() {
+    public List<JsonObject> getStrippedState() {
         return strippedState;
     }
 
-    public RoomInviteRequest setStrippedState(RoomState strippedState) {
+    public RoomInviteRequest setStrippedState(List<JsonObject> strippedState) {
         this.strippedState = strippedState;
 
         return this;

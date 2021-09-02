@@ -55,26 +55,30 @@ public class RoomManager {
     }
 
     private Room fromDao(ChannelDao dao) {
-        return new Room(g, dao.getSid(), dao.getId(), RoomAlgos.get(dao.getVersion()));
+        return new Room(g, dao);
     }
 
     public Set<String> getVersions() {
         return RoomAlgos.getVersions();
     }
 
-    public Room createRoom(MatrixDomainCryptopher crypto, String creator, JsonObject options) {
+    public Room register(String roomId, String roomVersion) {
+        RoomAlgos.get(roomVersion); // We check if valid
+        ChannelDao dao = new ChannelDao("matrix", roomId, roomVersion);
+        dao = g.getStore().saveChannel(dao);
+        Room r = new Room(g, dao);
+        rooms.put(r.getId(), r);
+        return r;
+    }
+
+    public String createRoom(MatrixDomainCryptopher crypto, String creator, JsonObject options) {
         String algoVersionDefault = RoomAlgos.defaultVersion();
         String algoVersionCfg = g.getConfig().getRoom().getCreation().getVersion();
         String algoVersionOption = GsonUtil.getStringOrNull(options, "room_version");
         String algoVersion = StringUtils.defaultIfBlank(algoVersionOption, StringUtils.defaultIfBlank(algoVersionCfg, algoVersionDefault));
         RoomAlgo algo = RoomAlgos.get(algoVersion);
 
-        ChannelDao dao = new ChannelDao("matrix", algo.generateRoomId(crypto.getDomain()), algo.getVersion());
-        dao = g.getStore().saveChannel(dao);
-
-        Room r = new Room(g, dao.getSid(), dao.getId(), algo);
-        rooms.put(r.getId(), r);
-
+        Room r = register(algo.generateRoomId(crypto.getDomain()), algoVersion);
         List<BareEvent<?>> createEvents = algo.getCreationEvents(crypto.getDomain(), creator, options);
         createEvents.stream()
                 .map(ev -> r.offer(ev, crypto))
@@ -82,7 +86,7 @@ public class RoomManager {
                 .findAny().ifPresent(auth -> {
                     throw new RuntimeException("Room creation failed because of initial event " + auth.getEventId() + " being rejected: " + auth.getReason());
                 });
-        return r;
+        return r.getId();
     }
 
     private Room create(JsonObject createDoc) {
@@ -99,9 +103,7 @@ public class RoomManager {
         }
 
         // We create the room internally
-        ChannelDao dao = new ChannelDao("matrix", createEv.getRoomId(), roomVersion);
-        dao = g.getStore().saveChannel(dao);
-        Room r = new Room(g, dao, algo);
+        Room r = register(createEv.getRoomId(), roomVersion);
 
         // We inject the auth chain
         ChannelEventAuthorization auth = r.addSeed(createDoc, Collections.emptyList());
@@ -109,7 +111,6 @@ public class RoomManager {
             throw new ForbiddenException("Room Creation denied with Event " + createAuth.getEventId() + ": " + createAuth.getReason());
         }
 
-        rooms.put(r.getId(), r);
         return r;
     }
 
@@ -123,7 +124,8 @@ public class RoomManager {
 
     public synchronized Optional<Room> find(String rId) {
         if (!rooms.containsKey(rId)) {
-            g.getStore().findChannel("matrix", rId).ifPresent(dao -> rooms.put(rId, fromDao(dao)));
+            g.getStore().findChannel("matrix", rId)
+                    .ifPresent(dao -> rooms.put(rId, fromDao(dao)));
         }
 
         return Optional.ofNullable(rooms.get(rId));
@@ -181,7 +183,7 @@ public class RoomManager {
                 // Add the join event as seed
                 auth = r.addSeed(joinEventSignedOff, response.getState());
                 if (!auth.isAuthorized()) {
-                    log.info("{} did not sent valid state events to perform join: Event ID {} - {}", resident, auth.getEventId(), auth.getReason());
+                    log.info("{} did not sent valid seed event to perform join: Event ID {} - {}", resident, auth.getEventId(), auth.getReason());
                     continue;
                 }
 
@@ -219,29 +221,59 @@ public class RoomManager {
         log.debug("Performing join of user {} in room address {}", userIdRaw, roomIdOrAlias);
 
         UserID uId = UserID.parse(userIdRaw);
-        if (!RoomAlias.sigillMatch(roomIdOrAlias)) {
-            log.debug("Room address is an ID, no resolution needed");
-            return joinLocal(userIdRaw, roomIdOrAlias, crypto);
+        String roomId = roomIdOrAlias;
+        Set<String> servers = new HashSet<>();
+        if (RoomAlias.sigillMatch(roomIdOrAlias)) {
+            log.debug("Room address is an alias, resolving");
+            RoomAlias rAlias = RoomAlias.parse(roomIdOrAlias);
+            RoomLookup data = g.overMatrix().roomDir().lookup(uId.network(), rAlias, true)
+                    .orElseThrow(() -> new ObjectNotFoundException("Room alias", rAlias.full()));
+            log.debug("Room alias {} resolved to {}", data.getAlias(), data.getId());
+            roomId = data.getId();
+            servers.addAll(data.getServers());
+        } else {
+            log.debug("Room address is an ID, using as is");
         }
 
-        log.debug("Room address is an alias, resolving");
-        RoomAlias rAlias = RoomAlias.parse(roomIdOrAlias);
-        RoomLookup data = g.overMatrix().roomDir().lookup(uId.network(), rAlias, true)
-                .orElseThrow(() -> new ObjectNotFoundException("Room alias", rAlias.full()));
-        log.debug("Room alias {} resolved to {}", data.getAlias(), data.getId());
+        Optional<Room> cOpt = find(roomId);
+        if (!cOpt.isPresent()) {
+            log.debug("Room is not known locally, performing remote join");
+            return joinRemote(uId, new RoomLookup(roomIdOrAlias, roomId, servers));
+        }
 
-
-        Optional<Room> cOpt = find(data.getId());
-        if (cOpt.isPresent()) {
-            Room r = cOpt.get();
-            if (r.getView().isServerJoined(uId.network())) {
-                log.debug("Server is already in the room, performing self-join");
-                return joinLocal(r, userIdRaw, crypto);
-            } else {
-                return joinRemote(uId, data);
-            }
+        Room r = cOpt.get();
+        if (r.getView().isServerJoined(uId.network())) {
+            log.debug("Server is already in the room, performing self-join");
+            return joinLocal(r, userIdRaw, crypto);
         } else {
-            return joinRemote(uId, data);
+            log.debug("Server is not in room");
+            servers.removeIf(g.overMatrix().predicates().isLocalDomain());
+            if (!servers.isEmpty()) {
+                log.debug("Attempting join with lookup candidates");
+                return joinRemote(uId, new RoomLookup(roomIdOrAlias, roomId, servers));
+            } else {
+                log.debug("No lookup candidates, attempting to find resident server candidates");
+
+                // Try to find a membership event for the user
+                r.getView().getState().find(RoomEventType.Member, userIdRaw)
+                        .ifPresent(channelEvent -> {
+                            String origin = channelEvent.asMatrix().getOrigin();
+                            servers.add(origin);
+                            log.debug("Added origin {} from found membership event", origin);
+                        });
+
+                // Use the room HEAD as a potential candidate
+                r.findEvent(r.getView().getEventId()).ifPresent(ev -> {
+                    String origin = ev.asMatrix().getOrigin();
+                    servers.add(origin);
+                    log.debug("Added origin {} from HEAD", origin);
+                });
+
+                servers.removeIf(g.overMatrix().predicates().isLocalDomain());
+                log.debug("Found {} remote server candidates", servers.size());
+
+                return joinRemote(uId, new RoomLookup(roomIdOrAlias, roomId, servers));
+            }
         }
     }
 

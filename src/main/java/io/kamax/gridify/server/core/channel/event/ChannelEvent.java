@@ -54,6 +54,7 @@ public class ChannelEvent {
     private String id;
     private JsonObject data;
     private ChannelEventMeta meta;
+    private JsonObject extra;
 
     private transient BareGenericEvent asMatrix;
     private transient io.kamax.gridify.server.core.channel.event.BareGenericEvent bare;
@@ -61,6 +62,7 @@ public class ChannelEvent {
 
     public ChannelEvent() {
         meta = new ChannelEventMeta();
+        extra = new JsonObject();
     }
 
     public ChannelEvent(long cSid) {
@@ -184,9 +186,18 @@ public class ChannelEvent {
         return meta;
     }
 
+    public JsonObject getExtra() {
+        if (Objects.isNull(extra)) {
+            extra = new JsonObject();
+        }
+
+        return extra;
+    }
+
     public void processed(ChannelEventAuthorization auth) {
         getMeta().setValid(auth.isValid());
         getMeta().setAllowed(auth.isAuthorized());
+        getMeta().setValidReason(auth.getReason());
         getMeta().setProcessedOn(Instant.now());
     }
 

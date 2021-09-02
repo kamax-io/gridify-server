@@ -32,6 +32,7 @@ import io.kamax.gridify.server.network.matrix.core.event.BareJoinRulesEvent;
 import io.kamax.gridify.server.network.matrix.core.federation.HomeServerHttpClient;
 import io.kamax.gridify.server.network.matrix.core.room.Room;
 import io.kamax.gridify.server.network.matrix.core.room.RoomAlias;
+import io.kamax.gridify.server.util.KxLog;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -61,6 +62,8 @@ public class FederationTest {
 
     @BeforeClass
     public static void init() {
+        System.setProperty("org.slf4j.simpleLogger.log." + KxLog.logPrefix, "debug");
+
         deinit();
 
         HomeServerHttpClient.useHttps = false;
@@ -91,7 +94,6 @@ public class FederationTest {
         a1 = "@" + n1 + ":" + dn1;
         mx1.getFedPusher().setAsync(false);
         User u1b = mx1.vHost(dn1).asClient().register(n1, pass);
-        //u1b.addThreePid(new GenericThreePid("g.id.net.matrix", a1));
         s1 = mx1.vHost(dn1).asClient().login(u1b);
         u1 = s1.getUser();
 
@@ -103,7 +105,6 @@ public class FederationTest {
         a2 = "@" + n2 + ":" + dn2;
         mx2.getFedPusher().setAsync(false);
         User u2b = g2.register(n2, pass);
-        //u2b.addThreePid(new GenericThreePid("g.id.net.matrix", a2));
         s2 = mx2.vHost(dn2).asClient().login(u2b);
         u2 = s2.getUser();
     }

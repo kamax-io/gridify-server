@@ -179,8 +179,8 @@ public class Exchange {
     }
 
     public void respond(int statusCode, JsonElement bodyJson) {
-        if (log.isDebugEnabled()) {
-            log.debug("Body: {}", GsonUtil.getPrettyForLog(bodyJson));
+        if (log.isTraceEnabled()) {
+            log.trace("Body: {}", GsonUtil.getPrettyForLog(bodyJson));
         }
 
         respondJson(statusCode, GsonUtil.get().toJson(bodyJson));
@@ -209,8 +209,8 @@ public class Exchange {
     }
 
     public void respondJson(Object body) {
-        if (log.isDebugEnabled()) {
-            log.debug("Body:{}", GsonUtil.getPrettyForLog(body));
+        if (log.isTraceEnabled()) {
+            log.trace("Body:{}", GsonUtil.getPrettyForLog(body));
         }
 
         respondJson(GsonUtil.toJson(body));

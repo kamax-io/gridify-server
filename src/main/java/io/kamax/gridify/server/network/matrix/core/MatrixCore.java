@@ -34,8 +34,15 @@ import io.kamax.gridify.server.network.matrix.core.room.RoomManager;
 
 import java.util.List;
 import java.util.Queue;
+import java.util.function.Predicate;
 
 public interface MatrixCore {
+
+    interface Predicates {
+
+        Predicate<String> isLocalDomain();
+
+    }
 
     GridifyServer gridify();
 
@@ -68,5 +75,7 @@ public interface MatrixCore {
     FederationPusher getFedPusher();
 
     Queue<JsonObject> getCommandResponseQueue(String userId);
+
+    Predicates predicates();
 
 }

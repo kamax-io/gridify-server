@@ -21,7 +21,6 @@
 package io.kamax.gridify.server.network.matrix.core.room;
 
 import io.kamax.gridify.server.core.channel.event.ChannelEvent;
-import io.kamax.gridify.server.core.channel.state.ChannelState;
 import io.kamax.gridify.server.core.store.ChannelStateDao;
 import io.kamax.gridify.server.network.matrix.core.event.*;
 import io.kamax.gridify.server.util.GsonUtil;
@@ -60,32 +59,52 @@ public class RoomState {
         return new RoomState();
     }
 
-    private Long sid;
+    private long sid = 0L;
+    private boolean trusted = false;
+    private boolean complete = false;
+    private boolean finall = false; // because final is a reserved keyword
     private Map<String, ChannelEvent> data = new HashMap<>();
 
     private RoomState() {
+
     }
 
-    public RoomState(List<ChannelEvent> events) {
-        this(null, events);
-    }
-
-    public RoomState(ChannelStateDao dao) {
-        this(dao.getSid(), dao.getEvents());
-    }
-
-    public RoomState(ChannelState state) {
-        this(state.getSid(), state.getEvents());
-    }
-
-    public RoomState(Long sid, List<ChannelEvent> events) {
+    public RoomState(long sid, RoomState state) {
         this.sid = sid;
+        this.trusted = state.trusted;
+        this.complete = state.complete;
+        this.finall = state.finall;
+        this.data = new HashMap<>(state.data);
+    }
+
+    public RoomState(boolean trusted, boolean complete, boolean finall, List<ChannelEvent> events) {
+        this.trusted = trusted;
+        this.complete = complete;
+        this.finall = finall;
         events.forEach(this::addEvent);
     }
 
-    public RoomState(Long sid, RoomState state) {
+    public RoomState(long sid, boolean trusted, boolean complete, boolean finall, List<ChannelEvent> events) {
+        this(trusted, complete, finall, events);
         this.sid = sid;
-        this.data = new HashMap<>(state.data);
+    }
+
+    public RoomState(ChannelStateDao dao) {
+        this(dao.getSid(), dao.isTrusted(), dao.isComplete(), dao.isFinal(), dao.getEvents());
+    }
+
+    public RoomState(List<ChannelEvent> events) {
+        this(false, false, false, events);
+    }
+
+    private RoomState copy() {
+        RoomState r = new RoomState();
+        r.sid = sid;
+        r.trusted = trusted;
+        r.complete = complete;
+        r.finall = finall;
+        r.data = new HashMap<>(data);
+        return r;
     }
 
     private void addEvent(ChannelEvent ev) {
@@ -95,7 +114,7 @@ public class RoomState {
         data.put(key, ev);
     }
 
-    public Long getSid() {
+    public long getSid() {
         return sid;
     }
 
@@ -186,6 +205,56 @@ public class RoomState {
         state.addEvent(ev);
 
         return state;
+    }
+
+    public boolean isTrusted() {
+        return trusted;
+    }
+
+    public boolean isComplete() {
+        return complete;
+    }
+
+    public boolean isFinal() {
+        return finall;
+    }
+
+    public RoomState setTrusted(boolean trusted) {
+        if (this.trusted == trusted) {
+            return this;
+        }
+
+        RoomState state = copy();
+        state.trusted = trusted;
+        return state;
+    }
+
+    public RoomState setComplete(boolean complete) {
+        if (this.complete == complete) {
+            return this;
+        }
+
+        RoomState state = copy();
+        state.complete = complete;
+        return state;
+    }
+
+    public RoomState setFinal(boolean finall) {
+        if (this.finall == finall) {
+            return this;
+        }
+
+        RoomState state = copy();
+        state.finall = finall;
+        return state;
+    }
+
+    public RoomState fromPreviousEvents() {
+        return setTrusted(true).setComplete(true).setFinal(true);
+    }
+
+    public RoomState fromAuthEvents() {
+        return setTrusted(true).setComplete(true).setFinal(false);
     }
 
 }

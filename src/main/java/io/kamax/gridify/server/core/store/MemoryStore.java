@@ -372,13 +372,13 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public List<Long> getForwardExtremities(long cSid) {
+    public synchronized List<Long> getForwardExtremities(long cSid) {
         return getOrComputeForwardExts(cSid);
     }
 
     @Override
     public long insertIfNew(long cSid, ChannelStateDao state) {
-        if (Objects.nonNull(state.getSid())) {
+        if (Objects.nonNull(state.getSid()) && state.getSid() > 0) {
             return state.getSid();
         }
 

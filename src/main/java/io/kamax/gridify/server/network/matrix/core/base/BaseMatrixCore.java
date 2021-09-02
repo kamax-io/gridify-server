@@ -43,6 +43,7 @@ import org.slf4j.Logger;
 import java.lang.invoke.MethodHandles;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class BaseMatrixCore implements MatrixCore {
@@ -204,6 +205,11 @@ public class BaseMatrixCore implements MatrixCore {
     @Override
     public Queue<JsonObject> getCommandResponseQueue(String userId) {
         return commandResponseQueues.computeIfAbsent(userId, uId -> new LinkedList<>());
+    }
+
+    @Override
+    public Predicates predicates() {
+        return () -> (Predicate<String>) this::isLocal;
     }
 
 }

@@ -83,20 +83,6 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
         withConnConsumer(conn -> conn.isValid(1000));
         log.info("Connected");
 
-        // FIXME Temporary solution until we can directly list from the jar
-        List<String> schemaUpdates = new ArrayList<>();
-
-        try (InputStream elIs = PostgreSQLDataStore.class.getResourceAsStream("/store/postgres/schema")) {
-            List<String> schemas = IOUtils.readLines(Objects.requireNonNull(elIs), StandardCharsets.UTF_8);
-            log.debug("Schemas auto-discovery:");
-            schemas.forEach(s -> {
-                if (StringUtils.isNotBlank(s)) log.debug(s);
-            });
-        } catch (IOException e) {
-            log.warn("Schema autodiscovery failed");
-        }
-
-        schemaUpdates.add("0-init.sql");
         withConnConsumer(conn -> {
             Statement stmt = conn.createStatement();
             stmt.execute("CREATE TABLE IF NOT EXISTS schema (version bigint NOT NULL)");
@@ -104,23 +90,38 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
             long version = getSchemaVersion();
             log.info("Schema version: {}", version);
-            log.info("Schemas to check: {}", schemaUpdates.size());
-            for (String sql : schemaUpdates) {
-                log.info("Processing schema update: {}", sql);
-                String[] els = sql.split("-", 2);
-                if (els.length < 2) {
-                    log.warn("Skipping invalid schema update name format: {}", sql);
+
+            try (InputStream elIs = PostgreSQLDataStore.class.getResourceAsStream("/store/postgres/schema")) {
+                if (Objects.isNull(elIs)) {
+                    throw new IllegalStateException("No schema found for PostgreSQL. Please report this issue.");
                 }
 
-                try {
+                List<String> schemas = new ArrayList<>();
+                schemas.add("000000.sql");
+                schemas.add("000001.sql");
+                //LineIterator it = IOUtils.lineIterator(elIs, StandardCharsets.UTF_8);
+                Iterator<String> it = schemas.listIterator();
+                log.debug("Schemas auto-discovery:");
+                while (it.hasNext()) {
+                    String sql = it.next();
+                    if (!StringUtils.endsWith(sql, ".sql")) {
+                        continue;
+                    }
+                    log.info("Processing schema update: {}", sql);
+                    String[] els = StringUtils.substringBeforeLast(sql, ".").split("-", 2);
+                    if (els.length < 1) {
+                        log.warn("Skipping invalid schema update name format: {}", sql);
+                    }
+
                     long elV = Long.parseLong(els[0]);
+                    log.debug("Schema {}: version {}", sql, elV);
                     if (elV <= version) {
-                        log.info("Skipping {}", sql);
+                        log.debug("Skipping {}", sql);
                         continue;
                     }
 
-                    try (InputStream elIs = PostgreSQLDataStore.class.getResourceAsStream("/store/postgres/schema/" + sql)) {
-                        String update = IOUtils.toString(Objects.requireNonNull(elIs), StandardCharsets.UTF_8);
+                    try (InputStream schemaIs = PostgreSQLDataStore.class.getResourceAsStream("/store/postgres/schema/" + sql)) {
+                        String update = IOUtils.toString(Objects.requireNonNull(schemaIs), StandardCharsets.UTF_8);
                         stmt.execute(update);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
@@ -131,12 +132,12 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
                     }
 
                     log.info("Updated schema to version {}", elV);
-                } catch (NumberFormatException e) {
-                    log.warn("Invalid schema update version: {}", els[0]);
                 }
+            } catch (IOException e) {
+                log.warn("Schema autodiscovery failed");
             }
-
             conn.commit();
+            log.info("DB schema version: {}", getSchemaVersion());
         });
     }
 
@@ -436,12 +437,13 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
     }
 
     private long insertEvent(ChannelEvent ev) {
-        String sql = "INSERT INTO channel_events (id,channel_lid,meta,data) VALUES (?,?,?::jsonb,?::jsonb) RETURNING lid";
+        String sql = "INSERT INTO channel_events (id,channel_lid,meta,extra,data) VALUES (?,?,?::jsonb,?::jsonb,?::jsonb) RETURNING lid";
         return withStmtFunction(sql, stmt -> {
             stmt.setString(1, ev.getId());
             stmt.setLong(2, ev.getChannelSid());
             stmt.setString(3, GsonUtil.toJson(ev.getMeta()));
-            stmt.setString(4, GsonUtil.toJson(ev.getData()));
+            stmt.setString(4, GsonUtil.toJson(ev.getExtra()));
+            stmt.setString(5, GsonUtil.toJson(ev.getData()));
             ResultSet rSet = stmt.executeQuery();
             if (!rSet.next()) {
                 throw new IllegalStateException("Inserted channel event but got no LID back");
@@ -452,10 +454,11 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
     }
 
     private void updateEvent(ChannelEvent ev) {
-        String sql = "UPDATE channel_events SET meta = ?::jsonb WHERE lid = ?";
+        String sql = "UPDATE channel_events SET meta = ?::jsonb, extra = ?::jsonb WHERE lid = ?";
         withStmtConsumer(sql, stmt -> {
             stmt.setString(1, GsonUtil.toJson(ev.getMeta()));
-            stmt.setLong(2, ev.getLid());
+            stmt.setString(2, GsonUtil.toJson(ev.getExtra()));
+            stmt.setLong(3, ev.getLid());
             int rc = stmt.executeUpdate();
             if (rc != 1) {
                 throw new IllegalStateException("Channel Event # " + ev.getLid() + ": DB updated " + rc + " rows. 1 expected");
@@ -724,7 +727,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
     @Override
     public long insertIfNew(long cLid, ChannelStateDao state) {
-        if (Objects.nonNull(state.getSid())) {
+        if (Objects.nonNull(state.getSid()) && state.getSid() > 0) {
             return state.getSid();
         }
 

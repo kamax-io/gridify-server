@@ -42,6 +42,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
 import java.lang.invoke.MethodHandles;
+import java.time.Instant;
 import java.util.*;
 
 public class ServerSession {
@@ -103,6 +104,12 @@ public class ServerSession {
 
     public JsonObject inviteUser(RoomInviteRequest request) {
         RoomAlgo algo = RoomAlgos.get(request.getRoomVersion());
+
+        String docEventId = algo.getEventId(request.getDoc());
+        if (!StringUtils.equals(docEventId, request.getEventId())) {
+            throw new IllegalArgumentException("Event IDs do not match");
+        }
+
         BareMemberEvent inviteEvent = algo.getMemberEvent(request.getDoc());
         if (!RoomMembership.Invite.match(inviteEvent.getContent().getMembership())) {
             throw new IllegalArgumentException("Event is not an invite");
@@ -122,6 +129,21 @@ public class ServerSession {
         if (!StringUtils.equals(vHost, invitee.network())) {
             throw new IllegalArgumentException("Not authoritative for domain " + invitee.network());
         }
+
+        Room r = srv.roomMgr().find(eventRoomId)
+                .orElseGet(() -> srv.roomMgr().register(eventRoomId, request.getRoomVersion()));
+        ChannelEvent ev = r.buildEvent(request.getDoc());
+        if (!ev.getMeta().isValid()) {
+            log.info("Invite from {} for {}: Invalid event: {}", remote, inviter.full(), ev.getMeta().getValidReason());
+            throw new IllegalArgumentException("Invalid event");
+        }
+        ev.getMeta().setReceivedFrom(remote);
+        ev.getMeta().setReceivedAt(Instant.now());
+        ev.getMeta().setAllowed(true);
+        ev.getMeta().setProcessed(true);
+        ev.getExtra().add("stripped_state", GsonUtil.asArray(request.getStrippedState()));
+
+        r.put(ev, RoomState.empty().apply(ev).setTrusted(false));
 
         return CryptoJson.signUnsafe(request.getDoc(), srv.crypto());
     }
@@ -252,6 +274,15 @@ public class ServerSession {
         }
 
         throw new ObjectNotFoundException("Event", eventId);
+    }
+
+    public JsonObject getUserProfile(String userId) {
+        UserID uId = UserID.parse(userId);
+        if (!srv.isLocal(uId)) {
+            throw new IllegalArgumentException("Not authoritative for user " + userId);
+        }
+
+        return new JsonObject();
     }
 
 }

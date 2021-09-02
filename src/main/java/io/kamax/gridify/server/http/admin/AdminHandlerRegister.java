@@ -23,6 +23,7 @@ package io.kamax.gridify.server.http.admin;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import io.kamax.gridify.server.GridifyServer;
+import io.kamax.gridify.server.core.channel.event.ChannelEvent;
 import io.kamax.gridify.server.exception.AlreadyExistsException;
 import io.kamax.gridify.server.exception.UnauthenticatedException;
 import io.kamax.gridify.server.http.Exchange;
@@ -32,6 +33,7 @@ import io.kamax.gridify.server.http.admin.handler.HomepageHandler;
 import io.kamax.gridify.server.http.admin.handler.InstallSetupApiHandler;
 import io.kamax.gridify.server.http.admin.handler.InstallSetupWizardHandler;
 import io.kamax.gridify.server.network.matrix.core.domain.MatrixDomain;
+import io.kamax.gridify.server.network.matrix.core.room.RoomState;
 import io.kamax.gridify.server.network.matrix.http.json.UIAuthJson;
 import io.kamax.gridify.server.util.GsonUtil;
 import io.undertow.server.RoutingHandler;
@@ -113,6 +115,16 @@ public class AdminHandlerRegister {
             protected void handle(Exchange ex) {
                 String domain = ex.getPathVariable("id");
                 g.overMatrix().removeDomain(domain);
+            }
+        });
+        r.get("/_gridify/admin/v0/networks/matrix/rooms/{roomId}/events/{eventId}/state", new AdminHandler(g) {
+            @Override
+            protected void handle(Exchange ex) throws Exception {
+                String roomId = ex.getPathVariable("roomId");
+                String eventId = ex.getPathVariable("eventId");
+                ChannelEvent ev = g.overMatrix().roomMgr().get(roomId).getEvent(eventId);
+                RoomState state = g.overMatrix().roomMgr().get(roomId).getState(ev);
+                ex.respondJsonObject("state", state);
             }
         });
         r.post("/admin/firstRunWizard", new InstallSetupWizardHandler(g));

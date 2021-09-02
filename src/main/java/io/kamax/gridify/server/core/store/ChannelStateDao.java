@@ -22,13 +22,15 @@ package io.kamax.gridify.server.core.store;
 
 import io.kamax.gridify.server.core.channel.event.ChannelEvent;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class ChannelStateDao {
 
     private Long sid;
-    private List<ChannelEvent> events = new ArrayList<>();
+    private boolean trusted = false;
+    private boolean complete = false;
+    private boolean finall = false; // because final is a reserved keyword
+    private List<ChannelEvent> events;
 
     public ChannelStateDao(Long sid, List<ChannelEvent> events) {
         this.sid = sid;
@@ -41,6 +43,30 @@ public class ChannelStateDao {
 
     public void setSid(Long sid) {
         this.sid = sid;
+    }
+
+    public boolean isTrusted() {
+        return trusted;
+    }
+
+    public void setTrusted(boolean trusted) {
+        this.trusted = trusted;
+    }
+
+    public boolean isComplete() {
+        return complete;
+    }
+
+    public void setComplete(boolean complete) {
+        this.complete = complete;
+    }
+
+    public boolean isFinal() {
+        return finall;
+    }
+
+    public void setFinal(boolean finall) {
+        this.finall = finall;
     }
 
     public List<ChannelEvent> getEvents() {

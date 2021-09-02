@@ -306,7 +306,7 @@ public class UserSession {
     }
 
     public Room createRoom(JsonObject options) {
-        return g.roomMgr().createRoom(g.crypto(), userId, options);
+        return g.roomMgr().get(g.roomMgr().createRoom(g.crypto(), userId, options));
     }
 
     public Room joinRoom(String roomIdOrAlias) {
@@ -347,7 +347,7 @@ public class UserSession {
                     .setRoomId(roomId)
                     .setRoomVersion(r.getVersion())
                     .setEventId(auth.getEventId())
-                    .setStrippedState(RoomState.empty())
+                    .setStrippedState(Collections.emptyList()) // FIXME provide a proper state
                     .setDoc(inviteEvent);
 
             if (g.core().isLocal(invitee.network())) {

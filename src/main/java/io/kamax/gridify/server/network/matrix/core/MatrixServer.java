@@ -31,6 +31,7 @@ import io.kamax.gridify.server.network.matrix.core.domain.MatrixDomainConfig;
 import io.kamax.gridify.server.network.matrix.core.federation.FederationPusher;
 import io.kamax.gridify.server.network.matrix.core.room.RoomDirectory;
 import io.kamax.gridify.server.network.matrix.core.room.RoomManager;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Queue;
 import java.util.Set;
@@ -41,6 +42,10 @@ public interface MatrixServer {
     MatrixDomain id();
 
     String getDomain();
+
+    default boolean isLocal(UserID uId) {
+        return StringUtils.equals(getDomain(), uId.network());
+    }
 
     MatrixServerImplementation getImplementation();
 

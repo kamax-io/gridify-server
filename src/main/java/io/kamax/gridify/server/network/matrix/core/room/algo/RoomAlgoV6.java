@@ -263,7 +263,7 @@ public class RoomAlgoV6 implements RoomAlgo {
 
     @Override
     public String validate(JsonObject evRaw) {
-        String eventId = "!" + computeEventHash(evRaw);
+        String eventId = getEventId(evRaw);
         BareGenericEvent ev = toProto(evRaw);
         ev.setId(eventId);
 

@@ -39,6 +39,7 @@ import io.kamax.gridify.server.network.matrix.core.event.EventKey;
 import io.kamax.gridify.server.network.matrix.core.federation.HomeServerLink;
 import io.kamax.gridify.server.network.matrix.core.federation.RemoteForbiddenException;
 import io.kamax.gridify.server.network.matrix.core.room.algo.RoomAlgo;
+import io.kamax.gridify.server.network.matrix.core.room.algo.RoomAlgos;
 import io.kamax.gridify.server.util.GsonUtil;
 import io.kamax.gridify.server.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
@@ -73,16 +74,24 @@ public class Room {
         this(g, dao.getSid(), dao.getId(), algo);
     }
 
+    public Room(GridifyServer g, ChannelDao dao) {
+        this(g, dao, RoomAlgos.get(dao.getVersion()));
+    }
+
     private void init() {
+        log.debug("Room {} - init - Started", getId());
         // FIXME we need to resolve the extremities as a timeline, get the HEAD and its state
         List<ChannelEvent> extremities = g.getStore().getForwardExtremities(sid).stream()
                 .map(sid -> g.getStore().getEvent(sid))
                 .collect(Collectors.toList());
+        log.debug("Room {} - init - Found {} extremities", getId(), extremities.size());
+        extremities.forEach(ext -> log.debug("\t- {}", ext.getId()));
 
         String head = extremities.stream()
                 .max(Comparator.comparingLong(ChannelEvent::getSid))
                 .map(ChannelEvent::getId)
                 .orElse(null);
+        log.debug("Room {} - init - HEAD is {}", getId(), head);
 
         RoomState state = extremities.stream()
                 .max(Comparator.comparingLong(ev -> BareGenericEvent.extractDepth(ev.getData())))
@@ -92,6 +101,10 @@ public class Room {
 
         view = new RoomView(head, state);
         log.info("Room {}: Loaded saved state SID {}", getId(), view.getState().getSid());
+    }
+
+    public long getLocalId() {
+        return sid;
     }
 
     public String getId() {
@@ -154,6 +167,31 @@ public class Room {
         return signedOff;
     }
 
+    public RoomState computeState(BareGenericEvent bEv) {
+        if (bEv.getPreviousEvents().isEmpty()) {
+            return RoomState.empty().fromPreviousEvents();
+        }
+
+        // FIXME try to build from previous events
+
+
+        if (bEv.getAuthEvents().isEmpty()) {
+            return RoomState.empty().fromAuthEvents();
+        }
+
+        List<ChannelEvent> authEvents = bEv.getAuthEvents().stream()
+                .map(evId -> g.getStore().findEvent(id, evId))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .filter(ev -> ev.getMeta().isAllowed())
+                .collect(Collectors.toList());
+        if (!authEvents.isEmpty()) {
+            return new RoomState(authEvents).fromAuthEvents();
+        }
+
+        return RoomState.empty().setTrusted(true);
+    }
+
     public RoomState getState(ChannelEvent event) {
         if (event.hasLid()) {
             try {
@@ -164,24 +202,20 @@ public class Room {
             }
         }
 
-        // FIXME try to build from previous events
+        return computeState(event.asMatrix());
+    }
 
-        BareGenericEvent bEv = BareGenericEvent.fromJson(event.getData());
-        if (bEv.getAuthEvents().isEmpty()) {
-            return RoomState.empty();
+    public RoomState getTrustedState(ChannelEvent event) {
+        RoomState state = getState(event);
+        if (event.getMeta().isSeed()) {
+            return state;
         }
 
-        List<ChannelEvent> authEvents = bEv.getAuthEvents().stream()
-                .map(evId -> g.getStore().findEvent(id, evId))
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .filter(ev -> ev.getMeta().isAllowed())
-                .collect(Collectors.toList());
-        if (authEvents.isEmpty()) {
-            throw new IllegalStateException("Cannot build room event state");
+        if (state.isTrusted()) {
+            return state;
         }
 
-        return new RoomState(authEvents);
+        return computeState(event.asMatrix());
     }
 
     public RoomState getFullState(String eventId) {
@@ -236,7 +270,7 @@ public class Room {
 
     public ChannelEventAuthorization process(ChannelEvent event) {
         log.debug("Processing Event {} || {} || {}", event.asMatrix().getRoomId(), event.getId(), event.asMatrix().getType());
-        RoomState state = getState(event);
+        RoomState state = getTrustedState(event);
         ChannelEventAuthorization auth = algo.authorize(state, event.getId(), event.getData());
         auth.setEvent(event);
         event.processed(auth);
@@ -264,7 +298,12 @@ public class Room {
                 .map(this::add)
                 .collect(Collectors.toList());
 
-        if (auths.stream().anyMatch(auth -> !auth.isAuthorized())) {
+        List<ChannelEventAuthorization> unauthorized = auths.stream()
+                .filter(auth -> !auth.isAuthorized()).collect(Collectors.toList());
+        if (!unauthorized.isEmpty()) {
+            unauthorized.forEach(auth -> {
+                log.debug("Event {} is not authorized: {}", auth.getEventId(), auth.getReason());
+            });
             throw new ForbiddenException("Seed add: unauthorized state");
         }
 
@@ -426,7 +465,7 @@ public class Room {
             return currentStateAuth;
         }
 
-        List<Long> toRemove = event.getPreviousEvents().stream()
+        List<Long> toRemove = event.asMatrix().getPreviousEvents().stream()
                 .map(id -> g.getStore().findEventLid(getId(), id))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
@@ -439,6 +478,7 @@ public class Room {
         state = new RoomState(stateSid, state);
         g.getStore().map(event.getLid(), state.getSid());
         view = new RoomView(event.getId(), state);
+        log.debug("Room {} - View updated to Event {} with state {}", getId(), event.getId(), state.getSid());
 
         // Insert the seed event into the stream
         long streamId = g.getStore().addToStream(event.getLid());
@@ -486,6 +526,30 @@ public class Room {
         return offer(crypto.getDomain(), crypto.getDomain(), finalize(crypto, populate(event.getJson())));
     }
 
+    public void put(ChannelEvent ev, RoomState state) {
+        ev = g.getStore().saveEvent(ev);
+        state = new RoomState(g.getStore().insertIfNew(sid, state), state);
+        g.getStore().map(ev.getLid(), state.getSid());
+        List<Long> toRemove = ev.asMatrix().getPreviousEvents().stream()
+                .map(id -> g.getStore().findEventLid(getId(), id))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toList());
+        List<Long> toAdd = Collections.singletonList(ev.getLid());
+        g.getStore().updateForwardExtremities(sid, toRemove, toAdd);
+
+        view = new RoomView(ev.getId(), state);
+        log.debug("Room {} - View updated to Event {} with empty state", getId(), ev.getId());
+
+        // Insert the event into the stream
+        long streamId = g.getStore().addToStream(ev.getLid());
+        ev.setSid(streamId);
+
+        // Publish onto the signal bus
+        ChannelMessageProcessed busEvent = new ChannelMessageProcessed(ev, ChannelEventAuthorization.from(ev));
+        g.getBus().forTopic(SignalTopic.Room).publish(busEvent);
+    }
+
     public RoomView getView() {
         return view;
     }
@@ -496,6 +560,17 @@ public class Room {
 
     public JsonObject makeJoinTemplate(String userId) {
         return populate(BareMemberEvent.join(userId).getJson());
+    }
+
+    public ChannelEvent buildEvent(JsonObject doc) {
+        String reason = algo.validate(doc);
+
+        ChannelEvent ev = new ChannelEvent(sid);
+        ev.setId(algo.getEventId(doc));
+        ev.setData(doc);
+        ev.getMeta().setValid(StringUtils.isBlank(reason));
+
+        return ev;
     }
 
 }

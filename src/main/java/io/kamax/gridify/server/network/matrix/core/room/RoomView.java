@@ -20,7 +20,7 @@
 
 package io.kamax.gridify.server.network.matrix.core.room;
 
-import io.kamax.gridify.server.core.channel.state.ChannelState;
+import io.kamax.gridify.server.network.matrix.core.event.BareEvent;
 import io.kamax.gridify.server.network.matrix.core.event.BareGenericEvent;
 import io.kamax.gridify.server.network.matrix.core.event.BareMemberEvent;
 import io.kamax.gridify.server.network.matrix.core.event.RoomEventType;
@@ -34,10 +34,6 @@ public class RoomView {
 
     private final String eventId;
     private final RoomState state;
-
-    public RoomView(String eventId, ChannelState state) {
-        this(eventId, new RoomState(state));
-    }
 
     public RoomView(String eventId, RoomState state) {
         this.eventId = eventId;
@@ -64,7 +60,7 @@ public class RoomView {
                 .filter(o -> RoomEventType.Member.match(o.getData()))
                 .map(o -> GsonUtil.fromJson(o.getData(), BareMemberEvent.class))
                 .filter(o -> RoomMembership.Join.match(o.getContent().getMembership()))
-                .map(o -> StringUtils.substringAfter(o.getStateKey(), ":"))
+                .map(BareEvent::getOrigin)
                 .collect(Collectors.toSet());
     }
 
