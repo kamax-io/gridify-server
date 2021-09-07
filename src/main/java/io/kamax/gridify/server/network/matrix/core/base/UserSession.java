@@ -64,14 +64,14 @@ public class UserSession {
     private static final String commandInLinePrefix = "~g";
 
     private final MatrixServer g;
-    private final String vHost;
+    private final String domain;
     private final User u;
     private final String userId;
     private final String accessToken;
 
-    public UserSession(MatrixServer g, String vHost, User u, String userId, String accessToken) {
+    public UserSession(MatrixServer g, String domain, User u, String userId, String accessToken) {
         this.g = g;
-        this.vHost = vHost;
+        this.domain = domain;
         this.u = u;
         this.userId = userId;
         this.accessToken = accessToken;
@@ -110,7 +110,7 @@ public class UserSession {
     }
 
     public String getDomain() {
-        return vHost;
+        return domain;
     }
 
     public RoomEvent buildSyncEvent(ChannelEvent ev) {
@@ -318,15 +318,14 @@ public class UserSession {
     }
 
     public void leaveRoom(String roomId) {
-        BareMemberEvent bareEvent = BareMemberEvent.leave(userId);
-        send(roomId, bareEvent);
+        g.roomMgr().leave(userId, roomId, g.crypto());
     }
 
     public void inviteToRoom(String roomId, String inviteeId) {
         UserID invitee = UserID.parse(inviteeId);
 
         BareMemberEvent bareInviteEvent = BareMemberEvent.makeFor(inviteeId, RoomMembership.Invite);
-        bareInviteEvent.setOrigin(vHost);
+        bareInviteEvent.setOrigin(domain);
         bareInviteEvent.setSender(userId);
 
         Room r = getRoom(roomId);
@@ -355,12 +354,12 @@ public class UserSession {
                 inviteEvent = g.core().forDomain(invitee.network()).asServer(getDomain()).inviteUser(request);
             } else {
                 // The user is managed by a remote server, we perform the handshake remotely
-                HomeServerLink remoteHs = g.core().hsMgr().getLink(vHost, invitee.network());
+                HomeServerLink remoteHs = g.core().hsMgr().getLink(domain, invitee.network());
                 inviteEvent = remoteHs.inviteUser(request);
             }
         }
 
-        r.offer(vHost, vHost, inviteEvent);
+        r.offer(domain, domain, inviteEvent);
     }
 
     public String send(String roomId, BareEvent<?> event) {
@@ -448,7 +447,7 @@ public class UserSession {
                         subCmb = StringUtils.replace(subCmb, "matrix domain ", "", 1);
                         String[] subCmbArgs = StringUtils.split(subCmb, " ");
                         if (StringUtils.equals(subCmbArgs[0], "this")) {
-                            subCmbArgs[0] = vHost;
+                            subCmbArgs[0] = domain;
                         }
                         if (StringUtils.equals(subCmbArgs[1], "registration")) {
                             boolean enable = StringUtils.equals(subCmbArgs[2], "enable");
@@ -513,7 +512,7 @@ public class UserSession {
         rEv.setEventId(responseEventId);
         rEv.setType(RoomEventType.Message.getId());
         rEv.setRoomId(roomId);
-        rEv.setSender("@:" + vHost);
+        rEv.setSender("@:" + domain);
         rEv.setOriginServerTs(Instant.now().toEpochMilli());
         rEv.setContent(content);
         g.getCommandResponseQueue(userId).add(GsonUtil.makeObj(rEv));
@@ -577,7 +576,7 @@ public class UserSession {
     }
 
     public Optional<RoomLookup> lookupRoomAlias(String roomAlias) {
-        return g.roomDir().lookup(vHost, RoomAlias.parse(roomAlias), true);
+        return g.roomDir().lookup(domain, RoomAlias.parse(roomAlias), true);
     }
 
 }

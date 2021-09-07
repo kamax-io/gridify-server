@@ -50,8 +50,7 @@ public class RoomView {
 
     public Set<String> getAllServers() {
         return getState().getEvents().stream()
-                .map(o -> BareGenericEvent.fromJson(o.getData()).getSender())
-                .map(sender -> StringUtils.substringAfter(sender, ":"))
+                .map(o -> BareGenericEvent.fromJson(o.getData()).getOrigin())
                 .collect(Collectors.toSet());
     }
 

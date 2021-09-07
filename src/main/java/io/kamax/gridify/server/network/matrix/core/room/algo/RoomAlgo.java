@@ -27,6 +27,7 @@ import io.kamax.gridify.server.network.matrix.core.event.BareEvent;
 import io.kamax.gridify.server.network.matrix.core.event.BareMemberEvent;
 import io.kamax.gridify.server.network.matrix.core.event.BarePowerEvent;
 import io.kamax.gridify.server.network.matrix.core.federation.RoomJoinTemplate;
+import io.kamax.gridify.server.network.matrix.core.federation.RoomLeaveTemplate;
 import io.kamax.gridify.server.network.matrix.core.room.RoomID;
 import io.kamax.gridify.server.network.matrix.core.room.RoomState;
 import io.kamax.gridify.server.util.Base64Codec;
@@ -71,6 +72,8 @@ public interface RoomAlgo {
     List<BareEvent<?>> getCreationEvents(String domain, String creator, JsonObject options);
 
     JsonObject buildJoinEvent(RoomJoinTemplate template);
+
+    JsonObject buildLeaveEvent(RoomLeaveTemplate template);
 
     Set<String> getAuthEvents(JsonObject eventDoc, RoomState state);
 

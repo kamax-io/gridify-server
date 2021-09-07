@@ -239,4 +239,36 @@ public class HomeServerLink {
         return GsonUtil.getObj(resBody, "event");
     }
 
+    public RoomLeaveTemplate getLeaveTemplate(String roomId, String userId) {
+        URI path = URI.create("/_matrix/federation/v1/make_leave/" + roomId + "/" + userId);
+        URIBuilder builder = new URIBuilder(path);
+
+        HomeServerRequest request = build(domain, "GET", builder);
+
+        HomeServerResponse res = client.doRequest(request);
+        if (res.getCode() == 200) {
+            return GsonUtil.fromJson(res.getBody(), RoomLeaveTemplate.class);
+        }
+
+        JsonObject resBody = res.getBody();
+        if (res.getCode() == 403) {
+            throw new RemoteForbiddenException(domain, resBody);
+        } else {
+            String errCode = GsonUtil.getStringOrNull(resBody, "errcode");
+            String error = GsonUtil.getStringOrNull(resBody, "error");
+            throw new RemoteServerException(domain, errCode, error);
+        }
+    }
+
+    public void sendLeave(String roomId, String userId, JsonObject doc) {
+        URI path = URI.create("/_matrix/federation/v2/send_leave/" + roomId + "/" + userId);
+        URIBuilder builder = new URIBuilder(path);
+        HomeServerRequest request = build(domain, "PUT", builder, doc);
+
+        HomeServerResponse response = client.doRequest(request);
+        if (response.getCode() != 200) {
+            throw new RemoteServerException(domain, response.getBody());
+        }
+    }
+
 }

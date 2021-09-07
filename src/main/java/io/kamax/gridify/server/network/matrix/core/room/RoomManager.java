@@ -31,7 +31,9 @@ import io.kamax.gridify.server.network.matrix.core.UserID;
 import io.kamax.gridify.server.network.matrix.core.crypto.MatrixDomainCryptopher;
 import io.kamax.gridify.server.network.matrix.core.event.*;
 import io.kamax.gridify.server.network.matrix.core.federation.HomeServerLink;
+import io.kamax.gridify.server.network.matrix.core.federation.RemoteForbiddenException;
 import io.kamax.gridify.server.network.matrix.core.federation.RoomJoinTemplate;
+import io.kamax.gridify.server.network.matrix.core.federation.RoomLeaveTemplate;
 import io.kamax.gridify.server.network.matrix.core.room.algo.RoomAlgo;
 import io.kamax.gridify.server.network.matrix.core.room.algo.RoomAlgos;
 import io.kamax.gridify.server.util.GsonUtil;
@@ -213,10 +215,6 @@ public class RoomManager {
         return r;
     }
 
-    public Room joinLocal(String userIdRaw, String roomId, MatrixDomainCryptopher crypto) {
-        return joinLocal(get(roomId), userIdRaw, crypto);
-    }
-
     public Room join(String userIdRaw, String roomIdOrAlias, MatrixDomainCryptopher crypto) {
         log.debug("Performing join of user {} in room address {}", userIdRaw, roomIdOrAlias);
 
@@ -248,10 +246,7 @@ public class RoomManager {
         } else {
             log.debug("Server is not in room");
             servers.removeIf(g.overMatrix().predicates().isLocalDomain());
-            if (!servers.isEmpty()) {
-                log.debug("Attempting join with lookup candidates");
-                return joinRemote(uId, new RoomLookup(roomIdOrAlias, roomId, servers));
-            } else {
+            if (servers.isEmpty()) {
                 log.debug("No lookup candidates, attempting to find resident server candidates");
 
                 // Try to find a membership event for the user
@@ -271,10 +266,107 @@ public class RoomManager {
 
                 servers.removeIf(g.overMatrix().predicates().isLocalDomain());
                 log.debug("Found {} remote server candidates", servers.size());
+            }
 
-                return joinRemote(uId, new RoomLookup(roomIdOrAlias, roomId, servers));
+            return joinRemote(uId, new RoomLookup(roomIdOrAlias, roomId, servers));
+        }
+    }
+
+    public boolean leaveRemote(Room r, UserID user, Set<String> servers) {
+        for (HomeServerLink srv : g.overMatrix().hsMgr().getLink(user.network(), servers, true)) {
+            String resident = srv.getDomain();
+            log.debug("Attempting remote leave of user {} in room {} using resident server {}", user.full(), r.getId(), resident);
+            try {
+                // We fetch template from the resident server
+                RoomLeaveTemplate template = srv.getLeaveTemplate(r.getId(), user.full());
+                template.setOrigin(user.network());
+                template.setRoomId(r.getId());
+                template.setUserId(user.full());
+
+                // We use the correct algo to build a complete event
+                String roomVersion = StringUtils.defaultIfBlank(template.getRoomVersion(), RoomAlgos.blankVersion());
+                RoomAlgo algo = RoomAlgos.get(roomVersion);
+                JsonObject eventDoc = algo.buildLeaveEvent(template);
+                JsonObject eventDocSignedOff = algo.signEvent(eventDoc, g.overMatrix().vHost(user.network()).asServer().getCrypto());
+
+                // We offer the signed off event to the resident server
+                srv.sendLeave(r.getId(), user.full(), eventDocSignedOff);
+
+                r.offer(user.network(), user.network(), eventDocSignedOff);
+
+                return true;
+            } catch (RemoteForbiddenException e) {
+                log.warn("{} refused our leave request to {} because: {}", resident, r.getId(), e.getReason());
+            } catch (RuntimeException e) {
+                log.warn("Failure during remote leave using {}", resident);
+                log.debug("Detailed failure", e);
             }
         }
+
+        return false;
+    }
+
+    public void leaveLocal(Room r, String userIdRaw, MatrixDomainCryptopher crypto) {
+        UserID uId = UserID.parse(userIdRaw);
+        BareMemberEvent bEv = new BareMemberEvent();
+        bEv.setOrigin(uId.network());
+        bEv.setRoomId(r.getId());
+        bEv.setSender(userIdRaw);
+        bEv.setStateKey(userIdRaw);
+        bEv.getContent().setMembership(RoomMembership.Leave);
+        ChannelEventAuthorization auth = r.offer(bEv, crypto);
+        if (!auth.isAuthorized()) {
+            throw new ForbiddenException(auth.getReason());
+        }
+    }
+
+    public void leave(String userIdRaw, String roomId, MatrixDomainCryptopher crypto) {
+        log.debug("Performing leave of user {} in room {}", userIdRaw, roomId);
+
+        Room r = get(roomId);
+        RoomView view = r.getView();
+        view.getState().find(RoomEventType.Member, userIdRaw).ifPresent(ev -> {
+            String membership = BareMemberEvent.computeMembership(ev.getData());
+            if (RoomMembership.Leave.match(membership) || RoomMembership.Ban.match(membership)) {
+                // User is already in Leave state
+                return;
+            }
+
+            if (RoomMembership.Join.match(membership)) {
+                leaveLocal(r, userIdRaw, crypto);
+            }
+
+            UserID uId = UserID.parse(userIdRaw);
+            if (RoomMembership.Invite.match(membership) || RoomMembership.Knock.match(membership)) {
+                if (view.isServerJoined(uId.network())) {
+                    leaveLocal(r, userIdRaw, crypto);
+                } else {
+                    log.debug("Server is not in room");
+                    Set<String> servers = new HashSet<>();
+
+                    String origin = ev.asMatrix().getOrigin();
+                    servers.add(origin);
+                    log.debug("Added origin {} from found membership event", origin);
+
+                    r.findEvent(r.getView().getEventId()).ifPresent(headEv -> {
+                        String headOrigin = headEv.asMatrix().getOrigin();
+                        servers.add(headOrigin);
+                        log.debug("Added origin {} from HEAD", headOrigin);
+                    });
+
+                    servers.removeIf(g.overMatrix().predicates().isLocalDomain());
+                    log.debug("Found {} remote server candidates", servers.size());
+
+                    boolean couldRemoteLeave = leaveRemote(r, uId, servers);
+                    if (!couldRemoteLeave) {
+                        log.debug("Could not leave remotely, forcing it locally");
+                        leaveLocal(r, userIdRaw, crypto);
+                    }
+                }
+            } else {
+                throw new IllegalStateException("Cannot leave, unknown membership: " + membership);
+            }
+        });
     }
 
     public void queueForDiscovery(List<JsonObject> events) {

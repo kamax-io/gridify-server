@@ -34,9 +34,7 @@ import io.kamax.gridify.server.network.matrix.core.event.RoomEventType;
 import io.kamax.gridify.server.network.matrix.core.room.Room;
 import io.kamax.gridify.server.network.matrix.core.room.RoomMembership;
 import io.kamax.gridify.server.network.matrix.http.json.SyncResponse;
-import io.kamax.gridify.server.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.List;
@@ -46,11 +44,6 @@ import java.util.UUID;
 import static org.junit.Assert.*;
 
 public class BasicUsageTest {
-
-    @BeforeClass
-    public static void beforeClass() {
-        System.setProperty("org.slf4j.simpleLogger.log." + KxLog.logPrefix, "debug");
-    }
 
     @Test
     public void roomCreate() {

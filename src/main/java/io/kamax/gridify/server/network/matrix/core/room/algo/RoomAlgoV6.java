@@ -29,6 +29,7 @@ import io.kamax.gridify.server.network.matrix.core.crypto.CryptoJson;
 import io.kamax.gridify.server.network.matrix.core.crypto.MatrixDomainCryptopher;
 import io.kamax.gridify.server.network.matrix.core.event.*;
 import io.kamax.gridify.server.network.matrix.core.federation.RoomJoinTemplate;
+import io.kamax.gridify.server.network.matrix.core.federation.RoomLeaveTemplate;
 import io.kamax.gridify.server.network.matrix.core.room.RoomJoinRule;
 import io.kamax.gridify.server.network.matrix.core.room.RoomMembership;
 import io.kamax.gridify.server.network.matrix.core.room.RoomState;
@@ -48,14 +49,7 @@ public class RoomAlgoV6 implements RoomAlgo {
     private static final List<String> essentialTopKeys;
     private static final Map<String, List<String>> essentialContentKeys = new HashMap<>();
 
-    private static final Map<String, Class<? extends BareEvent<?>>> bares = new HashMap<>();
-
     static {
-        bares.put(RoomEventType.Create.getId(), BareCreateEvent.class);
-        bares.put(RoomEventType.Member.getId(), BareMemberEvent.class);
-        bares.put(RoomEventType.Power.getId(), BarePowerEvent.class);
-        bares.put(RoomEventType.JoinRules.getId(), BareJoinRulesEvent.class);
-
         essentialTopKeys = Arrays.asList(
                 EventKey.AuthEvents,
                 EventKey.Content,
@@ -147,7 +141,7 @@ public class RoomAlgoV6 implements RoomAlgo {
         return events;
     }
 
-    private boolean canDoMembership(long senderPl, RoomMembership m, BarePowerEvent.Content pls) {
+    private boolean cannotDoMembership(long senderPl, RoomMembership m, BarePowerEvent.Content pls) {
         Long actionPl = null;
 
         if (RoomMembership.Kick.equals(m)) {
@@ -164,7 +158,7 @@ public class RoomAlgoV6 implements RoomAlgo {
             throw new IllegalArgumentException();
         }
 
-        return senderPl >= actionPl;
+        return senderPl < actionPl;
     }
 
     private boolean canEvent(BarePowerEvent.Content pls, long senderPl, BareEvent<?> ev) {
@@ -334,11 +328,7 @@ public class RoomAlgoV6 implements RoomAlgo {
             return auth.allow();
         }
 
-        if (!cOpt.isPresent()) {
-            return auth.deny("Room does not exist as per state");
-        }
-
-        BareCreateEvent.Content cEv = cOpt.map(BareCreateEvent::getContent).get();
+        BareCreateEvent.Content cEv = cOpt.map(BareCreateEvent::getContent).orElseGet(BareCreateEvent.Content::forUnknownCreator);
 
         BarePowerEvent.Content pls = DefaultPowerEvent.applyDefaults(state.getPowers().orElseGet(() -> getDefaultPowers(cEv.getCreator())));
         String sender = ev.getSender();
@@ -403,7 +393,7 @@ public class RoomAlgoV6 implements RoomAlgo {
                     return auth.deny("Invite target is already joined");
                 }
 
-                if (!canDoMembership(senderPl, RoomMembership.Invite, pls)) {
+                if (cannotDoMembership(senderPl, RoomMembership.Invite, pls)) {
                     return auth.deny("Sender does not have the required Power Level to invite");
                 }
 
@@ -418,11 +408,11 @@ public class RoomAlgoV6 implements RoomAlgo {
                     return auth.deny("Sender cannot send in a room they are not joined");
                 }
 
-                if (RoomMembership.Ban.equals(targetMs) && !canDoMembership(senderPl, RoomMembership.Ban, pls)) {
+                if (RoomMembership.Ban.equals(targetMs) && cannotDoMembership(senderPl, RoomMembership.Ban, pls)) {
                     return auth.deny("Sender does not have the required Power Level to remove a ban");
                 }
 
-                if (!canDoMembership(senderPl, RoomMembership.Kick, pls)) {
+                if (cannotDoMembership(senderPl, RoomMembership.Kick, pls)) {
                     return auth.deny("Sender does not have the required Power Level to kick");
                 }
 
@@ -436,7 +426,7 @@ public class RoomAlgoV6 implements RoomAlgo {
                     return auth.deny("Sender cannot send in a room they are not joined");
                 }
 
-                if (!canDoMembership(senderPl, RoomMembership.Ban, pls)) {
+                if (cannotDoMembership(senderPl, RoomMembership.Ban, pls)) {
                     return auth.deny("Sender does not have the required Power Level to ban");
                 }
 
@@ -497,6 +487,24 @@ public class RoomAlgoV6 implements RoomAlgo {
     }
 
     @Override
+    public JsonObject buildLeaveEvent(RoomLeaveTemplate template) {
+        // We build a fresh event that we trust (no hidden keys or whatever)
+        BareMemberEvent eventBare = BareMemberEvent.leave(template.getUserId());
+        eventBare.setRoomId(template.getRoomId());
+        eventBare.setOrigin(template.getOrigin());
+        eventBare.setSender(template.getUserId());
+        eventBare.setTimestamp(Instant.now().toEpochMilli());
+
+        // We only take the info we need from the template
+        BareMemberEvent templateBare = GsonUtil.fromJson(template.getEvent(), BareMemberEvent.class);
+        eventBare.setAuthEvents(templateBare.getAuthEvents());
+        eventBare.setPreviousEvents(templateBare.getPreviousEvents());
+        eventBare.setDepth(templateBare.getDepth());
+
+        return eventBare.getJson();
+    }
+
+    @Override
     public Set<String> getAuthEvents(JsonObject eventDoc, RoomState state) {
         // https://matrix.org/docs/spec/server_server/r0.1.4#get-matrix-federation-v1-make-join-roomid-userid
         // https://matrix.org/docs/spec/server_server/r0.1.4#auth-events-selection
@@ -507,7 +515,7 @@ public class RoomAlgoV6 implements RoomAlgo {
 
         Set<ChannelEvent> authEvents = new HashSet<>();
         BareGenericEvent genericEvent = BareGenericEvent.fromJson(eventDoc);
-        authEvents.add(state.getCreation());
+        state.find(RoomEventType.Create).ifPresent(authEvents::add);
         state.find(RoomEventType.Member, genericEvent.getSender()).ifPresent(authEvents::add);
         state.find(RoomEventType.Power, "").ifPresent(authEvents::add);
 

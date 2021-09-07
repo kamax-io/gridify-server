@@ -41,6 +41,12 @@ public class BareCreateEvent extends BareEvent<BareCreateEvent.Content> {
 
     public static class Content {
 
+        public static Content forUnknownCreator() {
+            Content c = new Content();
+            c.setCreator("");
+            return c;
+        }
+
         public static final String RoomVersion = "room_version";
         public static final String Federate = "m.federate";
 
