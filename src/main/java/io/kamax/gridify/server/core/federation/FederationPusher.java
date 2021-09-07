@@ -29,13 +29,14 @@ import io.kamax.gridify.server.util.KxLog;
 import net.engio.mbassy.listener.Handler;
 import org.slf4j.Logger;
 
+import java.lang.invoke.MethodHandles;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 public class FederationPusher {
 
-    private static final Logger log = KxLog.make(FederationPusher.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private final GridifyServer g;
     private final DataServerManager srvMgr;

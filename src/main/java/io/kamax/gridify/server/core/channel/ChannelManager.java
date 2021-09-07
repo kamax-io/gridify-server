@@ -45,6 +45,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
+import java.lang.invoke.MethodHandles;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -56,7 +57,7 @@ import java.util.stream.Collectors;
 
 public class ChannelManager {
 
-    private static final Logger log = KxLog.make(ChannelManager.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private GridifyServer g;
     private GridDataServer gSrv;

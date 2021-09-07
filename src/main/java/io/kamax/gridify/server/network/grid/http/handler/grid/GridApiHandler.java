@@ -29,12 +29,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpStatus;
 import org.slf4j.Logger;
 
+import java.lang.invoke.MethodHandles;
 import java.net.InetSocketAddress;
 import java.time.Instant;
 
 public abstract class GridApiHandler implements HttpHandler {
 
-    private transient final Logger log = KxLog.make(GridApiHandler.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     @Override
     public void handleRequest(HttpServerExchange exchange) {

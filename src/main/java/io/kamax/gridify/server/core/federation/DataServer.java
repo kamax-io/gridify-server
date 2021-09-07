@@ -32,6 +32,7 @@ import io.kamax.gridify.server.util.GsonUtil;
 import io.kamax.gridify.server.util.KxLog;
 import org.slf4j.Logger;
 
+import java.lang.invoke.MethodHandles;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Optional;
@@ -40,7 +41,7 @@ import java.util.function.Supplier;
 
 public class DataServer {
 
-    private static final Logger log = KxLog.make(DataServer.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private final ServerID id;
     private final String hostname;

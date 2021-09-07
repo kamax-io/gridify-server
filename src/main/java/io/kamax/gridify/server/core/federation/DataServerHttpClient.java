@@ -55,6 +55,7 @@ import org.slf4j.Logger;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -71,7 +72,7 @@ public class DataServerHttpClient implements DataServerClient {
     // FIXME pure hack, switch to config - maybe only for testing?
     public static boolean useHttps = true;
 
-    private final Logger log = KxLog.make(DataServerHttpClient.class);
+    private final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private CloseableHttpClient client;
 

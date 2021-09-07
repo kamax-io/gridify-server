@@ -28,6 +28,7 @@ import io.kamax.gridify.server.core.identity.*;
 import io.kamax.gridify.server.exception.ConfigurationException;
 import io.kamax.gridify.server.exception.InternalServerError;
 import io.kamax.gridify.server.exception.NotImplementedException;
+import io.kamax.gridify.server.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.directory.api.ldap.model.cursor.CursorException;
 import org.apache.directory.api.ldap.model.cursor.CursorLdapReferralException;
@@ -37,14 +38,14 @@ import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapException;
 import org.apache.directory.api.ldap.model.message.SearchScope;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.*;
 
 public class LdapIdentityStore implements IdentityStore, AuthIdentityStore, ProfileIdentityStore {
 
-    private static final Logger log = LoggerFactory.getLogger(LdapIdentityStore.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     public interface LdapServerFunction<LdapServer, R> {
 

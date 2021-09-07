@@ -25,16 +25,17 @@ import io.kamax.gridify.server.core.crypto.Cryptopher;
 import io.kamax.gridify.server.core.crypto.KeyIdentifier;
 import io.kamax.gridify.server.core.store.DataStore;
 import io.kamax.gridify.server.network.grid.core.UserID;
+import io.kamax.gridify.server.util.KxLog;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import java.lang.invoke.MethodHandles;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class User {
 
-    private static final Logger log = LoggerFactory.getLogger(User.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private long lid;
     private String id;

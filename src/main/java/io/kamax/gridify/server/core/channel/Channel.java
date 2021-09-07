@@ -48,6 +48,7 @@ import io.kamax.gridify.server.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
+import java.lang.invoke.MethodHandles;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -56,7 +57,7 @@ import java.util.stream.Collectors;
 
 public class Channel {
 
-    private static final Logger log = KxLog.make(Channel.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private ChannelDao dao;
     private ServerID origin;

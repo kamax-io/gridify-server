@@ -32,12 +32,13 @@ import io.kamax.gridify.server.exception.ObjectNotFoundException;
 import io.kamax.gridify.server.util.KxLog;
 import org.slf4j.Logger;
 
+import java.lang.invoke.MethodHandles;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MultiStoreAuthService implements AuthService {
 
-    private static final Logger log = KxLog.make(MultiStoreAuthService.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private final Map<String, IdentityStore> storeByLabel = new ConcurrentHashMap<>();
     private final Set<IdentityStore> stores = new HashSet<>();

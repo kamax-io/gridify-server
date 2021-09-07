@@ -37,13 +37,14 @@ import io.kamax.gridify.server.util.KxLog;
 import net.engio.mbassy.listener.Handler;
 import org.slf4j.Logger;
 
+import java.lang.invoke.MethodHandles;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 
 public class ChannelDirectory {
 
-    private static final Logger log = KxLog.make(ChannelDirectory.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private final ServerID origin;
     private final DataStore store;

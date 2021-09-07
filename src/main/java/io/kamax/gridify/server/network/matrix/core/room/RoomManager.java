@@ -41,13 +41,14 @@ import io.kamax.gridify.server.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
+import java.lang.invoke.MethodHandles;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class RoomManager {
 
-    private static final Logger log = KxLog.make(RoomManager.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private final GridifyServer g;
     private final Map<String, Room> rooms = new ConcurrentHashMap<>();

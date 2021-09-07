@@ -41,12 +41,13 @@ import io.kamax.gridify.server.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
+import java.lang.invoke.MethodHandles;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class ServerSession {
 
-    private static final Logger log = KxLog.make(ServerSession.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private final GridServer gSrv;
     private final ServerID id;

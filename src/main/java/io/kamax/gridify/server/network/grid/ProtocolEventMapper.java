@@ -30,6 +30,7 @@ import io.kamax.gridify.server.util.KxLog;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
+import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -38,7 +39,7 @@ import java.util.function.Function;
 public class ProtocolEventMapper {
 
     private static final String WildcardType = "*";
-    private static final Logger log = KxLog.make(ProtocolEventMapper.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private static Map<String, Function<ChannelEvent, RoomEvent>> g2mMappers = new HashMap<>();
     private static Map<String, Function<JsonObject, JsonObject>> m2gMappers = new HashMap<>();

@@ -32,11 +32,12 @@ import io.kamax.gridify.server.util.GsonUtil;
 import io.kamax.gridify.server.util.KxLog;
 import org.slf4j.Logger;
 
+import java.lang.invoke.MethodHandles;
 import java.util.*;
 
 public class SyncResponse {
 
-    private static final Logger log = KxLog.make(SyncResponse.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
         public static RoomEvent build(ChannelEvent ev) {
             RoomEvent rEv = ProtocolEventMapper.forEventConvertToMatrix(ev);

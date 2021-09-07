@@ -35,13 +35,14 @@ import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.invoke.MethodHandles;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class Exchange {
 
-    private static final Logger log = KxLog.make(Exchange.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private final HttpServerExchange exchange;
     private String error;

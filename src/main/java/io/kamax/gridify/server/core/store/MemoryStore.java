@@ -36,6 +36,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.mina.util.ConcurrentHashSet;
 import org.slf4j.Logger;
 
+import java.lang.invoke.MethodHandles;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -44,7 +45,7 @@ import java.util.stream.Collectors;
 
 public class MemoryStore implements DataStore, IdentityStore {
 
-    private static final Logger log = KxLog.make(MemoryStore.class);
+    private static final Logger log = KxLog.make(MethodHandles.lookup().lookupClass());
 
     private final static Map<String, MemoryStore> singleton = new ConcurrentHashMap<>();
 
