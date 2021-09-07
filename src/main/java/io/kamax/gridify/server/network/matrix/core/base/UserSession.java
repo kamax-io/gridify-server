@@ -309,6 +309,10 @@ public class UserSession {
         return g.roomMgr().get(g.roomMgr().createRoom(g.crypto(), userId, options));
     }
 
+    public Room createRoom() {
+        return createRoom(new JsonObject());
+    }
+
     public Room joinRoom(String roomIdOrAlias) {
         return g.roomMgr().join(userId, roomIdOrAlias, g.crypto());
     }
@@ -350,10 +354,10 @@ public class UserSession {
                     .setDoc(inviteEvent);
 
             if (g.core().isLocal(invitee.network())) {
-                // The user is managed by one of the virtual domains, we perform the handshake locally
+                // The user is managed by one of the virtual domains, perform the handshake locally
                 inviteEvent = g.core().forDomain(invitee.network()).asServer(getDomain()).inviteUser(request);
             } else {
-                // The user is managed by a remote server, we perform the handshake remotely
+                // The user is managed by a remote server, perform the handshake remotely
                 HomeServerLink remoteHs = g.core().hsMgr().getLink(domain, invitee.network());
                 inviteEvent = remoteHs.inviteUser(request);
             }

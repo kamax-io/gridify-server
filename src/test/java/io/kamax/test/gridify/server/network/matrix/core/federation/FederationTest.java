@@ -27,12 +27,9 @@ import io.kamax.gridify.server.core.identity.User;
 import io.kamax.gridify.server.http.MonolithHttpGridifyServer;
 import io.kamax.gridify.server.network.matrix.core.MatrixCore;
 import io.kamax.gridify.server.network.matrix.core.base.UserSession;
-import io.kamax.gridify.server.network.matrix.core.event.BareCanonicalAliasEvent;
-import io.kamax.gridify.server.network.matrix.core.event.BareJoinRulesEvent;
 import io.kamax.gridify.server.network.matrix.core.federation.HomeServerHttpClient;
 import io.kamax.gridify.server.network.matrix.core.room.Room;
-import io.kamax.gridify.server.network.matrix.core.room.RoomAlias;
-import io.kamax.gridify.server.util.KxLog;
+import io.kamax.gridify.server.network.matrix.core.room.RoomMembership;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -62,8 +59,6 @@ public class FederationTest {
 
     @BeforeClass
     public static void init() {
-        System.setProperty("org.slf4j.simpleLogger.log." + KxLog.logPrefix, "debug");
-
         deinit();
 
         HomeServerHttpClient.useHttps = false;
@@ -120,25 +115,26 @@ public class FederationTest {
         }
     }
 
-    protected String makeSharedRoom() {
-        Room u1r1 = s1.createRoom(new JsonObject());
-        String rId = u1r1.getId();
-        String r1Alias = RoomAlias.from("test", s1.getDomain()).full();
+    protected String makeSharedRoomViaInvite() {
+        Room g1c1 = s1.createRoom(new JsonObject());
+        s1.inviteToRoom(g1c1.getId(), u2);
 
-        BareCanonicalAliasEvent aEv = new BareCanonicalAliasEvent();
-        aEv.getContent().setAlias(r1Alias);
-        s1.send(rId, aEv);
+        RoomMembership g1u2c1 = g1c1.getView().getState().getMembership(u2);
+        assertEquals(RoomMembership.Invite, g1u2c1);
 
-        BareJoinRulesEvent jEv = new BareJoinRulesEvent();
-        jEv.getContent().setRule("public");
-        s1.send(rId, jEv);
+        Room g2c1 = mx2.roomMgr().get(g1c1.getId());
+        RoomMembership g2u2c1 = g2c1.getView().getState().getMembership(u2);
+        assertEquals(RoomMembership.Invite, g2u2c1);
 
-        Room u2r1 = s2.joinRoom(r1Alias);
-        assertEquals(u1r1.getId(), u2r1.getId());
-        assertEquals(2, u1r1.getView().getAllServers().size());
-        assertEquals(2, u2r1.getView().getAllServers().size());
+        Room g2c1Joined = s2.joinRoom(g1c1.getId());
+        assertEquals(g1c1.getId(), g2c1Joined.getId());
 
-        return rId;
+        g1u2c1 = g1c1.getView().getState().getMembership(u2);
+        assertEquals(RoomMembership.Join, g1u2c1);
+        g2u2c1 = g2c1.getView().getState().getMembership(u2);
+        assertEquals(RoomMembership.Join, g2u2c1);
+
+        return g1c1.getId();
     }
 
 }

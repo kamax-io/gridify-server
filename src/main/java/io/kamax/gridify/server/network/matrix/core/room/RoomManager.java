@@ -333,36 +333,30 @@ public class RoomManager {
                 return;
             }
 
-            if (RoomMembership.Join.match(membership)) {
-                leaveLocal(r, userIdRaw, crypto);
-            }
-
             UserID uId = UserID.parse(userIdRaw);
-            if (RoomMembership.Invite.match(membership) || RoomMembership.Knock.match(membership)) {
-                if (view.isServerJoined(uId.network())) {
+            if (view.isServerJoined(uId.network())) {
+                leaveLocal(r, userIdRaw, crypto);
+            } else if (RoomMembership.Invite.match(membership) || RoomMembership.Knock.match(membership)) {
+                log.debug("Server is not in room");
+                Set<String> servers = new HashSet<>();
+
+                String origin = ev.asMatrix().getOrigin();
+                servers.add(origin);
+                log.debug("Added origin {} from found membership event", origin);
+
+                r.findEvent(r.getView().getEventId()).ifPresent(headEv -> {
+                    String headOrigin = headEv.asMatrix().getOrigin();
+                    servers.add(headOrigin);
+                    log.debug("Added origin {} from HEAD", headOrigin);
+                });
+
+                servers.removeIf(g.overMatrix().predicates().isLocalDomain());
+                log.debug("Found {} remote server candidates", servers.size());
+
+                boolean couldRemoteLeave = leaveRemote(r, uId, servers);
+                if (!couldRemoteLeave) {
+                    log.debug("Could not leave remotely, forcing it locally");
                     leaveLocal(r, userIdRaw, crypto);
-                } else {
-                    log.debug("Server is not in room");
-                    Set<String> servers = new HashSet<>();
-
-                    String origin = ev.asMatrix().getOrigin();
-                    servers.add(origin);
-                    log.debug("Added origin {} from found membership event", origin);
-
-                    r.findEvent(r.getView().getEventId()).ifPresent(headEv -> {
-                        String headOrigin = headEv.asMatrix().getOrigin();
-                        servers.add(headOrigin);
-                        log.debug("Added origin {} from HEAD", headOrigin);
-                    });
-
-                    servers.removeIf(g.overMatrix().predicates().isLocalDomain());
-                    log.debug("Found {} remote server candidates", servers.size());
-
-                    boolean couldRemoteLeave = leaveRemote(r, uId, servers);
-                    if (!couldRemoteLeave) {
-                        log.debug("Could not leave remotely, forcing it locally");
-                        leaveLocal(r, userIdRaw, crypto);
-                    }
                 }
             } else {
                 throw new IllegalStateException("Cannot leave, unknown membership: " + membership);
