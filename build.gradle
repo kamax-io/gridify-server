@@ -24,7 +24,7 @@ String buildVersion() {
     def versionPattern = Pattern.compile("v(\\d+\\.)?(\\d+\\.)?(\\d+)(-.*)?")
 
     String version = System.getenv('GRIDIFYD_BUILD_VERSION')
-    if (version == null || version.size() == 0) {
+    if (version == null || version.length() == 0) {
         version = sourceVersion()
     }
     return versionPattern.matcher(version).matches() ? version.substring(1) : version
@@ -32,7 +32,7 @@ String buildVersion() {
 
 String sourceVersion() {
     String version = System.getenv('GRIDIFYD_SOURCE_VERSION')
-    if (version != null && version.size() > 0) {
+    if (version != null && version.length() > 0) {
         return version
     }
 
@@ -47,7 +47,7 @@ String sourceVersion() {
 
     if (o.exitValue != 0) {
         if (o.exitValue != 128) {
-            printf("Unable to determine git version: %s", out.toString())
+            logger.lifecycle("Unable to determine git version: {}", out.toString())
         }
 
         return "UNKNOWN"
@@ -57,7 +57,6 @@ String sourceVersion() {
 }
 
 apply plugin: 'application'
-apply plugin: 'idea'
 
 group = 'io.kamax.gridify'
 version = buildVersion()
@@ -96,7 +95,8 @@ def dockerImageTag = "${dockerImageName}:${version}"
 def dockerImageTagLatestDev = "${dockerImageName}:latest-dev"
 
 repositories {
-    jcenter()
+    mavenLocal()
+    mavenCentral()
 }
 
 dependencies {
@@ -152,7 +152,7 @@ dependencies {
 
 // For reproducible builds
 // https://docs.gradle.org/5.2/userguide/working_with_files.html#sec:reproducible_archives
-tasks.withType(AbstractArchiveTask) {
+tasks.withType(AbstractArchiveTask).configureEach {
     preserveFileTimestamps = false
     reproducibleFileOrder = true
 }
@@ -170,7 +170,7 @@ jar {
 task debBuild() {
     doLast {
         String debVersion = buildVersion()
-        println "Version for package: ${debVersion}"
+        logger.lifecycle('Version for package: {}', debVersion)
         mkdir distDir
         mkdir debBuildBasePath
         mkdir debBuildDebianPath
