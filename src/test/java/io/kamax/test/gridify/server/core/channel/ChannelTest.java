@@ -75,7 +75,7 @@ public class ChannelTest {
         EventService evSvc = new EventService(sId, mainKeyId, crypto);
         ChannelAlgo algo = new ChannelAlgoV0_0();
         DataServerManager srvMgr = new DataServerManager();
-        ChannelDao cDao = store.saveChannel(new ChannelDao("grid", cId.full(), "0"));
+        ChannelDao cDao = store.saveChannel(new ChannelDao("grid", "c", cId.full(), "0"));
         Channel c = new Channel(cDao, sId, algo, evSvc, store, srvMgr, bus);
         assertNull(c.getView().getHead());
         assertNotNull(c.getView().getState());

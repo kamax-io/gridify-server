@@ -41,7 +41,6 @@ import io.kamax.gridify.server.core.crypto.KeyIdentifier;
 import io.kamax.gridify.server.core.crypto.PublicKey;
 import io.kamax.gridify.server.core.crypto.RegularKeyIdentifier;
 import io.kamax.gridify.server.core.crypto.ed25519.Ed25519Cryptopher;
-import io.kamax.gridify.server.core.event.EventStreamer;
 import io.kamax.gridify.server.core.identity.GenericThreePid;
 import io.kamax.gridify.server.core.identity.IdentityManager;
 import io.kamax.gridify.server.core.identity.ThreePid;
@@ -90,8 +89,6 @@ public class MonolithGridifyServer implements GridifyServer {
     private final Cryptopher crypto;
     private final AuthService authSvc;
     private final IdentityManager idMgr;
-
-    private final EventStreamer streamer;
 
     private final AdminCore admCore;
     private final MatrixCore mxCore;
@@ -160,7 +157,6 @@ public class MonolithGridifyServer implements GridifyServer {
 
         idMgr = new IdentityManager(cfg.getIdentity(), store, crypto);
         authSvc = new MultiStoreAuthService(this);
-        streamer = new EventStreamer(store);
 
         admCore = new DefaultAdminCore(this);
         mxCore = new BaseMatrixCore(this);
@@ -241,11 +237,6 @@ public class MonolithGridifyServer implements GridifyServer {
     @Override
     public SignalBus getBus() {
         return bus;
-    }
-
-    @Override
-    public EventStreamer getStreamer() {
-        return streamer;
     }
 
     @Override

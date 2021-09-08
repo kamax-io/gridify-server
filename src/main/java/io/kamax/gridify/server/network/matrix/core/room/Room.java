@@ -25,6 +25,7 @@ import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.core.channel.ChannelDao;
 import io.kamax.gridify.server.core.channel.event.ChannelEvent;
 import io.kamax.gridify.server.core.channel.state.ChannelEventAuthorization;
+import io.kamax.gridify.server.core.event.EventStreams;
 import io.kamax.gridify.server.core.signal.ChannelMessageProcessed;
 import io.kamax.gridify.server.core.signal.SignalTopic;
 import io.kamax.gridify.server.core.store.ChannelStateDao;
@@ -339,7 +340,7 @@ public class Room {
         view = new RoomView(seed.getId(), state);
 
         // Insert the seed event into the stream
-        long streamId = g.getStore().addToStream(seed.getLid());
+        long streamId = g.getStore().addToStream(EventStreams.MatrixRooms(), seed.getLid());
         seed.setSid(streamId);
 
         // Publish onto the signal bus
@@ -481,7 +482,7 @@ public class Room {
         log.debug("Room {} - View updated to Event {} with state {}", getId(), event.getId(), state.getSid());
 
         // Insert the seed event into the stream
-        long streamId = g.getStore().addToStream(event.getLid());
+        long streamId = g.getStore().addToStream(EventStreams.MatrixRooms(), event.getLid());
         event.setSid(streamId);
 
         // Publish onto the signal bus
@@ -542,7 +543,7 @@ public class Room {
         log.debug("Room {} - View updated to Event {} with empty state", getId(), ev.getId());
 
         // Insert the event into the stream
-        long streamId = g.getStore().addToStream(ev.getLid());
+        long streamId = g.getStore().addToStream(EventStreams.MatrixRooms(), ev.getLid());
         ev.setSid(streamId);
 
         // Publish onto the signal bus

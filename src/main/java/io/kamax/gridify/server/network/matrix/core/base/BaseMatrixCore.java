@@ -25,6 +25,7 @@ import io.kamax.gridify.server.GridifyServer;
 import io.kamax.gridify.server.core.crypto.Cryptopher;
 import io.kamax.gridify.server.core.crypto.KeyIdentifier;
 import io.kamax.gridify.server.core.event.EventStreamer;
+import io.kamax.gridify.server.core.event.EventStreams;
 import io.kamax.gridify.server.core.signal.SignalBus;
 import io.kamax.gridify.server.core.store.DataStore;
 import io.kamax.gridify.server.core.store.DomainDao;
@@ -194,7 +195,7 @@ public class BaseMatrixCore implements MatrixCore {
 
     @Override
     public EventStreamer getStreamer() {
-        return new EventStreamer(g.getStore());
+        return new EventStreamer(EventStreams.MatrixRooms(), g.getStore());
     }
 
     @Override

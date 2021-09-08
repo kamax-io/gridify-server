@@ -67,7 +67,7 @@ public class RoomManager {
 
     public Room register(String roomId, String roomVersion) {
         RoomAlgos.get(roomVersion); // We check if valid
-        ChannelDao dao = new ChannelDao("matrix", roomId, roomVersion);
+        ChannelDao dao = new ChannelDao("matrix", "r", roomId, roomVersion);
         dao = g.getStore().saveChannel(dao);
         Room r = new Room(g, dao);
         rooms.put(r.getId(), r);
@@ -127,7 +127,7 @@ public class RoomManager {
 
     public synchronized Optional<Room> find(String rId) {
         if (!rooms.containsKey(rId)) {
-            g.getStore().findChannel("matrix", rId)
+            g.getStore().findChannel("matrix", "r", rId)
                     .ifPresent(dao -> rooms.put(rId, fromDao(dao)));
         }
 

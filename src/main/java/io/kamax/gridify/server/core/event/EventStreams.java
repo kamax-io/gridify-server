@@ -18,35 +18,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.kamax.gridify.server.network.grid.core;
+package io.kamax.gridify.server.core.event;
 
-import io.kamax.gridify.server.GridifyServer;
-import io.kamax.gridify.server.core.event.EventService;
-import io.kamax.gridify.server.core.event.EventStreamer;
-import io.kamax.gridify.server.core.federation.DataServerManager;
-import io.kamax.gridify.server.core.store.DataStore;
+public class EventStreams {
 
-public interface GridServer {
+    private static final EventStreamID gc = new EventStreamID("g:c", "");
+    private static final EventStreamID mr = new EventStreamID("m:r", "");
 
-    GridifyServer gridify();
+    public static EventStreamID GridChannels() {
+        return gc;
+    }
 
-    ServerID getOrigin();
+    public static EventStreamID MatrixRooms() {
+        return mr;
+    }
 
-    String getDomain();
+    public static EventStreamID MatrixUserAccount(String userId) {
+        return new EventStreamID("m:u:a", userId);
+    }
 
-    DataServerManager dataSrvMgr();
+    public static EventStreamID MatrixUserProfile(String userId) {
+        return new EventStreamID("m:u:p", userId);
+    }
 
-    EventService evSvc();
-
-    DataStore store();
-
-    EventStreamer streamer();
-
-    boolean isLocal(ServerID id);
-
-    boolean isLocal(UserID uId);
-
-    GridDataServer forData();
-
+    private EventStreams() {
+        // Nope
+    }
 
 }

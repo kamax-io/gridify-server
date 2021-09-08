@@ -29,6 +29,7 @@ import io.kamax.gridify.server.core.channel.state.ChannelState;
 import io.kamax.gridify.server.core.channel.structure.InviteApprovalRequest;
 import io.kamax.gridify.server.core.event.EventKey;
 import io.kamax.gridify.server.core.event.EventService;
+import io.kamax.gridify.server.core.event.EventStreams;
 import io.kamax.gridify.server.core.federation.DataServer;
 import io.kamax.gridify.server.core.federation.DataServerManager;
 import io.kamax.gridify.server.core.identity.GenericThreePid;
@@ -72,7 +73,7 @@ public class Channel {
     private ChannelView view;
 
     public Channel(long sid, ChannelID id, ServerID origin, ChannelAlgo algo, EventService evSvc, DataStore store, DataServerManager srvMgr, SignalBus bus) {
-        this(new ChannelDao(sid, "grid", id.full(), "0"), origin, algo, evSvc, store, srvMgr, bus);
+        this(new ChannelDao(sid, "grid", "c", id.full(), "0"), origin, algo, evSvc, store, srvMgr, bus);
     }
 
     public Channel(ChannelDao dao, ServerID origin, ChannelAlgo algo, EventService evSvc, DataStore store, DataServerManager srvMgr, SignalBus bus) {
@@ -264,7 +265,7 @@ public class Channel {
         ev = store.saveEvent(ev);
         state = new ChannelState(store.getState(store.insertIfNew(getSid(), state)));
         store.map(ev.getLid(), state.getSid());
-        store.addToStream(ev.getLid());
+        store.addToStream(EventStreams.GridChannels(), ev.getLid());
 
         if (ev.getMeta().isAllowed()) {
             List<Long> toRemove = ev.getBare().getPreviousEvents().stream()

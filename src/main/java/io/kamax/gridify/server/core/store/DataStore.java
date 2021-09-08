@@ -27,6 +27,7 @@ import io.kamax.gridify.server.core.auth.SecureCredentials;
 import io.kamax.gridify.server.core.channel.ChannelDao;
 import io.kamax.gridify.server.core.channel.event.ChannelEvent;
 import io.kamax.gridify.server.core.channel.state.ChannelState;
+import io.kamax.gridify.server.core.event.EventStreamID;
 import io.kamax.gridify.server.core.identity.ThreePid;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
 import io.kamax.gridify.server.network.grid.core.ChannelID;
@@ -81,19 +82,19 @@ public interface DataStore {
 
     Optional<ChannelDao> findChannel(long cLid);
 
-    Optional<ChannelDao> findChannel(String network, String cId);
+    Optional<ChannelDao> findChannel(String network, String type, String cId);
 
     default Optional<ChannelDao> findChannel(ChannelID cId) {
-        return findChannel("grid", cId.full());
+        return findChannel("grid", "c", cId.full());
     }
 
     default ChannelDao getChannel(long cLid) {
         return findChannel(cLid).orElseThrow(() -> new ObjectNotFoundException("Channel", Long.toString(cLid)));
     }
 
-    long addToStream(long eLid);
+    long addToStream(EventStreamID streamId, long eLid);
 
-    long getStreamPosition();
+    long getStreamPosition(EventStreamID streamId);
 
     ChannelDao saveChannel(ChannelDao ch);
 
@@ -112,7 +113,7 @@ public interface DataStore {
     List<ChannelDao> searchForRoomsInUserEvents(String network, String type, String stateKey);
 
     // Get the N next events. next = Higher SID. last SID is not included.
-    List<ChannelEvent> getNext(long lastSid, long amount);
+    List<ChannelEvent> getNext(EventStreamID stream, long lastSid, long amount);
 
     List<ChannelEvent> getTimelineNext(long cLid, long lastTid, long amount);
 

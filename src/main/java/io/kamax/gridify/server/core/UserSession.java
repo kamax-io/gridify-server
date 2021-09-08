@@ -107,7 +107,7 @@ public class UserSession {
     public SyncData syncInitial() {
         SyncData data = new SyncData();
         data.setInitial(true);
-        data.setPosition(Long.toString(g.server().gridify().getStreamer().getPosition()));
+        data.setPosition(Long.toString(g.server().streamer().getPosition()));
 
         // FIXME this doesn't scale - we only care about channels where the user has ever been into
         // so we shouldn't even deal with those. Need to make storage smarter in this case
@@ -142,7 +142,7 @@ public class UserSession {
                     break;
                 }
 
-                List<ChannelEvent> events = g.server().gridify().getStreamer().next(sid);
+                List<ChannelEvent> events = g.server().streamer().next(sid);
                 if (!events.isEmpty()) {
                     long position = events.stream()
                             .filter(ev -> ev.getMeta().isProcessed())

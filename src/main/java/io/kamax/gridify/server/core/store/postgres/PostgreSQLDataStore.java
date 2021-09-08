@@ -26,10 +26,12 @@ import io.kamax.gridify.server.core.auth.Credentials;
 import io.kamax.gridify.server.core.auth.SecureCredentials;
 import io.kamax.gridify.server.core.channel.ChannelDao;
 import io.kamax.gridify.server.core.channel.event.ChannelEvent;
+import io.kamax.gridify.server.core.event.EventStreamID;
 import io.kamax.gridify.server.core.identity.*;
 import io.kamax.gridify.server.core.identity.store.local.LocalAuthIdentityStore;
 import io.kamax.gridify.server.core.store.*;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
+import io.kamax.gridify.server.util.Base64Codec;
 import io.kamax.gridify.server.util.GsonUtil;
 import io.kamax.gridify.server.util.KxLog;
 import org.apache.commons.io.IOUtils;
@@ -65,6 +67,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
     private interface StmtFunction<T, R> {
 
         R run(T stmt) throws SQLException;
+
     }
 
     private interface StmtConsumer<T> {
@@ -99,6 +102,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
                 List<String> schemas = new ArrayList<>();
                 schemas.add("000000.sql");
                 schemas.add("000001.sql");
+                schemas.add("000002.sql");
                 //LineIterator it = IOUtils.lineIterator(elIs, StandardCharsets.UTF_8);
                 Iterator<String> it = schemas.listIterator();
                 log.debug("Schemas auto-discovery:");
@@ -230,7 +234,13 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
     }
 
     private ChannelDao makeChannel(ResultSet rSet) throws SQLException {
-        return new ChannelDao(rSet.getLong("lid"), rSet.getString("network"), rSet.getString("id"), rSet.getString("version"));
+        return new ChannelDao(
+                rSet.getLong("lid"),
+                rSet.getString("network"),
+                rSet.getString("type"),
+                rSet.getString("id"),
+                rSet.getString("version")
+        );
     }
 
     @Override
@@ -349,7 +359,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
             ResultSet rSet = stmt.executeQuery();
             while (rSet.next()) {
-                channels.add(new ChannelDao(rSet.getLong("lid"), rSet.getString("network"), rSet.getString("id"), rSet.getString("version")));
+                channels.add(makeChannel(rSet));
             }
 
             return channels;
@@ -365,7 +375,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
             List<ChannelDao> channels = new ArrayList<>();
             ResultSet rSet = stmt.executeQuery();
             while (rSet.next()) {
-                channels.add(new ChannelDao(rSet.getLong("lid"), rSet.getString("network"), rSet.getString("id"), rSet.getString("version")));
+                channels.add(makeChannel(rSet));
             }
 
             return channels;
@@ -382,33 +392,79 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public Optional<ChannelDao> findChannel(String network, String networkId) {
-        String sql = "SELECT * FROM channels WHERE network = ? AND id = ?";
+    public Optional<ChannelDao> findChannel(String network, String type, String networkId) {
+        String sql = "SELECT * FROM channels WHERE network = ? AND type = ? AND id = ?";
         return withStmtFunction(sql, stmt -> {
             stmt.setString(1, network);
-            stmt.setString(2, networkId);
+            stmt.setString(2, type);
+            stmt.setString(3, networkId);
             return findChannel(stmt.executeQuery());
         });
     }
 
-    @Override
-    public long addToStream(long eLid) {
-        String sql = "INSERT INTO channel_event_stream (lid) VALUES (?) RETURNING sid";
+    private String getStreamSeqName(EventStreamID stream) {
+        String suffix = Base64Codec.encode(stream.getType() + (StringUtils.isBlank(stream.getScope()) ? "" : ("_" + stream.getScope())));
+        return "seq_channel_event_stream_sid_" + suffix;
+    }
+
+    private long getNextStreamPosition(EventStreamID stream) {
+        String sql = "SELECT nextval(?)";
         return withStmtFunction(sql, stmt -> {
-            stmt.setLong(1, eLid);
+            stmt.setString(1, "\"" + getStreamSeqName(stream) + "\"");
             try (ResultSet rSet = stmt.executeQuery()) {
                 if (!rSet.next()) {
-                    throw new IllegalStateException("Inserted event " + eLid + " in stream but got no SID back");
+                    throw new RuntimeException("No next value for sequence " + getStreamSeqName(stream));
                 }
+
                 return rSet.getLong(1);
             }
         });
     }
 
+    private long fetchNextStreamPosition(EventStreamID stream) {
+        try {
+            return getNextStreamPosition(stream);
+        } catch (RuntimeException e) {
+            if (Objects.nonNull(e.getCause()) && e.getCause() instanceof SQLException) {
+                if (StringUtils.equals("42P01", ((SQLException) e.getCause()).getSQLState())) {
+                    log.debug("Sequence {} for stream {} not found, creating", getStreamSeqName(stream), stream);
+                    String sql = "CREATE SEQUENCE \"" + getStreamSeqName(stream) + "\" MINVALUE " + Long.MIN_VALUE;
+                    withConnConsumer(conn -> {
+                        try (Statement s = conn.createStatement()) {
+                            s.execute(sql);
+                        }
+                    });
+                    return getNextStreamPosition(stream);
+                }
+            }
+
+            throw e;
+        }
+    }
+
     @Override
-    public long getStreamPosition() {
-        String sql = "SELECT MAX(sid) FROM channel_event_stream";
+    public long addToStream(EventStreamID streamId, long eLid) {
+        String sql = "INSERT INTO channel_event_stream (type, scope, sid, lid) VALUES (?,?,?,?)";
+        long position = fetchNextStreamPosition(streamId);
         return withStmtFunction(sql, stmt -> {
+            stmt.setString(1, streamId.getType());
+            stmt.setString(2, streamId.getScope());
+            stmt.setLong(3, position);
+            stmt.setLong(4, eLid);
+            int rc = stmt.executeUpdate();
+            if (rc != 1) {
+                throw new IllegalStateException("Stream " + streamId + ": DB inserted " + rc + " rows. 1 expected");
+            }
+            return position;
+        });
+    }
+
+    @Override
+    public long getStreamPosition(EventStreamID streamId) {
+        String sql = "SELECT MAX(sid) FROM channel_event_stream WHERE type = ? AND scope = ?";
+        return withStmtFunction(sql, stmt -> {
+            stmt.setString(1, streamId.getType());
+            stmt.setString(2, streamId.getScope());
             ResultSet rSet = stmt.executeQuery();
             if (!rSet.next()) {
                 return 0L;
@@ -420,11 +476,12 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
 
     @Override
     public ChannelDao saveChannel(ChannelDao ch) {
-        String sql = "INSERT INTO channels (network,id,version) VALUES (?,?,?) RETURNING lid";
+        String sql = "INSERT INTO channels (network,type,id,version) VALUES (?,?,?,?) RETURNING lid";
         return withStmtFunction(sql, stmt -> {
             stmt.setString(1, ch.getNetwork());
-            stmt.setString(2, ch.getId());
-            stmt.setString(3, ch.getVersion());
+            stmt.setString(2, ch.getType());
+            stmt.setString(3, ch.getId());
+            stmt.setString(4, ch.getVersion());
             ResultSet rSet = stmt.executeQuery();
 
             if (!rSet.next()) {
@@ -432,7 +489,7 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
             }
 
             long sid = rSet.getLong(1);
-            return new ChannelDao(sid, ch.getNetwork(), ch.getId(), ch.getVersion());
+            return new ChannelDao(sid, ch.getNetwork(), ch.getType(), ch.getId(), ch.getVersion());
         });
     }
 
@@ -540,8 +597,8 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
                 "WHERE network = ?",
                 "  AND meta->>'processed' = 'true'",
                 "  AND meta->>'allowed' = 'true'",
-                "  AND DATA->>'type' = ?",
-                "  AND DATA->>'state_key' = ?");
+                "  AND data->>'type' = ?",
+                "  AND data->>'state_key' = ?");
 
         return withStmtFunction(sql, stmt -> {
             stmt.setString(1, network);
@@ -558,11 +615,13 @@ public class PostgreSQLDataStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public List<ChannelEvent> getNext(long lastSid, long amount) {
-        String sql = "SELECT * FROM channel_event_stream s JOIN channel_events e ON s.lid = e.lid WHERE s.sid > ? ORDER BY s.sid ASC LIMIT ?";
+    public List<ChannelEvent> getNext(EventStreamID stream, long lastSid, long amount) {
+        String sql = "SELECT * FROM channel_event_stream s JOIN channel_events e ON s.lid = e.lid WHERE s.type = ? AND s.scope = ? AND s.sid > ? ORDER BY s.sid ASC LIMIT ?";
         return withStmtFunction(sql, stmt -> {
-            stmt.setLong(1, lastSid);
-            stmt.setLong(2, amount);
+            stmt.setString(1, stream.getType());
+            stmt.setString(2, stream.getScope());
+            stmt.setLong(3, lastSid);
+            stmt.setLong(4, amount);
             ResultSet rSet = stmt.executeQuery();
 
             List<ChannelEvent> events = new ArrayList<>();

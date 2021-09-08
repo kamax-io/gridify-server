@@ -27,6 +27,7 @@ import io.kamax.gridify.server.core.auth.Credentials;
 import io.kamax.gridify.server.core.auth.SecureCredentials;
 import io.kamax.gridify.server.core.channel.ChannelDao;
 import io.kamax.gridify.server.core.channel.event.ChannelEvent;
+import io.kamax.gridify.server.core.event.EventStreamID;
 import io.kamax.gridify.server.core.identity.*;
 import io.kamax.gridify.server.core.identity.store.local.LocalAuthIdentityStore;
 import io.kamax.gridify.server.exception.ObjectNotFoundException;
@@ -76,17 +77,18 @@ public class MemoryStore implements DataStore, IdentityStore {
     private final AtomicLong uLid = new AtomicLong(0);
     private final AtomicLong chSid = new AtomicLong(0);
     private final AtomicLong evLid = new AtomicLong(0);
-    private final AtomicLong evSid = new AtomicLong(0);
+    private final Map<EventStreamID, AtomicLong> evSid = new ConcurrentHashMap<>();
     private final AtomicLong sSid = new AtomicLong(0);
 
     private final Map<String, JsonElement> config = new ConcurrentHashMap<>();
     private final Map<Long, DomainDao> domains = new ConcurrentHashMap<>();
+
     private final Map<Long, UserDao> users = new ConcurrentHashMap<>();
+    private final Map<String, Long> uNameToLid = new ConcurrentHashMap<>();
     private final Map<Long, Set<ThreePid>> userStoreIds = new ConcurrentHashMap<>();
     private final Map<Long, Map<String, SecureCredentials>> userCreds = new ConcurrentHashMap<>();
     private final Map<Long, List<String>> uTokens = new ConcurrentHashMap<>();
     private final Map<Long, Set<ThreePid>> userThreepids = new ConcurrentHashMap<>();
-    private final Map<String, Long> uNameToLid = new ConcurrentHashMap<>();
 
     private final Map<Long, ChannelDao> channels = new ConcurrentHashMap<>();
     private final Map<String, ChannelDao> chIdToDao = new ConcurrentHashMap<>();
@@ -168,7 +170,7 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public Optional<ChannelDao> findChannel(String network, String cId) {
+    public Optional<ChannelDao> findChannel(String network, String type, String cId) {
         ChannelDao dao = chIdToDao.get(cId);
         if (Objects.isNull(dao)) {
             return Optional.empty();
@@ -178,12 +180,20 @@ public class MemoryStore implements DataStore, IdentityStore {
             return Optional.empty();
         }
 
+        if (!StringUtils.equals(type, dao.getType())) {
+            return Optional.empty();
+        }
+
         return Optional.of(dao);
     }
 
+    private AtomicLong getStreamIdGenerator(EventStreamID streamId) {
+        return evSid.computeIfAbsent(streamId, id -> new AtomicLong(0));
+    }
+
     @Override
-    public long addToStream(long eLid) {
-        long sid = evSid.incrementAndGet();
+    public long addToStream(EventStreamID streamId, long eLid) {
+        long sid = getStreamIdGenerator(streamId).incrementAndGet();
         evSidToLid.put(sid, eLid);
         evLidToSid.put(eLid, sid);
         log.debug("Added Event LID {} to stream with SID {}", eLid, sid);
@@ -191,14 +201,14 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public long getStreamPosition() {
-        return evSid.get();
+    public long getStreamPosition(EventStreamID streamId) {
+        return getStreamIdGenerator(streamId).get();
     }
 
     @Override
     public ChannelDao saveChannel(ChannelDao ch) {
         long sid = chSid.incrementAndGet();
-        ch = new ChannelDao(sid, ch.getNetwork(), ch.getId(), ch.getVersion());
+        ch = new ChannelDao(sid, ch.getNetwork(), ch.getType(), ch.getId(), ch.getVersion());
         channels.put(sid, ch);
         chIdToDao.put(ch.getId(), ch);
         return ch;
@@ -206,14 +216,19 @@ public class MemoryStore implements DataStore, IdentityStore {
 
     @Override
     public synchronized ChannelEvent saveEvent(ChannelEvent ev) {
+        String evRef = makeRef(ev);
         if (!ev.hasLid()) {
+            if (evRefToLid.containsKey(evRef)) {
+                throw new IllegalArgumentException();
+            }
+
             ev.setLid(evLid.incrementAndGet());
+            evRefToLid.put(evRef, ev.getLid());
         }
 
         chEvents.put(ev.getLid(), ev);
-        evRefToLid.put(makeRef(ev), ev.getLid());
 
-        log.info("Added new channel event with SID {}", ev.getLid());
+        log.debug("Added new channel event {} with LID {}", evRef, ev.getLid());
 
         return ev;
     }
@@ -250,7 +265,7 @@ public class MemoryStore implements DataStore, IdentityStore {
     }
 
     @Override
-    public List<ChannelEvent> getNext(long lastSid, long amount) {
+    public List<ChannelEvent> getNext(EventStreamID stream, long lastSid, long amount) {
         List<ChannelEvent> events = new ArrayList<>();
         while (events.size() < amount) {
             lastSid++;

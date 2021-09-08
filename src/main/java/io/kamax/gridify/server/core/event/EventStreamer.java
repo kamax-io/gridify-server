@@ -27,14 +27,16 @@ import java.util.List;
 
 public class EventStreamer {
 
+    private final EventStreamID stream;
     private final DataStore store;
 
-    public EventStreamer(DataStore store) {
+    public EventStreamer(EventStreamID stream, DataStore store) {
+        this.stream = stream;
         this.store = store;
     }
 
     public List<ChannelEvent> next(long sid) {
-        return store.getNext(sid, 20);
+        return store.getNext(stream, sid, 20);
     }
 
     public List<ChannelEvent> next(ChannelEvent ev) {
@@ -42,7 +44,7 @@ public class EventStreamer {
     }
 
     public long getPosition() {
-        return store.getStreamPosition();
+        return store.getStreamPosition(stream);
     }
 
 }

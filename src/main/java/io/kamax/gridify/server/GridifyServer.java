@@ -28,7 +28,6 @@ import io.kamax.gridify.server.core.auth.AuthService;
 import io.kamax.gridify.server.core.auth.UIAuthSession;
 import io.kamax.gridify.server.core.crypto.Cryptopher;
 import io.kamax.gridify.server.core.crypto.PublicKey;
-import io.kamax.gridify.server.core.event.EventStreamer;
 import io.kamax.gridify.server.core.identity.IdentityManager;
 import io.kamax.gridify.server.core.identity.User;
 import io.kamax.gridify.server.core.signal.SignalBus;
@@ -61,8 +60,6 @@ public interface GridifyServer {
     Cryptopher getCrypto();
 
     IdentityManager getIdentity();
-
-    EventStreamer getStreamer();
 
     AuthService getAuth();
 

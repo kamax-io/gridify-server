@@ -27,16 +27,18 @@ public class ChannelDao {
     private long sid;
     private String network;
     private String id;
+    private String type;
     private String version;
 
-    public ChannelDao(String net, String id, String version) {
+    public ChannelDao(String net, String type, String id, String version) {
         this.network = net;
+        this.type = type;
         this.id = id;
         this.version = version;
     }
 
-    public ChannelDao(long sid, String network, String id, String version) {
-        this(network, id, version);
+    public ChannelDao(long sid, String network, String type, String id, String version) {
+        this(network, type, id, version);
         setSid(sid);
     }
 
@@ -54,6 +56,14 @@ public class ChannelDao {
 
     public void setNetwork(String network) {
         this.network = network;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 
     public String getId() {

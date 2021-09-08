@@ -25,6 +25,8 @@ import io.kamax.gridify.server.core.GridType;
 import io.kamax.gridify.server.core.channel.ChannelDirectory;
 import io.kamax.gridify.server.core.channel.ChannelManager;
 import io.kamax.gridify.server.core.event.EventService;
+import io.kamax.gridify.server.core.event.EventStreamer;
+import io.kamax.gridify.server.core.event.EventStreams;
 import io.kamax.gridify.server.core.federation.DataServerManager;
 import io.kamax.gridify.server.core.federation.FederationPusher;
 import io.kamax.gridify.server.core.identity.GenericThreePid;
@@ -91,6 +93,11 @@ public class SimpleGridServer implements GridCore, GridServer {
     @Override
     public DataStore store() {
         return g.getStore();
+    }
+
+    @Override
+    public EventStreamer streamer() {
+        return new EventStreamer(EventStreams.GridChannels(), store());
     }
 
     @Override

@@ -52,7 +52,7 @@ public abstract class DataStoreTest {
 
     private ChannelDao makeChannel() {
         String id = ChannelID.from(UUID.randomUUID().toString(), "example.org").full();
-        ChannelDao daoBefore = new ChannelDao("", id, "");
+        ChannelDao daoBefore = new ChannelDao("", "", id, "");
         assertEquals(id, daoBefore.getId());
         ChannelDao daoAfter = store.saveChannel(daoBefore);
         assertEquals(id, daoAfter.getId());
@@ -222,6 +222,15 @@ public abstract class DataStoreTest {
         assertNotNull(ev2.getData());
         ev2 = store.saveEvent(ev2);
         assertNotNull(ev2.getData());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void saveDuplicateEvent() {
+        long clid = makeChannel().getSid();
+        ChannelEvent ev1 = ChannelEvent.forNotFound(clid, "a");
+        store.saveEvent(ev1);
+        ChannelEvent ev2 = ChannelEvent.forNotFound(clid, "a");
+        store.saveEvent(ev2);
     }
 
     @Test
