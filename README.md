@@ -13,8 +13,9 @@ single-user server to multi-site, high-availability infrastructure with millions
 
 The [Getting Started Guide](docs/getting-started.md) will quickly and easily get you on the network!
 
-Enterprise? Public Sector? Startup in need of expertise and/or custom dev? You may want to have a look into our **[
-Consultancy Services](https://www.kamax.io/page/services/)** provided by Kamax Sarl.
+Enterprise? Public Sector? Startup in need of expertise and/or custom dev?  
+You may want to have a look into our **[Consultancy Services](https://www.kamax.io/page/services/)** provided by Kamax
+Sarl.
 
 ## Get in touch 💬
 
