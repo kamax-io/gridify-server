@@ -43,7 +43,7 @@ public class HomeServerManager {
 
     public List<HomeServerLink> getLink(String origin, Collection<String> domains, boolean all) {
         return domains.stream()
-                .filter(domain -> all || StringUtils.equals(origin, domain))
+                .filter(domain -> all || !StringUtils.equals(origin, domain))
                 .map(domain -> getLink(origin, domain))
                 .collect(Collectors.toList());
     }

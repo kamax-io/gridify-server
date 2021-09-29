@@ -388,6 +388,7 @@ public class Room {
             List<String> missingParents = findMissingEvents(event.asMatrix().getPreviousEvents());
             // Backfill the timeline
             if (!missingParents.isEmpty()) {
+                log.debug("Backfill needed for event {}/{}", getId(), event.getId());
                 // Populate the missing events mapping
                 Map<String, String> missingEvents = new HashMap<>();
                 for (String missingParent : missingParents) {
@@ -415,7 +416,7 @@ public class Room {
                     }
 
                     while (!missingEvents.isEmpty()) {
-                        // Compute the list of latest events not found yet
+                        // Compute the list of the latest events not found yet
                         Set<String> latestEvents = new HashSet<>(missingEvents.values());
                         List<JsonObject> backfillEventDocs = remoteHs.getPreviousEvents(getId(), latestEvents, earliestEventIds, minDepth);
                         if (backfillEventDocs.isEmpty()) {

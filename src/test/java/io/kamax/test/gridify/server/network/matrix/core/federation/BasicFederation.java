@@ -20,14 +20,26 @@
 
 package io.kamax.test.gridify.server.network.matrix.core.federation;
 
+import io.kamax.gridify.server.core.channel.event.ChannelEvent;
 import io.kamax.gridify.server.network.matrix.core.event.BareCanonicalAliasEvent;
 import io.kamax.gridify.server.network.matrix.core.event.BareJoinRulesEvent;
+import io.kamax.gridify.server.network.matrix.core.event.BareMessageEvent;
 import io.kamax.gridify.server.network.matrix.core.room.Room;
 import io.kamax.gridify.server.network.matrix.core.room.RoomAlias;
 import io.kamax.gridify.server.network.matrix.core.room.RoomMembership;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class BasicFederation extends FederationTest {
 
@@ -72,6 +84,47 @@ public class BasicFederation extends FederationTest {
         u2r1 = s2.joinRoom(r1Alias);
         assertEquals(RoomMembership.Join, u2r1.getView().getState().getMembership(s2.getUser()));
         assertEquals(RoomMembership.Join, u1r1.getView().getState().getMembership(s2.getUser()));
+    }
+
+    @Test
+    public void backfillComplex() throws InterruptedException {
+        String roomId = makeSharedRoomViaInvite();
+
+        mx1.getFedPusher().setEnabled(false);
+
+        ExecutorService executor = Executors.newFixedThreadPool(4);
+        List<Callable<String>> tasks = new ArrayList<>();
+        for (int i = 0; i < 128; i++) {
+            int j = i;
+            tasks.add(() -> s1.send(roomId, BareMessageEvent.makeText("Message " + j)));
+        }
+
+        List<String> events = executor.invokeAll(tasks).stream().map(f -> {
+            try {
+                return f.get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }).collect(Collectors.toList());
+
+        mx1.getFedPusher().setEnabled(true);
+        events.add(s1.send(roomId, BareMessageEvent.makeText("Final message")));
+
+        for (String evId : events) {
+            Optional<ChannelEvent> g1c1evOpt = mx1.store().findEvent(roomId, evId);
+            assertTrue(g1c1evOpt.isPresent());
+            ChannelEvent g1c1ev = g1c1evOpt.get();
+            assertTrue(g1c1ev.getMeta().isPresent());
+            assertTrue(g1c1ev.getMeta().isProcessed());
+            assertTrue(g1c1ev.getMeta().isAllowed());
+
+            Optional<ChannelEvent> g2c1evOpt = mx2.store().findEvent(roomId, evId);
+            assertTrue(g2c1evOpt.isPresent());
+            ChannelEvent g2c1ev = g2c1evOpt.get();
+            assertTrue(g2c1ev.getMeta().isPresent());
+            assertTrue(g2c1ev.getMeta().isProcessed());
+            assertTrue(g2c1ev.getMeta().isAllowed());
+        }
     }
 
 }
